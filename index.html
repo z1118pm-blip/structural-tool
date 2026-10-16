@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>力学概念训练器 · 平面刚架线弹性静力分析</title>
+<title>Structura（测试版）· 平面刚架线弹性静力分析</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
@@ -48,6 +48,28 @@
     font-family:'JetBrains Mono',ui-monospace,monospace;
     letter-spacing:.1px;
   }
+  /* 摘要卡左侧 / 右侧两栏 */
+  .modelSummary{display:flex;justify-content:space-between;align-items:stretch;gap:12px}
+  .msLeft{flex:1 1 auto;min-width:0}
+  .msRight{
+    flex:0 0 auto;
+    display:flex;flex-direction:column;
+    justify-content:space-around;align-items:flex-end;
+    gap:4px;text-align:right;
+  }
+  .msMetric{
+    display:flex;align-items:baseline;gap:4px;justify-content:flex-end;
+    font-size:11px;line-height:1.35;
+    font-variant-numeric:tabular-nums;
+    font-family:'JetBrains Mono',ui-monospace,monospace;
+  }
+  .msMetric span{
+    color:#94a3b8;font-size:9.5px;letter-spacing:.4px;
+    min-width:22px;text-align:right;
+  }
+  .msMetric b{font-weight:600;color:#0f172a;font-size:12px}
+  .msMetric i{font-style:normal;color:#94a3b8;font-size:9.5px}
+
 
   /* Tab 栏 */
   .tabBar{
@@ -186,7 +208,7 @@
 
   /* ---------- 右侧图形区 ---------- */
   #stage{
-    flex:1;min-width:0;padding:10px;gap:10px;
+    flex:1;min-width:0;padding:10px 10px 36px;gap:10px;
     display:grid;
     grid-template-columns:340px 1fr;
     grid-template-rows:1fr 1fr;
@@ -213,6 +235,8 @@
 
   /* 内力图卡 tagBar 下移，给浮动工具条让位 */
   #chartForce .tagBar{top:48px}
+  /* 荷载简图卡 tagBar 下移，让位给 canvas 顶部的 HUD 英文 */
+  #chartLoad .tagBar{top:38px}
 
   #readout{
     flex:0 0 300px;background:#fff;border-radius:10px;
@@ -408,12 +432,7 @@
       padding:0 4px;
       pointer-events:auto;
     }
-    #stageWatermark{
-      right:14px;
-      bottom:52px;
-      font-size:10px;
-      letter-spacing:1.4px;
-    }
+    /* #stageWatermark 已在 HTML 中删除，此处规则一并移除 */
     #chartForce .tagBar{top:9px}
     #readout{grid-column:1;grid-row:auto;max-height:320px}
     #chartForce{grid-column:1;grid-row:auto;min-height:340px}
@@ -468,6 +487,10 @@
     background:rgba(56,189,248,0.15);color:#7dd3fc;
   }
   .modelSummary .msLine{color:var(--tx3)}
+  .msMetric span{color:var(--tx3)}
+  .msMetric b{color:#f1f5f9}
+  .msMetric i{color:var(--tx3)}
+
 
   .tabBar{border-bottom-color:var(--line)}
   .tabBar button{color:var(--tx3)}
@@ -621,6 +644,23 @@
     background:linear-gradient(90deg, rgba(56,189,248,.85), rgba(56,189,248,0));
     border-radius:1px;
   }
+  /* 品牌名后的「测试版」小字：不继承 19px 渐变，避免抢视觉 */
+  .brandTest{
+    display:inline-block;
+    margin-left:6px;
+    vertical-align:2px;
+    font-family:'Inter','PingFang SC','Microsoft YaHei',sans-serif;
+    font-size:10.5px;
+    font-weight:500;
+    letter-spacing:.4px;
+    color:#fbbf24;
+    padding:1px 6px;
+    border:1px solid rgba(251,191,36,.45);
+    border-radius:5px;
+    background:rgba(251,191,36,.10);
+    white-space:nowrap;
+    -webkit-text-fill-color:#fbbf24;
+  }
   .brandSub{
     font-size:11px;color:#94a3b8;
     line-height:1.5;letter-spacing:.2px;
@@ -637,22 +677,7 @@
     user-select:none;
   }
 
-  /* 右区右下角水印 */
-  #stageWatermark{
-    position:absolute;
-    right:22px;
-    bottom:56px;
-    z-index:9;
-    pointer-events:none;
-    user-select:none;
-    font-family:'JetBrains Mono',ui-monospace,monospace;
-    font-size:11px;
-    font-weight:500;
-    letter-spacing:1.8px;
-    color:rgba(125,211,252,.52);
-    text-shadow:0 0 10px rgba(56,189,248,.28);
-    white-space:nowrap;
-  }
+  /* 右区右下角水印：DOM 已移除，此处不再保留 */
 
   /* 窄屏下的深色边框 */
   @media(max-width:1020px){
@@ -716,6 +741,19 @@
     border-color:#38bdf8;color:#fff;font-weight:600;
   }
 
+  /* 数值按钮：靛蓝 —— 与 M/N/V 的蓝、冻结的绿区分 */
+  .segMini #btnVals.on{
+    background:linear-gradient(180deg,#6366f1,#4f46e5);
+    border-color:#818cf8;color:#fff;
+    box-shadow:0 0 8px rgba(99,102,241,.40);
+  }
+  /* 冻结按钮：绿色 —— 一眼看出"当前处于对比模式" */
+  .segMini #btnFreeze.on{
+    background:linear-gradient(180deg,#10b981,#059669);
+    border-color:#34d399;color:#fff;
+    box-shadow:0 0 8px rgba(16,185,129,.45);
+  }
+
   /* 读数面板 */
   #readout{color:var(--tx2)}
   #readout .rTitle{color:var(--tx3);border-bottom-color:var(--line)}
@@ -774,6 +812,15 @@
   }
   #stage.mode-deform .deformOverlay .dRow{
     flex-direction:row;align-items:baseline;gap:8px;padding:0;
+    white-space:nowrap;
+  }
+  /* 宽屏：叠加层限制最大宽度，避开右上角模式按钮；超宽自动换行 */
+  @media(min-width:1021px){
+    #stage.mode-deform .deformOverlay{
+      right: 12px;
+      max-width: calc(100% - 300px);
+      flex-wrap: wrap;
+    }
   }
 
   /* 滚动条深色化 */
@@ -989,6 +1036,333 @@
     color:var(--tx3);
     opacity:.7;
   }
+
+  /* ============ 分享弹窗 ============ */
+  .modalCardShare{width:min(420px,100%)}
+
+  .modalBodyShare{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:20px 24px 24px;
+  }
+
+  /* 标题前的 ◆ 用青色，与卡片 HUD 的 ◆ 保持同一视觉语言 */
+  .shareTitleMark{
+    color:var(--accent);
+    margin-right:4px;
+    text-shadow:0 0 8px rgba(56,189,248,.55);
+  }
+
+  /* ---------- 本地打开提示条 ---------- */
+  .shareLocalWarn{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    width:100%;
+    margin-bottom:14px;
+    padding:8px 12px;
+    font-size:11.5px;
+    line-height:1.5;
+    color:#fcd34d;
+    background:rgba(251,191,36,.08);
+    border:1px solid rgba(251,191,36,.32);
+    border-radius:8px;
+    letter-spacing:.2px;
+  }
+  .shareLocalWarn[hidden]{display:none}
+  .shareLocalWarnIcon{
+    flex:0 0 auto;
+    font-size:13px;
+    line-height:1;
+  }
+
+  /* ---------- QR 展示区：外层光晕 + 内层白底 ---------- */
+  .shareQRFrame{
+    position:relative;
+    padding:14px;
+    border-radius:24px;
+    background:radial-gradient(circle at 50% 50%,
+      rgba(56,189,248,.24) 0%,
+      rgba(56,189,248,.08) 45%,
+      rgba(56,189,248,0) 72%);
+    animation:qrHalo 4.5s ease-in-out infinite;
+  }
+  @keyframes qrHalo{
+    0%,100%{ filter:brightness(.95); }
+    50%    { filter:brightness(1.15); }
+  }
+
+  .shareQRBox{
+    position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:236px;
+    height:236px;
+    padding:14px;
+    background:#ffffff;
+    border-radius:14px;
+    box-sizing:border-box;
+    box-shadow:
+      0 0 0 1px rgba(56,189,248,.18),
+      0 14px 40px rgba(0,0,0,.55),
+      0 0 34px rgba(56,189,248,.18);
+  }
+  .shareQRBox canvas{
+    display:block;
+    image-rendering:pixelated;
+    image-rendering:crisp-edges;
+  }
+
+  /* 四角 L 形 HUD 刻线：叠在白块外边，取景框感 */
+  .shareQRBox .qrCorner{
+    position:absolute;
+    width:18px;height:18px;
+    border:2px solid #0ea5e9;
+    pointer-events:none;
+    filter:drop-shadow(0 0 6px rgba(56,189,248,.55));
+  }
+  .shareQRBox .qrCorner.tl{ top:-7px;   left:-7px;  border-width:2px 0 0 2px; border-radius:5px 0 0 0; }
+  .shareQRBox .qrCorner.tr{ top:-7px;   right:-7px; border-width:2px 2px 0 0; border-radius:0 5px 0 0; }
+  .shareQRBox .qrCorner.bl{ bottom:-7px;left:-7px;  border-width:0 0 2px 2px; border-radius:0 0 0 5px; }
+  .shareQRBox .qrCorner.br{ bottom:-7px;right:-7px; border-width:0 2px 2px 0; border-radius:0 0 5px 0; }
+
+  .shareQRLoading{
+    font-size:12px;
+    color:#94a3b8;
+    letter-spacing:.4px;
+  }
+
+  /* ---------- 装饰 meta 行 ---------- */
+  .shareMeta{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-top:14px;
+    font-family:'JetBrains Mono',ui-monospace,monospace;
+    font-size:9.5px;
+    font-weight:600;
+    letter-spacing:2.2px;
+    color:#7dd3fc;
+    opacity:.72;
+    user-select:none;
+  }
+  .shareMetaDot{
+    width:5px;height:5px;
+    border-radius:50%;
+    background:var(--accent);
+    box-shadow:0 0 8px rgba(56,189,248,.85);
+  }
+
+  .shareHint{
+    margin-top:8px;
+    font-size:12.5px;
+    color:var(--tx2);
+    letter-spacing:.3px;
+  }
+
+  /* ---------- URL 行 ---------- */
+  .shareURLRow{
+    display:flex;
+    gap:6px;
+    width:100%;
+    margin-top:16px;
+  }
+  .shareURLField{
+    flex:1 1 auto;
+    min-width:0;
+    padding:8px 11px;
+    font-family:'JetBrains Mono',ui-monospace,monospace;
+    font-size:11px;
+    color:var(--tx);
+    background:#0b1220;
+    border:1px solid var(--line);
+    border-radius:7px;
+    outline:none;
+    color-scheme:dark;
+    transition:border-color .15s, box-shadow .15s;
+  }
+  .shareURLField:focus{
+    border-color:var(--accent);
+    box-shadow:0 0 0 2px rgba(56,189,248,.15);
+  }
+
+  .btnShareCopy{
+    flex:0 0 auto;
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:0 14px;
+    font-size:12px;
+    font-family:inherit;
+    font-weight:600;
+    line-height:1;
+    cursor:pointer;
+    background:rgba(56,189,248,.14);
+    border:1px solid rgba(56,189,248,.45);
+    border-radius:7px;
+    color:#7dd3fc;
+    transition:all .15s;
+    white-space:nowrap;
+  }
+  .btnShareCopy:hover{
+    background:rgba(56,189,248,.24);
+    border-color:#38bdf8;
+    color:#bae6fd;
+  }
+  .btnShareCopy.copied{
+    background:rgba(74,222,128,.18);
+    border-color:#4ade80;
+    color:#86efac;
+  }
+  .btnShareCopyIcon{ font-size:12px; line-height:1; }
+  .btnShareCopyTxt{ letter-spacing:.4px; }
+
+  /* ---------- 次要操作：下载 QR ---------- */
+  .btnShareDownload{
+    margin-top:14px;
+    padding:6px 14px;
+    font-size:11.5px;
+    font-family:inherit;
+    letter-spacing:.3px;
+    color:var(--tx3);
+    background:transparent;
+    border:1px dashed var(--line);
+    border-radius:6px;
+    cursor:pointer;
+    transition:all .15s;
+  }
+  .btnShareDownload:hover{
+    color:#7dd3fc;
+    border-color:rgba(56,189,248,.45);
+    background:rgba(56,189,248,.05);
+  }
+
+  /* ============ 卡片光晕呼吸 ============ */
+  @keyframes cardPulse{
+    0%,100%{ box-shadow:0 1px 0 rgba(255,255,255,.05) inset,
+                        0 12px 40px rgba(0,0,0,.60),
+                        0 0 30px rgba(56,189,248,.06); }
+    50%    { box-shadow:0 1px 0 rgba(255,255,255,.05) inset,
+                        0 12px 40px rgba(0,0,0,.60),
+                        0 0 44px rgba(56,189,248,.18); }
+  }
+  #chartForce, #chartDeform{
+    animation:cardPulse 4.5s ease-in-out infinite;
+  }
+
+  /* ============ 品牌图标 + 水印脉冲 ============ */
+  @keyframes brandPulse{
+    0%,100%{ box-shadow:0 0 12px rgba(56,189,248,.14); }
+    50%    { box-shadow:0 0 22px rgba(56,189,248,.42); }
+  }
+  .brandIcon{ animation:brandPulse 3.2s ease-in-out infinite; }
+
+  /* 原 wmPulse 动画随 #stageWatermark 一并移除 */
+
+  /* ============ 底部状态栏 ============ */
+  #stageStatusBar{
+    position:absolute;
+    left:10px; right:10px; bottom:2px;
+    height:26px;
+    display:flex;align-items:center;gap:18px;
+    padding:0 14px;
+    background:linear-gradient(180deg, rgba(15,23,42,.92), rgba(11,18,32,.96));
+    border:1px solid rgba(56,189,248,.22);
+    border-radius:8px;
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:10.5px;
+    color:#94a3b8;
+    letter-spacing:.4px;
+    backdrop-filter:blur(6px);
+    z-index:8;
+    pointer-events:none;
+    user-select:none;
+  }
+  #stageStatusBar .ssbItem{display:flex;align-items:center;gap:6px}
+  #stageStatusBar .ssbItem b{
+    font-weight:600;color:#475569;font-size:9.5px;letter-spacing:1px;
+  }
+  #stageStatusBar .ssbItem i{
+    font-style:normal;color:#7dd3fc;font-weight:600;
+  }
+  #stageStatusBar .ssbItem i.ok{color:#4ade80}
+  #stageStatusBar .ssbSpacer{flex:1}
+  #stageStatusBar .ssbMeta{
+    letter-spacing:1.8px;font-size:9.5px;
+    background:linear-gradient(90deg,
+      rgba(125,211,252,.42) 0%,
+      rgba(125,211,252,.42) 40%,
+      #7dd3fc 50%,
+      rgba(125,211,252,.42) 60%,
+      rgba(125,211,252,.42) 100%);
+    background-size:200% 100%;
+    -webkit-background-clip:text;
+    background-clip:text;
+    -webkit-text-fill-color:transparent;
+    animation:metaShine 6s linear infinite;
+  }
+  @keyframes metaShine{
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+  @media(max-width:1020px){
+    #stageStatusBar{display:none}
+  }
+
+  /* ============ 扫描线动画 ============ */
+  #chartForce::after, #chartDeform::after{
+    content: '';
+    position: absolute;
+    left: 0; right: 0;
+    height: 140px;
+    background: linear-gradient(180deg,
+      transparent 0%,
+      rgba(56,189,248,0.035) 40%,
+      rgba(56,189,248,0.10) 50%,
+      rgba(56,189,248,0.035) 60%,
+      transparent 100%);
+    animation: scanSweep 7s linear infinite;
+    pointer-events: none;
+    z-index: 1;
+    mix-blend-mode: screen;
+  }
+  #chartDeform::after{ animation-delay: 3.5s; }
+  @keyframes scanSweep{
+    0%   { transform: translateY(-140px); }
+    100% { transform: translateY(100vh); }
+  }
+  body.recording #chartForce::after,
+  body.recording #chartDeform::after{
+    animation: none; opacity: 0;
+  }
+
+  /* ============ 求解徽章 ============ */
+  #solveBadge{
+    position:absolute;
+    right:20px; top:60px;
+    padding:4px 12px;
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:10px;letter-spacing:1.6px;
+    color:#7dd3fc;
+    background:rgba(15,23,42,.92);
+    border:1px solid rgba(56,189,248,.42);
+    border-radius:6px;
+    opacity:0;
+    transition:opacity .12s;
+    pointer-events:none;
+    z-index:11;
+  }
+  #solveBadge.on{ opacity:1; }
+  #solveBadge::before{ content:'◆ '; color:#38bdf8; }
+
+  /* ============ 节点编号按钮 ============ */
+  .segMini #btnIds.on{
+    background:linear-gradient(180deg,#0ea5e9,#0284c7);
+    border-color:#38bdf8;color:#fff;
+    box-shadow:0 0 8px rgba(56,189,248,.40);
+  }
 </style>
 
 <script>
@@ -1002,6 +1376,10 @@ var _hmt = _hmt || [];
 })();
 </script>
 
+<!-- 二维码生成（Kazuhiko Arase, MIT License）。加载失败时，
+     分享模态框自动退化为「仅复制链接」。 -->
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js" defer></script>
+
 </head>
 <body>
 <div id="app">
@@ -1009,11 +1387,11 @@ var _hmt = _hmt || [];
   <div id="leftCol">
     <div class="brand">
       <div class="brandIcon">
-        <img src="1.png" alt="力学概念训练器">
+        <img src="1.png" alt="Structura 测试版">
       </div>
       <div class="brandText">
         <div class="brandRow">
-          <span class="brandName">力学概念训练器</span>
+          <span class="brandName">Structura<span class="brandTest">测试版</span></span>
           <span class="brandVer">v0.1</span>
         </div>
         <div class="brandRule"></div>
@@ -1024,9 +1402,16 @@ var _hmt = _hmt || [];
 
     <!-- 模型摘要卡 -->
     <div class="modelSummary" id="modelSummary">
-      <div class="msTop" id="msTop">2 跨 × 2 层<span class="msTag">右悬挑</span></div>
-      <div class="msLine" id="msSpans">6.0 / 6.0 m</div>
-      <div class="msLine" id="msHeights">4.0 / 4.0 m</div>
+      <div class="msLeft">
+        <div class="msTop" id="msTop">2 跨 × 2 层<span class="msTag">右悬挑</span></div>
+        <div class="msLine" id="msSpans">6.0 / 6.0 m</div>
+        <div class="msLine" id="msHeights">4.0 / 4.0 m</div>
+      </div>
+      <div class="msRight">
+        <div class="msMetric"><span>H</span><b id="msTotalH">8.0</b><i>m</i></div>
+        <div class="msMetric"><span>B</span><b id="msTotalW">13.5</b><i>m</i></div>
+        <div class="msMetric"><span>H/B</span><b id="msAspect">0.59</b></div>
+      </div>
     </div>
 
     <!-- Tab 栏 -->
@@ -1254,8 +1639,20 @@ var _hmt = _hmt || [];
   <!-- ============ 右侧图形区 ============ -->
   <main id="stage">
 
-    <!-- 右下角水印 -->
-    <div id="stageWatermark">Zhao | Struct. E.</div>
+    <!-- 底部状态栏 -->
+    <div id="stageStatusBar">
+      <span class="ssbItem"><b>NODES</b><i id="ssbNodes">—</i></span>
+      <span class="ssbItem"><b>ELEMENTS</b><i id="ssbElems">—</i></span>
+      <span class="ssbItem"><b>DOF</b><i id="ssbDof">—</i></span>
+      <span class="ssbItem"><b>SOLVE</b><i id="ssbTime">—</i></span>
+      <span class="ssbItem"><b>RESIDUAL</b><i id="ssbResid">—</i></span>
+      <span class="ssbItem"><b>STATUS</b><i id="ssbStatus" class="ok">OK</i></span>
+      <span class="ssbSpacer"></span>
+      <span class="ssbMeta">ZHAO STRUCTURAL LAB · v0.1 · EST. 2026</span>
+    </div>
+
+    <!-- 求解徽章 -->
+    <div id="solveBadge">ANALYZING…</div>
 
     <!-- 顶部：显示模式（全局布局级开关） -->
     <div id="stageModeBar">
@@ -1322,20 +1719,21 @@ var _hmt = _hmt || [];
             <div class="segMini" id="segView">
               <button type="button" id="btnVals">数值</button>
               <button type="button" id="btnFreeze">冻结</button>
+              <button type="button" id="btnIds" title="显示节点/单元编号">N#</button>
               <button type="button" id="btnShotForce" title="导出内力图为 PNG（2x）">📷</button>
             </div>
           </div>
         </div>
         <div class="chartBar chartBar2">
           <div class="cbRow cbRowSplit">
-            <span class="barLbl">放大 k<sub>F</sub></span>
-            <input type="range" id="mScale" min="0.05" max="10" step="0.05" value="1">
+            <span class="barLbl" title="内力图显示缩放倍数（仅影响显示，不影响计算）">缩放</span>
+            <input type="range" id="mScale" min="0.05" max="10" step="0.05" value="1" title="内力图显示比例（仅影响显示，不改变计算结果）">
             <b id="v-mScale" class="barVal">1.00</b>
-            <span class="barLbl">β<sub>f</sub></span>
-            <input type="range" id="betaF" min="0" max="1" step="0.01" value="1">
+            <span class="barLbl" title="柱脚转动约束：1=固接，0=铰接，中间=弹性">柱脚 β<sub>f</sub></span>
+            <input type="range" id="betaF" min="0" max="1" step="0.01" value="1" title="柱脚转动约束 1=固接，0=铰接">
             <b id="v-betaF" class="barVal">1.00</b>
-            <span class="barLbl">β<sub>j</sub></span>
-            <input type="range" id="betaJ" min="0" max="1" step="0.01" value="1">
+            <span class="barLbl" title="梁端转动约束：1=刚接，0=铰接，中间=半刚接">梁端 β<sub>j</sub></span>
+            <input type="range" id="betaJ" min="0" max="1" step="0.01" value="1" title="梁端转动约束 1=刚接，0=铰接">
             <b id="v-betaJ" class="barVal">1.00</b>
           </div>
         </div>
@@ -1358,13 +1756,13 @@ var _hmt = _hmt || [];
           <div class="dTitle">变形图</div>
           <div class="dRow"><span>最大位移</span><b id="r-maxD">—</b></div>
           <div class="dRow"><span>最大层间位移角</span><b id="r-drift">—</b></div>
-          <div class="dRow"><span>侧移刚度 K</span><b id="r-K">—</b></div>
+          <div class="dRow"><span>表观侧移刚度 K</span><b id="r-K">—</b></div>
           <div class="dRow" id="rowPD" style="display:none"><span>P-Δ 放大系数 B</span><b id="r-pd">—</b></div>
         </div>
         <div class="chartBar">
-          <span class="barLbl">放大 k<sub>D</sub></span>
-          <input type="range" id="dScale" min="10" max="20000" step="10" value="100">
-          <b id="v-dScale" class="barVal">100</b>
+          <span class="barLbl" title="变形图显示缩放倍数（仅影响显示，不影响计算）">缩放</span>
+          <input type="range" id="dScale" min="10" max="100" step="5" value="30" title="变形图显示比例（仅影响显示，不改变计算结果）">
+          <b id="v-dScale" class="barVal">30</b>
           <button type="button" id="btnShotDeform" class="barBtn" title="导出变形图为 PNG（2x）">📷</button>
         </div>
       </div>
@@ -1489,7 +1887,48 @@ var _hmt = _hmt || [];
         <li><strong>悬挑引起的偏心弯矩</strong>：把 q<sub>c1</sub>、q<sub>c2</sub> 调到 20 kN/m（其他荷载置 0），观察右柱顶出现的不平衡弯矩如何传到柱脚 —— 这是纯竖向荷载（H = 0）下的不对称侧移，与水平力侧移机制完全不同。</li>
       </ul>
 
-      <h3>十、支持作者</h3>
+      <h3>十、界面速览</h3>
+      <ul>
+        <li><strong>左栏摘要卡</strong>：拓扑（跨 × 层 + 悬挑）、各跨跨度、各层层高、总高 H、总宽 B（柱列间净宽，<strong>不含悬挑</strong>）、高宽比 H/B，均实时更新。</li>
+        <li><strong>左栏 Tab</strong>：「模型」放拓扑 / 几何 / 截面，「荷载」放均布 / 悬挑 / 水平力 / 二阶效应。快捷键 <code>1</code> / <code>2</code> 切换。</li>
+        <li><strong>内力图卡（右上角工具条）</strong>：
+          <ul style="margin-top:3px">
+            <li><code>M</code> / <code>N</code> / <code>V</code>：切换内力类型；</li>
+            <li><code>全部</code> / <code>柱</code> / <code>梁</code>：筛选单元；</li>
+            <li><code>数值</code>：标注杆端内力；</li>
+            <li><code>冻结</code>：把当前结果存为浅灰虚线基准，后续改动与它对比；</li>
+            <li><code>N#</code>：显示节点 / 单元编号；</li>
+            <li><code>📷</code>：导出当前内力图为 PNG（2x 分辨率）。</li>
+          </ul>
+          弯矩图会自动标出<strong>反弯点</strong>（空心圆圈，仅标构件内部 M 严格变号处）。底栏「缩放」滑块只影响显示比例，不改变计算结果。
+        </li>
+        <li><strong>荷载简图卡</strong>：均布荷载箭头按屏幕像素自适应，两端封口；标签纯数字（位置已说明含义）；<strong>顶层标签贴箭头下方，中间层标签落在本层梁与上层梁之间的空格</strong>；柱脚符号随 β<sub>f</sub> 切换（固定 / 铰接 / 弹簧）；右上角标注柱梁截面尺寸。</li>
+        <li><strong>变形图卡</strong>：挠度曲线由 <code>EI·v'' = M(x)</code> 双重积分得到（对半刚接与悬挑同样成立）。叠加层显示最大位移、最大层间位移角、侧移刚度 K、P-Δ 放大系数 B。底栏「缩放」滑块控制变形放大倍数（10~100）。</li>
+        <li><strong>显示模式</strong>（右上角浮层）：<code>全部</code> / <code>仅受力图</code> / <code>仅变形图</code>。</li>
+        <li><strong>参数扫掠</strong>（底栏「▶ 扫掠」）：单参数 3s 循环播放，可暂停 / 重置 / 录制；参数按当前拓扑自动过滤（如无悬挑则不显示 q<sub>c</sub> 系列）。</li>
+        <li><strong>录制</strong>：录制范围为内力图或变形图单张 canvas。录制期间自动切白底、关扫描线、限制分辨率 ≤ 1920×1080，优先 mp4，回退 webm。</li>
+        <li><strong>URL 分享</strong>（底栏 🔗）：把当前工况编码进 <code>#st=...</code> 一键复制。支持 <code>file://</code> / <code>https://</code> / <code>localhost</code>。重置全部时自动清除 hash。</li>
+        <li><strong>底部状态栏</strong>：<code>NODES</code> 节点数 · <code>ELEMENTS</code> 单元数 · <code>DOF</code> 自由度数 · <code>SOLVE</code> 本次求解耗时（ms）· <code>RESIDUAL</code> 平衡残差（柱脚反力之和与外部荷载之和的差值，越小越准）· <code>STATUS</code> 状态（残差 &lt; 1e-8 显示绿色 OK，否则 CHECK）。</li>
+      </ul>
+
+      <h3>十一、P-Δ 放大系数与侧移刚度的说明</h3>
+      <p><strong>P-Δ 放大系数 B</strong>（仅在「荷载」Tab 开启 P-Δ 开关后显示）：</p>
+      <ul>
+        <li>物理含义：二阶效应会把当前的内力和位移<strong>放大</strong>约 B 倍。B = 1 表示无二阶效应；B = 1.1 表示放大 10%。</li>
+        <li>计算式：<code>B = 1 / (1 − ΣN / ΣN_cr)</code>，其中 ΣN 是柱脚竖向反力之和，ΣN<sub>cr</sub> = ΣH · h<sub>总</sub> / u<sub>顶</sub> 是等效弹性临界荷载。</li>
+        <li><code>ΣN / ΣN_cr</code> 是稳定系数，必须 &lt; 1；越接近 1，B 越大，越接近失稳。</li>
+        <li>反直觉之处：<strong>水平力越大，B 反而越接近 1</strong>。因为水平力增大会让 u<sub>顶</sub> 增大，ΣN<sub>cr</sub> 随之增大，稳定系数下降。</li>
+        <li>⚠ 这是<strong>近似值</strong>，不做 P-Δ 迭代；ΣN<sub>cr</sub> 按等效单自由度反推，对刚度沿高度不均匀的结构误差较大。不能用于实际工程的稳定验算。</li>
+      </ul>
+      <p style="margin-top:8px"><strong>侧移刚度 K</strong>：</p>
+      <ul>
+        <li>定义：<code>K = ΣH / |u_顶平均|</code>，即总水平力除以顶层柱顶的平均水平位移。</li>
+        <li>⚠ 当竖向荷载<strong>不对称</strong>时（例如有悬挑均布 q<sub>c</sub>，或左右跨荷载不等），柱顶位移里会混入竖向荷载引起的侧移分量，此时 K 是一个<strong>表观值</strong>，会比纯侧移刚度偏小，且随竖向荷载变化而变化。</li>
+        <li>想要严格的侧移刚度：把悬挑荷载和跨内荷载全部调 0，只保留水平力。</li>
+        <li>自检场景下，K 的<strong>变化趋势</strong>（拖动 β<sub>f</sub>、r 时 K 怎么变）比绝对值更有意义。</li>
+      </ul>
+
+      <h3>十二、支持作者</h3>
       <p>如果这个工具帮你理清过某个力学概念，可以请作者喝杯咖啡。</p>
       <div class="tipInline">
         <img src="m.jpg" alt="打赏码">
@@ -1506,16 +1945,58 @@ var _hmt = _hmt || [];
 
 <!-- ============ 打赏弹窗 ============ -->
 <div class="modal" id="modalTip">
-  <div class="modalCard modalCardTip">
+  ...
+</div>
+
+<!-- ============ 分享弹窗 ============ -->
+<div class="modal" id="modalShare">
+  <div class="modalCard modalCardShare">
     <div class="modalHead">
-      <h2>支持作者</h2>
-      <button class="modalClose" id="btnTipClose" title="关闭">×</button>
+      <h2><span class="shareTitleMark">◆</span> 分享当前工况</h2>
+      <button class="modalClose" id="btnShareClose" title="关闭">×</button>
     </div>
-    <div class="modalBody modalBodyTip">
-      <img src="m.jpg" alt="打赏码" class="tipQR">
-      <p class="tipLine">微信扫码 · 赞赏码</p>
-      <p class="tipMeta">金额随意 · 感谢支持</p>
-      <p class="tipSign">—— Zhao | Struct. E.</p>
+    <div class="modalBody modalBodyShare">
+
+      <!-- file:// 或 localhost 打开时的提示条（默认隐藏） -->
+      <div class="shareLocalWarn" id="shareLocalWarn" hidden>
+        <span class="shareLocalWarnIcon">⚠</span>
+        <span>当前是本地打开。二维码已指向线上地址，手机可直接扫码。</span>
+      </div>
+
+      <!-- QR 展示区：光晕 + 白底 + 四角 HUD 刻线 -->
+      <div class="shareQRFrame">
+        <div class="shareQRBox" id="shareQRBox">
+          <span class="qrCorner tl"></span>
+          <span class="qrCorner tr"></span>
+          <span class="qrCorner bl"></span>
+          <span class="qrCorner br"></span>
+          <div class="shareQRLoading">二维码生成中…</div>
+        </div>
+      </div>
+
+      <!-- 装饰 meta 行 -->
+      <div class="shareMeta">
+        <span class="shareMetaDot"></span>
+        <span>STRUCTURA · LIVE LINK</span>
+        <span class="shareMetaDot"></span>
+      </div>
+
+      <p class="shareHint">扫码在手机上打开当前工况</p>
+
+      <!-- URL 字段 + 复制 -->
+      <div class="shareURLRow">
+        <input type="text" id="shareURLField" class="shareURLField" readonly>
+        <button type="button" id="btnShareCopy" class="btnShareCopy" title="复制链接">
+          <span class="btnShareCopyIcon">📋</span>
+          <span class="btnShareCopyTxt">复制</span>
+        </button>
+      </div>
+
+      <!-- 次要操作：下载二维码 -->
+      <button type="button" id="btnShareDownload" class="btnShareDownload">
+        ⬇ 下载二维码（高分辨率 PNG）
+      </button>
+
     </div>
   </div>
 </div>
@@ -1527,6 +2008,13 @@ var _hmt = _hmt || [];
    1. 状态
    ===================================================================== */
 const E_CONC = 3.0e7;
+
+/* 转动约束的统一判定阈值：
+   >= BETA_FIXED 视为固定/刚接，<= BETA_HINGE 视为铰接，中间为弹性/半刚接。
+   原先 colKeff、支座绘制、analyze 三处各写各的阈值（0.999/0.001、0.99/0.01），
+   同一 β 值在不同面板可能落到不同档位，这里统一。 */
+const BETA_FIXED = 0.99;
+const BETA_HINGE = 0.01;
 
 const S = {
   /* 拓扑 */
@@ -1547,9 +2035,10 @@ const S = {
   betaF:1.0,
   betaJ:1.0,
   mScale:1.0,
-  dScale:100,
+  dScale:30,
   elFilter:'all',
   showVals:false,
+  showIds:false,
   showPDelta:false,
   displayMode:'all',
   highlight:null,
@@ -1616,13 +2105,18 @@ function localK(el){
   let d=4*EI/L;
   let e=2*EI/L;
 
-  if(el.kind === 'beam' && el.alpha > 0){
-    const al = el.alpha;
-    const D  = 1 + 8*al + 12*al*al;
-    b = 12*EI/(L*L*L) / (1 + 6*al);
-    c = 6*EI/(L*L) * (1 + 2*al) / D;
-    d = (4*EI/L) * (1 + 3*al) / D;
-    e = (2*EI/L) / D;
+  if(el.kind === 'beam'){
+    if(el.hinge){
+      /* 两端完全铰接：弯曲刚度项全为 0，只剩轴向 */
+      b = 0; c = 0; d = 0; e = 0;
+    } else if(el.alpha > 0){
+      const al = el.alpha;
+      const D  = 1 + 8*al + 12*al*al;
+      b = 12*EI/(L*L*L) / (1 + 6*al);
+      c = 6*EI/(L*L) * (1 + 2*al) / D;
+      d = (4*EI/L) * (1 + 3*al) / D;
+      e = (2*EI/L) / D;
+    }
   }
 
   return [
@@ -1653,10 +2147,15 @@ function localEqLoad(el){
   const {w,L}=el;
   let pFe = w*L*L/12;
 
-  if(el.kind === 'beam' && el.alpha > 0){
-    const al = el.alpha;
-    const D  = 1 + 8*al + 12*al*al;
-    pFe = (w*L*L/12) * (1 + 6*al) / D;
+  if(el.kind === 'beam'){
+    if(el.hinge){
+      /* 两端铰接：固端弯矩为 0，均布荷载全部转为节点力 */
+      pFe = 0;
+    } else if(el.alpha > 0){
+      const al = el.alpha;
+      const D  = 1 + 8*al + 12*al*al;
+      pFe = (w*L*L/12) * (1 + 6*al) / D;
+    }
   }
 
   return [0, w*L/2, pFe, 0, w*L/2, -pFe];
@@ -1682,14 +2181,45 @@ function globalEqLoad(el){
    - 梁端 β_j 描述的是「梁端半刚接」，不是「柱顶转动弹簧」。
      真实节点处柱顶约束由梁的抗弯刚度决定，本处直接借用了 β_j。 */
 function colKeff(betaF, betaJ){
-  const kB = betaF >= 0.999 ? Infinity :
-             betaF <= 0.001 ? 0 : 4*betaF/(1-betaF);
-  const kT = betaJ >= 0.999 ? Infinity :
-             betaJ <= 0.001 ? 0 : 4*betaJ/(1-betaJ);
+  const kB = betaF >= BETA_FIXED ? Infinity :
+             betaF <= BETA_HINGE ? 0 : 4*betaF/(1-betaF);
+  const kT = betaJ >= BETA_FIXED ? Infinity :
+             betaJ <= BETA_HINGE ? 0 : 4*betaJ/(1-betaJ);
   if(!isFinite(kB) && !isFinite(kT)) return 12;
   if(!isFinite(kB)) return 12*(1+kT)/(4+kT);
   if(!isFinite(kT)) return 12*(1+kB)/(4+kB);
   return 12*(kB + kT + kB*kT)/(12 + 4*kB + 4*kT + kB*kT);
+}
+
+/* 水平力按柱分配的权重（未归一化）。
+   返回长度为 nCol 的数组。三处调用方（求解 / 荷载图 / 读数面板）
+   共用这一份逻辑，改分配规则时只需改这里。
+
+   - Hmode='left'：全部给左柱 → [1, 0, 0, ...]
+   - Hmode='dstiff'：权重 = colKeff(betaF, betaJ) × kc。
+     注意 colKeff 是各柱的公共因子，归一化时会被约掉，
+     最终分配比例实际只反映 kc（边柱 = 1，内柱 = r）。
+     这也是「同层各柱端部约束相同」这一近似在代码里的真实体现。 */
+function computeHShare(p, nCol){
+  if(p.Hmode === 'left'){
+    const w = new Array(nCol).fill(0);
+    w[0] = 1;
+    return w;
+  }
+  const cE = colKeff(p.betaF, p.betaJ);
+  if(!isFinite(cE) || cE < 1e-12){
+    /* colKeff 退化为 0：两端完全铰接，框架本已是机构，实际会在
+       高斯消元阶段抛异常。这里返回均分权重仅作为兜底，
+       避免调用方拿到 NaN。 */
+    return new Array(nCol).fill(1);
+  }
+  const isMid = c => (c > 0 && c < nCol - 1);
+  const w = [];
+  for(let c = 0; c < nCol; c++){
+    const kc = isMid(c) ? p.r : 1.0;
+    w.push(cE * kc);
+  }
+  return w;
 }
 
 function analyze(p){
@@ -1741,14 +2271,24 @@ function analyze(p){
       const i=nid(c,lv), j=nid(c,lv+1);
       const dx=nodes[j].x-nodes[i].x, dy=nodes[j].y-nodes[i].y;
       const L=Math.hypot(dx,dy);
-      els.push({i,j,L,cs:dx/L,sn:dy/L,EA:EAcc,EI:EIcc,w:0,q:0,kind:'col',lev:lv+1});
+      els.push({i,j,L,cs:dx/L,sn:dy/L,EA:EAcc,EI:EIcc,w:0,q:0,kind:'col',lev:lv+1,col:c});
     }
   }
 
-  /* ---- 半刚接参数 ---- */
+  /* ---- 半刚接 / 完全铰接参数 ----
+     - betaJ >= BETA_FIXED：alphaJ = 0，标准刚接梁单元；
+     - betaJ 在中间区间：alphaJ = (1-betaJ)/(4·betaJ)，标准半刚接；
+     - betaJ <= BETA_HINGE：走显式铰接分支，梁的弯曲刚度项全部置 0。
+       旧代码用 alphaJ = 1e6 近似无穷大，会让 D = 1 + 8α + 12α² ≈ 1.2e13，
+       矩阵条件数急剧恶化；这里改成真正的铰接单元，数值上干净得多。 */
   let alphaJ = 0;
-  if(p.betaJ < 0.99){
-    alphaJ = (p.betaJ <= 0.01) ? 1e6 : (1 - p.betaJ) / (4 * p.betaJ);
+  let beamHinge = false;
+  if(p.betaJ < BETA_FIXED){
+    if(p.betaJ <= BETA_HINGE){
+      beamHinge = true;
+    } else {
+      alphaJ = (1 - p.betaJ) / (4 * p.betaJ);
+    }
   }
 
   /* ---- 跨内梁：nLev 层 × nBay 跨 ---- */
@@ -1759,7 +2299,7 @@ function analyze(p){
       const dx=nodes[j].x-nodes[i].x, dy=nodes[j].y-nodes[i].y;
       const L=Math.hypot(dx,dy);
       els.push({i,j,L,cs:dx/L,sn:dy/L,EA:EAb,EI:EIb,w:-q,q,
-                kind:'beam',alpha:alphaJ,lev:lv,bay:c+1});
+                kind:'beam',alpha:alphaJ,hinge:beamHinge,lev:lv,bay:c+1});
     }
   }
 
@@ -1794,23 +2334,13 @@ function analyze(p){
   /* ---- 水平力施加（nCol 柱通用） ---- */
   function applyFloorH(level, H){
     if(H <= 0) return;
-    if(p.Hmode === 'left'){
-      F[nid(0, level)*3] += H;
-      return;
-    }
-    /* D 值法：每列相对刚度 = colKeff × kc，kc 边柱 1、内柱 r */
-    const cE = colKeff(p.betaF, p.betaJ);
-    if(!isFinite(cE) || cE < 1e-12){
+    const w = computeHShare(p, nCol);
+    let sum = 0;
+    for(const v of w) sum += v;
+    if(sum < 1e-12){
       const share = H / nCol;
       for(let c=0;c<nCol;c++) F[nid(c, level)*3] += share;
       return;
-    }
-    let sum = 0;
-    const w = [];
-    for(let c=0;c<nCol;c++){
-      const kc = isMidCol(c) ? p.r : 1.0;
-      const wc = cE * kc;
-      w.push(wc); sum += wc;
     }
     for(let c=0;c<nCol;c++) F[nid(c, level)*3] += H * w[c] / sum;
   }
@@ -1825,9 +2355,9 @@ function analyze(p){
     fixed.add(n*3);
     fixed.add(n*3+1);
     const thz = n*3 + 2;
-    if(p.betaF >= 0.99){
+    if(p.betaF >= BETA_FIXED){
       fixed.add(thz);
-    } else if(p.betaF > 0.01){
+    } else if(p.betaF > BETA_HINGE){
       const kc = isMidCol(c) ? p.r : 1.0;
       const EIcol = EIc * kc;
       const Rf = (4*EIcol/hFloor1) * p.betaF / (1 - p.betaF);
@@ -1994,6 +2524,93 @@ function setupCanvas(canvas, overrideDPR){
   return {ctx,W,H};
 }
 
+/* ============================================================
+   工程网格背景：24px 副格 + 120px 主格，淡青色
+   ============================================================ */
+function drawGrid(ctx, W, H){
+  ctx.save();
+  const step = 24;
+  ctx.strokeStyle = 'rgba(56,189,248,0.045)';
+  ctx.lineWidth = 0.5;
+  for(let x=0; x<=W; x+=step){
+    ctx.beginPath(); ctx.moveTo(x+0.5, 0); ctx.lineTo(x+0.5, H); ctx.stroke();
+  }
+  for(let y=0; y<=H; y+=step){
+    ctx.beginPath(); ctx.moveTo(0, y+0.5); ctx.lineTo(W, y+0.5); ctx.stroke();
+  }
+  ctx.strokeStyle = 'rgba(56,189,248,0.09)';
+  for(let x=0; x<=W; x+=step*5){
+    ctx.beginPath(); ctx.moveTo(x+0.5, 0); ctx.lineTo(x+0.5, H); ctx.stroke();
+  }
+  for(let y=0; y<=H; y+=step*5){
+    ctx.beginPath(); ctx.moveTo(0, y+0.5); ctx.lineTo(W, y+0.5); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+/* ============================================================
+   HUD 装饰：四角 L 刻线 + 顶部状态文本
+   ============================================================ */
+function drawHUD(ctx, W, H, label, showSolver, topOffset){
+  ctx.save();
+  ctx.strokeStyle = 'rgba(56,189,248,0.55)';
+  ctx.lineWidth = 1.2;
+  const L = 14, M = 10;
+  const corners = [
+    [M, M, 1, 1], [W-M, M, -1, 1],
+    [M, H-M, 1, -1], [W-M, H-M, -1, -1]
+  ];
+  for(const [x,y,dx,dy] of corners){
+    ctx.beginPath();
+    ctx.moveTo(x+dx*L, y); ctx.lineTo(x, y); ctx.lineTo(x, y+dy*L);
+    ctx.stroke();
+  }
+  const ty = M + 4 + (topOffset || 0);
+  ctx.font = '9.5px "JetBrains Mono", ui-monospace, monospace';
+  ctx.fillStyle = 'rgba(125,211,252,0.70)';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  ctx.fillText('◆ ' + (label||'STATIC / LINEAR-ELASTIC'), M+4, ty);
+  if(showSolver !== false){
+    ctx.textAlign = 'right';
+    ctx.fillText('SOLVER: MDOF-CG · CONVERGED', W-M-4, ty);
+  }
+  ctx.restore();
+}
+
+
+/* ============================================================
+   节点 / 单元编号
+   ============================================================ */
+function drawIds(ctx, model, toS){
+  ctx.save();
+  ctx.font = 'bold 8px "JetBrains Mono", ui-monospace, monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  /* 节点编号 N1 N2 ... */
+  ctx.fillStyle = 'rgba(125,211,252,0.85)';
+  for(let idx=0; idx<model.nodes.length; idx++){
+    const n = model.nodes[idx];
+    const [sx,sy] = toS(n.x, n.y);
+    ctx.fillText('N'+(idx+1), sx + 9, sy - 8);
+  }
+
+  /* 单元编号 E1 E2 ... */
+  ctx.fillStyle = 'rgba(74,222,128,0.85)';
+  for(let idx=0; idx<model.els.length; idx++){
+    const el = model.els[idx];
+    const ni = model.nodes[el.i], nj = model.nodes[el.j];
+    const [ax,ay] = toS(ni.x, ni.y);
+    const [bx,by] = toS(nj.x, nj.y);
+    const mx = (ax+bx)/2, my = (ay+by)/2;
+    const dx = bx-ax, dy = by-ay;
+    const len = Math.hypot(dx,dy) || 1;
+    const nx = -dy/len * 10, ny = dx/len * 10;
+    ctx.fillText('E'+(idx+1), mx + nx, my + ny);
+  }
+  ctx.restore();
+}
+
 function makeTransform(model, W, H, pad){
   let padL, padR, padT, padB;
   if(typeof pad === 'number'){
@@ -2049,16 +2666,16 @@ function drawSupports(ctx, model, toS, base){
   const T = theme();
   const nCol = model.nCol || 3;
   const nLev = model.nLev || 2;
-  /* 与 drawFrameLines(useSectionWidth) 里柱的线宽保持一致 */
-  const colW = model.p ? Math.max(3.5, Math.min(9, 2.5 + model.p.hc/130)) : 5;
+  /* 与 drawFrameLines 主线宽保持一致：2.5px */
+  const colW = 2.5;
   for(let c=0;c<nCol;c++){
     const n = model.nodes[c*(nLev+1)];
     const [sx,sy] = toS(n.x, n.y);
 
     /* 柱底 → 支座符号顶端的连接线：与柱同宽，避免"柱子被切断" */
-    const topY = (base >= 0.99) ? sy + 9
-               : (base <= 0.01) ? sy + 11
-               :                  sy + 4;
+    const topY = (base >= BETA_FIXED) ? sy + 9
+               : (base <= BETA_HINGE) ? sy + 11
+               :                        sy + 4;
     ctx.strokeStyle = T.support;
     ctx.lineWidth   = colW;
     ctx.beginPath();
@@ -2069,13 +2686,13 @@ function drawSupports(ctx, model, toS, base){
     ctx.strokeStyle = T.support;
     ctx.lineWidth = 1.6;
 
-    if(base >= 0.99){
+    if(base >= BETA_FIXED){
       /* 固定：横线 + 斜线 */
       ctx.beginPath(); ctx.moveTo(sx-11, sy+9); ctx.lineTo(sx+11, sy+9); ctx.stroke();
       for(let k=-9;k<=9;k+=6){
         ctx.beginPath(); ctx.moveTo(sx+k, sy+9); ctx.lineTo(sx+k-5, sy+16); ctx.stroke();
       }
-    } else if(base <= 0.01){
+    } else if(base <= BETA_HINGE){
       /* 铰接：圆圈 + 横线 + 斜线 */
       ctx.beginPath(); ctx.moveTo(sx-11, sy+11); ctx.lineTo(sx+11, sy+11); ctx.stroke();
       for(let k=-9;k<=9;k+=6){
@@ -2129,8 +2746,10 @@ function drawLoadDiagram(canvas, model, dprOverride){
 
   const T = theme();
   ctx.fillStyle=T.bg; ctx.fillRect(0,0,W,H);
+  drawGrid(ctx, W, H);
+  drawHUD(ctx, W, H, 'LOAD DIAGRAM', false);
 
-  drawFrameLines(ctx, model, toS, T.frame, 2.5, false, true);
+  drawFrameLines(ctx, model, toS, T.frame, 2.5, false, false);
   drawSupports(ctx, model, toS, model.p.betaF);
 
   ctx.fillStyle=T.node;
@@ -2142,10 +2761,10 @@ function drawLoadDiagram(canvas, model, dprOverride){
 
   /* βj < 0.99：跨内梁两端画半刚接圈（纯视觉，与是否有荷载无关）
      βj 越接近 0 圈越大、越亮 —— 直观提示"梁端正在从刚接向铰接过渡" */
-  if(model.p.betaJ < 0.99){
-    const t   = 1 - model.p.betaJ;              /* 0 → 1 */
-    const R   = 4 + t*2;                        /* 半径 4 → 6 */
-    const lw  = 1.4 + t*1.2;                    /* 线宽 1.4 → 2.6 */
+  if(model.p.betaJ < BETA_FIXED){
+    const t   = 1 - model.p.betaJ;
+    const R   = 3 + t*1.5;
+    const lw  = 1.0 + t*0.8;
     const seen = new Set();
     for(const el of model.els){
       if(el.kind !== 'beam' || el.isCant) continue;
@@ -2172,53 +2791,58 @@ function drawLoadDiagram(canvas, model, dprOverride){
     let q = 0, showLabel = false, labelTxt = '';
     if(el.isCant){
       q = p['qc'+lv];
-      labelTxt = `q_c${lv} = ${q.toFixed(1)} kN/m`;
+      labelTxt = q.toFixed(1);
       showLabel = true;
     } else {
       q = p['q'+lv];
       showLabel = (el.bay === 1);  // 只标第一跨
     }
     if(q <= 0) continue;
-    /* 奇偶层上下交错：奇数层标下方、偶数层标上方 —— 避免楼层标签堆叠 */
-    const placeAbove = (lv % 2 === 0);
-    drawUDL(ctx, toS, model.nodes[el.i], model.nodes[el.j], q, showLabel, labelTxt, placeAbove);
+    /* 竖向荷载标签统一放梁上方（荷载箭头之上） */
+    const placeAbove = true;
+    // 上一层梁的屏幕 y；顶层无上层梁 → null（保持原样）
+let labelMidY = null;
+if(lv < model.nLev){
+  const [ , yBeam ] = toS(model.nodes[el.i].x, model.nodes[el.i].y);
+  const [ , yUp   ] = toS(model.nodes[el.i].x, model.nodes[el.i].y + p['h'+(lv+1)]);
+  labelMidY = (yBeam + yUp) / 2;
+}
+drawUDL(ctx, toS, model.nodes[el.i], model.nodes[el.j],
+        q, showLabel, labelTxt, placeAbove, labelMidY);
   }
 
-  function drawFloorH(level, H, lblTotal){
+  function drawFloorH(level, H){
     if(H <= 0) return;
     const nCol = model.nCol, nid = model.nid;
-    if(p.Hmode === 'left'){
-      drawHF(ctx, toS, model.nodes[nid(0, level)], H, `${lblTotal}=${H.toFixed(1)} kN`);
+    const w = computeHShare(p, nCol);
+    let sum = 0;
+    for(const v of w) sum += v;
+    if(sum < 1e-12){
+      for(let c=0;c<nCol;c++){
+        drawHF(ctx, toS, model.nodes[nid(c, level)], H/nCol,
+               c===0 ? H.toFixed(1) : '');
+      }
       return;
     }
-    const isMid = c => (c>0 && c<nCol-1);
-    const cE = colKeff(p.betaF, p.betaJ);
-    const parts = [];
-    if(!isFinite(cE) || cE < 1e-12){
-      for(let c=0;c<nCol;c++) parts.push(H/nCol);
-    } else {
-      let sum = 0;
-      const w = [];
-      for(let c=0;c<nCol;c++){
-        const kc = isMid(c) ? p.r : 1.0;
-        w.push(cE * kc); sum += cE * kc;
-      }
-      for(let c=0;c<nCol;c++) parts.push(H * w[c] / sum);
-    }
     for(let c=0;c<nCol;c++){
-      drawHF(ctx, toS, model.nodes[nid(c, level)], parts[c],
-             c===0 ? `${lblTotal}=${H.toFixed(1)} kN` : '');
+      const Hc = H * w[c] / sum;
+      if(Hc <= 0) continue;   /* left 模式下非左柱权重为 0，不画箭头 */
+      drawHF(ctx, toS, model.nodes[nid(c, level)], Hc,
+             c===0 ? H.toFixed(1) : '');
     }
   }
-  const subs = ['₀','₁','₂','₃'];
   for(let lv=1; lv<=model.nLev; lv++){
-    drawFloorH(lv, p['H'+lv], 'H'+subs[lv]);
+    drawFloorH(lv, p['H'+lv]);
   }
 
   /* 尺寸线 + 截面信息（仅当画布足够宽时） */
   if(showDim){
     drawDims(ctx, model, toS, T);
     drawSectionInfo(ctx, model, W, T);
+  }
+
+  if(p.showIds){
+    drawIds(ctx, model, toS);
   }
 }
 
@@ -2281,12 +2905,11 @@ function drawDims(ctx, model, toS, T){
   }
 
   /* 底部跨度尺寸线 */
-  const subs = ['₀','₁','₂','₃'];
   for(let c=0; c<nBay; c++){
     const Lval = p['L'+(c+1)];
     drawDimLine(ctx,
       xCols[c], dimY, xCols[c+1], dimY,
-      `L${subs[c+1]} = ${Lval.toFixed(1)}`,
+      Lval.toFixed(1),
       T.frameThin, 'h');
   }
 
@@ -2297,13 +2920,13 @@ function drawDims(ctx, model, toS, T){
       const xb = toS(nCant.x, nCant.y)[0];
       drawDimLine(ctx,
         xCols[nBay], dimY, xb, dimY,
-        `Lc = ${p.Lc.toFixed(1)}`,
+        p.Lc.toFixed(1),
         T.frameThin, 'h');
     }
   }
 
-  /* 左侧层高尺寸线 */
-  const dimX = xCols[0] - 34;
+  /* 左侧层高尺寸线（左移以避开柱节点圆点） */
+  const dimX = xCols[0] - 48;
   const yLev = [];
   for(let lv=0; lv<=nLev; lv++){
     const n = model.nodes[lv];   /* 左柱第 lv 个节点 */
@@ -2313,7 +2936,7 @@ function drawDims(ctx, model, toS, T){
     const hval = p['h'+lv];
     drawDimLine(ctx,
       dimX, yLev[lv], dimX, yLev[lv-1],
-      `h${subs[lv]} = ${hval.toFixed(1)}`,
+      hval.toFixed(1),
       T.frameThin, 'v');
   }
 }
@@ -2331,19 +2954,31 @@ function drawSectionInfo(ctx, model, W, T){
   ctx.restore();
 }
 
-function drawUDL(ctx, toS, ni, nj, q, showLabel, labelTxt, placeAbove){
+function drawUDL(ctx, toS, ni, nj, q, showLabel, labelTxt, placeAbove, labelMidY){
   const T = theme();
   const [x1,y1] = toS(ni.x, ni.y);
   const [x2,y2] = toS(nj.x, nj.y);
 
   const arrowLen = 16 + Math.min(20, q/25);
-  const N = 10;
+  /* 箭头数量按屏幕像素间距自适应：约每 30px 一个，至少 2 个，最多 12 个。
+     跨内梁和悬挑端视觉间距一致。 */
+  const screenLen = Math.hypot(x2-x1, y2-y1);
+  const N = Math.max(2, Math.min(12, Math.round(screenLen / 30)));
 
+  /* 顶线 */
   ctx.strokeStyle = T.udl;
   ctx.lineWidth = 1.4;
   ctx.beginPath();
   ctx.moveTo(x1, y1 - arrowLen);
   ctx.lineTo(x2, y2 - arrowLen);
+  ctx.stroke();
+
+  /* 两端封口竖线（标准 UDL 符号） */
+  ctx.beginPath();
+  ctx.moveTo(x1, y1 - arrowLen);
+  ctx.lineTo(x1, y1 - 3);
+  ctx.moveTo(x2, y2 - arrowLen);
+  ctx.lineTo(x2, y2 - 3);
   ctx.stroke();
 
   for(let k=0;k<N;k++){
@@ -2367,17 +3002,17 @@ function drawUDL(ctx, toS, ni, nj, q, showLabel, labelTxt, placeAbove){
 
   if(showLabel){
     const mx = (x1+x2)/2;
-    const txt = labelTxt || `q = ${q.toFixed(1)} kN/m`;
+    const txt = labelTxt || q.toFixed(1);
     ctx.font = 'bold 11px ui-sans-serif,system-ui,sans-serif';
     ctx.textAlign = 'center';
 
     if(placeAbove){
       /* 梁上方：出箭头再往上 22px */
-      const my = (y1+y2)/2 - arrowLen - 22;
-      ctx.textBaseline = 'bottom';
+      const my = (labelMidY != null) ? labelMidY - 12 : (y1+y2)/2 - arrowLen - 12;
+      ctx.textBaseline = 'middle';
       const w = ctx.measureText(txt).width;
       ctx.fillStyle = T.udlLabelBg;
-      ctx.fillRect(mx - w/2 - 4, my - 13, w + 8, 15);
+      ctx.fillRect(mx - w/2 - 4, my - 8, w + 8, 16);
       ctx.fillStyle = T.udlLabel;
       ctx.fillText(txt, mx, my);
     } else {
@@ -2513,6 +3148,8 @@ function drawInternal(canvas, model, dprOverride){
   });
 
   ctx.fillStyle=T.bg; ctx.fillRect(0,0,W,H);
+  drawGrid(ctx, W, H);
+  drawHUD(ctx, W, H, 'INTERNAL FORCE · ' + type);
 
   const NP = 61;
   const targetPx = Math.min(W,H)*0.055;
@@ -2537,7 +3174,9 @@ function drawInternal(canvas, model, dprOverride){
         const bx = ni.x + (nj.x-ni.x)*xi;
         const by = ni.y + (nj.y-ni.y)*xi;
         const [sx,sy] = toS(bx,by);
-        const off = -(val/FSTYLE.ref)*targetPx*BASE.p.mScale;
+        /* 基准曲线与当前曲线共用当前 mScale —— 否则冻结后再拖 mScale，
+           基准按冻结时的比例、当前按新比例绘制，两条线彻底失去可比性。 */
+        const off = -(val/FSTYLE.ref)*targetPx*model.p.mScale;
         const px = sx + nx*off, py = sy + ny*off;
         if(k===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
       }
@@ -2575,7 +3214,16 @@ function drawInternal(canvas, model, dprOverride){
     for(let k=1;k<curve.length;k++) ctx.lineTo(curve[k][0], curve[k][1]);
     for(let k=base.length-1;k>=0;k--) ctx.lineTo(base[k][0], base[k][1]);
     ctx.closePath();
-    ctx.fillStyle = st.fill;
+    /* 沿构件方向渐变：端部深，跨中浅 */
+    const grad = ctx.createLinearGradient(
+      curve[0][0], curve[0][1],
+      curve[curve.length-1][0], curve[curve.length-1][1]
+    );
+    const baseRGB = st.color;
+    grad.addColorStop(0,   baseRGB + '99');
+    grad.addColorStop(0.5, baseRGB + '44');
+    grad.addColorStop(1,   baseRGB + '99');
+    ctx.fillStyle = grad;
     ctx.fill();
 
     ctx.beginPath();
@@ -2612,8 +3260,12 @@ function drawInternal(canvas, model, dprOverride){
       const ux = dxu/Lu, uy = dyu/Lu;
 
       if(el.kind === 'col'){
-        /* 柱：左柱、右柱标左侧（朝跨内），中柱标右侧 —— 避免柱标签撞柱、撞边缘 */
-        const side = (ni.col === 1) ? 1 : -1;
+        /* 最左柱标右侧（朝跨内），最右柱标左侧（朝跨内），
+           中柱按奇偶交替，避免相邻柱标签撞字 */
+        let side;
+        if(ni.col === 0)                              side = 1;
+        else if(ni.col === model.nCol - 1)            side = -1;
+        else                                          side = (ni.col % 2 === 1) ? 1 : -1;
         const off = 22;
         if(Math.abs(v0) > NZ){
           ctx.fillText(v0.toFixed(1), ix + side*off, iy);
@@ -2710,10 +3362,10 @@ function drawInternal(canvas, model, dprOverride){
 
   /* βj < 0.99：跨内梁两端画半刚接圈（与荷载简图一致）
      βj 越接近 0，圈越大越亮 —— 直观提示「梁端正从刚接向铰接过渡」 */
-  if(model.p.betaJ < 0.99){
+  if(model.p.betaJ < BETA_FIXED){
     const t   = 1 - model.p.betaJ;
-    const R   = 5 + t*3;
-    const lw  = 1.4 + t*1.2;
+    const R   = 3 + t*2;
+    const lw  = 1.0 + t*0.8;
     const seen = new Set();
     for(const el of model.els){
       if(el.kind !== 'beam' || el.isCant) continue;
@@ -2732,6 +3384,10 @@ function drawInternal(canvas, model, dprOverride){
       }
     }
   }
+
+  if(model.p.showIds){
+    drawIds(ctx, model, toS);
+  }
 }
 
 /* =====================================================================
@@ -2747,6 +3403,8 @@ function drawDeform(canvas, model, dprOverride){
   const {toS} = makeTransform(model, W, H, pad);
 
   ctx.fillStyle=T.bg; ctx.fillRect(0,0,W,H);
+  drawGrid(ctx, W, H);
+  drawHUD(ctx, W, H, 'DEFORMED SHAPE');
 
   const NP = 26;
   const curves = [];
@@ -2789,10 +3447,30 @@ function drawDeform(canvas, model, dprOverride){
   ctx.fillStyle=T.nodeBlue;
   for(let idx=0; idx<model.nodes.length; idx++){
     const n = model.nodes[idx];
-    if(n.y === 0) continue;   /* 柱底不画圆点 */
+    if(n.y === 0) continue;
     const ux = model.U[idx*3], uy = model.U[idx*3+1];
+    const [px,py] = toS(n.x, n.y);
     const [sx,sy] = toS(n.x + F*ux, n.y + F*uy);
+    const ddx = sx - px, ddy = sy - py;
+    const dlen = Math.hypot(ddx, ddy);
+    if(dlen > 3){
+      ctx.strokeStyle = 'rgba(56,189,248,0.62)';
+      ctx.fillStyle   = 'rgba(56,189,248,0.62)';
+      ctx.lineWidth   = 1.1;
+      ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(sx, sy); ctx.stroke();
+      const ang = Math.atan2(ddy, ddx);
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(sx - 6*Math.cos(ang - 0.4), sy - 6*Math.sin(ang - 0.4));
+      ctx.lineTo(sx - 6*Math.cos(ang + 0.4), sy - 6*Math.sin(ang + 0.4));
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.fillStyle = T.nodeBlue;
     ctx.beginPath(); ctx.arc(sx,sy,2.8,0,Math.PI*2); ctx.fill();
+  }
+
+  if(model.p.showIds){
+    drawIds(ctx, model, toS);
   }
   drawSupports(ctx, model, toS, model.p.betaF);
 }
@@ -2863,8 +3541,18 @@ function updateReadout(model){
       if(d > maxDrift){ maxDrift = d; driftFloor = lv; }
     }
   }
-  document.getElementById('r-drift').textContent =
-    maxDrift > 0 ? `1/${Math.round(1/maxDrift)}（${driftFloor}层）` : '1/∞（无水平力）';
+  {
+    let driftTxt;
+    if(maxDrift > 0){
+      const denom = 1 / maxDrift;
+      driftTxt = denom > 1e6
+        ? '1/∞（可忽略）'
+        : `1/${Math.round(denom)}（${driftFloor}层）`;
+    } else {
+      driftTxt = '1/∞（无水平力）';
+    }
+    document.getElementById('r-drift').textContent = driftTxt;
+  }
 
   let totalH = 0;
   for(let lv=1; lv<=model.nLev; lv++) totalH += p['H'+lv];
@@ -2889,8 +3577,13 @@ function updateReadout(model){
       const ratio = Math.abs(sumRy) / Ncr;
       const B = 1 / (1 - ratio);
       const sign = (B > 0) ? '' : '⚠ ';
+      /* 用显示精度反算 B，保证「B − 1」与显示的 ratio 自洽。
+         ratio 舍入到 ≥ 0.999 时 B 会爆炸，直接回退到真值显示一位小数。 */
+      const rShow = parseFloat(ratio.toFixed(3));
+      const bShow = (1 - rShow < 1e-4) ? B : 1 / (1 - rShow);
+      const bTxt  = (1 - rShow < 1e-4) ? bShow.toFixed(1) : bShow.toFixed(3);
       document.getElementById('r-pd').textContent =
-        `${sign}${B.toFixed(3)}  (ΣN/ΣN_cr = ${ratio.toFixed(3)})`;
+        `${sign}${bTxt}  (ΣN/ΣN_cr = ${rShow.toFixed(3)})`;
     } else {
       document.getElementById('r-pd').textContent = '—（无水平力或无轴力）';
     }
@@ -2901,23 +3594,12 @@ function updateReadout(model){
   /* 水平力分配比例（按柱，左→右） */
   function allocStr(){
     const nCol = model.nCol;
-    if(p.Hmode === 'left'){
-      const arr = new Array(nCol).fill('0%');
-      arr[0] = '100%';
-      return arr.join(' / ');
-    }
-    const cE = colKeff(p.betaF, p.betaJ);
-    if(!isFinite(cE) || cE < 1e-12){
+    const w = computeHShare(p, nCol);
+    let sum = 0;
+    for(const v of w) sum += v;
+    if(sum < 1e-12){
       const eq = (100/nCol).toFixed(0) + '%';
       return new Array(nCol).fill(eq).join(' / ');
-    }
-    const isMid = c => (c>0 && c<nCol-1);
-    let sum = 0;
-    const w = [];
-    for(let c=0;c<nCol;c++){
-      const kc = isMid(c) ? p.r : 1.0;
-      const wc = cE * kc;
-      w.push(wc); sum += wc;
     }
     return w.map(v => (v/sum*100).toFixed(0) + '%').join(' / ');
   }
@@ -2986,10 +3668,18 @@ function run(){
       if(btnFz) btnFz.classList.remove('on');
     }
   }
+  const _badge = document.getElementById('solveBadge');
+  if(_badge) _badge.classList.add('on');
   try{
+    const _solveT0 = performance.now();
     MODEL = analyze(S);
+    MODEL.solveTime = performance.now() - _solveT0;
   }catch(err){
     console.error(err);
+    /* 求解失败后必须清空 MODEL —— 否则后续任何一次「只重绘」调用
+       （拖动 mScale/dScale、导出 PNG、窗口 resize）都会基于
+       上一次成功的陈旧解重绘，读数与图形不一致。 */
+    MODEL = null;
     for(const id of ['cvLoad','cvForce','cvD']){
       const cv = document.getElementById(id);
       const ctx = cv.getContext('2d');
@@ -3003,7 +3693,7 @@ function run(){
       ctx.textAlign = 'start';
       ctx.textBaseline = 'alphabetic';
     }
-    for(const id of ['r-colsec','r-kmid','r-maxD','r-drift','r-K','r-R0','r-R1','r-R2','r-R3','r-alloc1','r-alloc2','r-alloc3']){
+    for(const id of ['r-colsec','r-kmid','r-maxD','r-drift','r-K','r-R0','r-R1','r-R2','r-R3','r-alloc1','r-alloc2','r-alloc3','r-pd']){
       const el = document.getElementById(id);
       if(el) el.textContent = '—';
     }
@@ -3011,6 +3701,14 @@ function run(){
     if(rhoBox) rhoBox.innerHTML = '';
     const rf = document.getElementById('r-resid');
     if(rf) rf.textContent = '计算失败：' + err.message;
+    /* 状态栏切到 FAIL */
+    const statusEl = document.getElementById('ssbStatus');
+    if(statusEl){
+      statusEl.textContent = 'FAIL';
+      statusEl.classList.remove('ok');
+    }
+    const badge = document.getElementById('solveBadge');
+    if(badge) badge.classList.remove('on');
     return;
   }
 
@@ -3034,6 +3732,25 @@ function run(){
   drawDeform(document.getElementById('cvD'), MODEL);
   updateReadout(MODEL);
   updateModelSummary();
+  updateStatusBar(MODEL);
+  if(_badge) requestAnimationFrame(()=> _badge.classList.remove('on'));
+}
+
+/* ---------- 底部状态栏更新 ---------- */
+function updateStatusBar(m){
+  if(!m) return;
+  const set = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = v; };
+  set('ssbNodes', m.nodes.length);
+  set('ssbElems', m.els.length);
+  set('ssbDof',   m.U.length);
+  set('ssbTime',  (m.solveTime||0).toFixed(2) + ' ms');
+  const resid = Math.max(Math.abs(m.residX), Math.abs(m.residY));
+  set('ssbResid', resid.toExponential(1));
+  const statusEl = document.getElementById('ssbStatus');
+  if(statusEl){
+    statusEl.textContent = resid < 1e-8 ? 'OK' : 'CHECK';
+    statusEl.classList.toggle('ok', resid < 1e-8);
+  }
 }
 
 /* ---------- 拓扑依赖弱化（不隐藏） ---------- */
@@ -3106,9 +3823,13 @@ function updateSweepOptions(){
     if(S.sweep.playing) sweepStop();
     S.sweep.param = firstVisible;
     sel.value     = firstVisible;
-    /* 扫掠条展开时才实际改值，避免未打开时乱改滑块 */
+    /* 扫掠条展开时把滑块拉回 min，但只改值 —— 不调用 sweepReset，
+       避免在 applyTopoState() 内隐式触发 run()，与调用方的 run() 重复求解。 */
     const bar = document.getElementById('sweepBar');
-    if(bar && bar.classList.contains('on')) sweepReset();
+    if(bar && bar.classList.contains('on')){
+      const el = document.getElementById(firstVisible);
+      if(el) sweepSetValue(firstVisible, parseFloat(el.min));
+    }
   }
 }
 
@@ -3124,12 +3845,29 @@ function updateModelSummary(){
   top.innerHTML = `${bayStr} × ${levStr}${tag}`;
 
   const spans = [];
-  for(let i=1; i<=S.nBay; i++) spans.push(S['L'+i].toFixed(1));
+  let totalB = 0;
+  for(let i=1; i<=S.nBay; i++){
+    spans.push(S['L'+i].toFixed(1));
+    totalB += S['L'+i];
+  }
   sp.textContent = spans.join(' / ') + ' m';
 
   const heights = [];
-  for(let i=1; i<=S.nLev; i++) heights.push(S['h'+i].toFixed(1));
+  let totalH = 0;
+  for(let i=1; i<=S.nLev; i++){
+    heights.push(S['h'+i].toFixed(1));
+    totalH += S['h'+i];
+  }
   hh.textContent = heights.join(' / ') + ' m';
+
+  /* 右侧指标：H 总高 / B 总宽（柱列间净宽，不含悬挑） / H-B 高宽比 */
+  const totalW = totalB;
+  const elH = document.getElementById('msTotalH');
+  const elB = document.getElementById('msTotalW');
+  const elA = document.getElementById('msAspect');
+  if(elH) elH.textContent = totalH.toFixed(1);
+  if(elB) elB.textContent = totalW.toFixed(1);
+  if(elA) elA.textContent = totalW > 0 ? (totalH / totalW).toFixed(2) : '—';
 }
 
 /* ---------- Tab 指示器 ---------- */
@@ -3231,6 +3969,31 @@ function updateRangeProgress(el){
   el.style.setProperty('--p', p.toFixed(2) + '%');
 }
 
+/* ---------- 参数格式化表 ----------
+   供 bindRange 的 output、sweepSetValue、以及重置按钮共用。
+   注意：必须定义在 sweepSetValue 之前 —— sweepSetValue 内部引用本表，
+   若启动时扫掠条处于展开态（例如将来加"记住上次状态"），
+   会在 fmtMap 的 TDZ 里抛 ReferenceError。 */
+const fmtMap = {
+  L1: v=>v.toFixed(1)+' m',  L2: v=>v.toFixed(1)+' m',  L3: v=>v.toFixed(1)+' m',
+  h1: v=>v.toFixed(1)+' m',  h2: v=>v.toFixed(1)+' m',  h3: v=>v.toFixed(1)+' m',
+  Lc: v=>v.toFixed(1)+' m',
+  bc: v=>v.toFixed(0)+' mm', hc: v=>v.toFixed(0)+' mm',
+  bb: v=>v.toFixed(0)+' mm', hb: v=>v.toFixed(0)+' mm',
+  q1: v=>v.toFixed(1)+' kN/m', q2: v=>v.toFixed(1)+' kN/m', q3: v=>v.toFixed(1)+' kN/m',
+  qc1: v=>v.toFixed(1)+' kN/m', qc2: v=>v.toFixed(1)+' kN/m', qc3: v=>v.toFixed(1)+' kN/m',
+  H1: v=>v.toFixed(1)+' kN',   H2: v=>v.toFixed(1)+' kN',   H3: v=>v.toFixed(1)+' kN',
+  r: v=>v.toFixed(2),
+  betaF: v=>v.toFixed(2),
+  betaJ: v=>v.toFixed(2),
+  mScale: v=>v.toFixed(2), dScale: v=>v.toFixed(0)
+};
+
+/* 拖动高亮的定时器：全局唯一。
+   之前挂在各自的 slider 上（el._hlTimer），500ms 内连续拖两个滑块时，
+   前一个的定时器到点会无差别把后一个刚设上的高亮清掉。 */
+let hlTimer = null;
+
 /* 只影响绘制、不影响求解的参数：拖动时只重绘相关 canvas，不重新 analyze */
 const DRAW_ONLY = new Set(['mScale', 'dScale']);
 function redrawOnly(key){
@@ -3238,6 +4001,11 @@ function redrawOnly(key){
   if(key === 'mScale')       drawInternal(document.getElementById('cvForce'), MODEL);
   else if(key === 'dScale')  drawDeform(document.getElementById('cvD'), MODEL);
 }
+
+/* 拖动滑块的 rAF 节流句柄。指针快速拖动时 input 事件密度可能
+   高于 60fps，而每次 input 都跑 analyze + 三张 canvas 重绘，
+   在低端机上会明显掉帧。用一个全局 rAF 把 run() 合并到下一帧。 */
+let dragRaf = null;
 
 function bindRange(id, key, fmt){
   const el  = document.getElementById(id);
@@ -3255,11 +4023,22 @@ function bindRange(id, key, fmt){
       redrawOnly(key);
       return;
     }
-    /* 拖动高亮：短暂显示对应构件 */
+    /* 拖动高亮：短暂显示对应构件。定时器全局唯一，回调里再确认
+       highlight 仍是本次的 key 才清除，避免抢占。 */
     S.highlight = key;
-    if(el._hlTimer) clearTimeout(el._hlTimer);
-    el._hlTimer = setTimeout(()=>{ S.highlight = null; run(); }, 500);
-    run();
+    if(hlTimer) clearTimeout(hlTimer);
+    hlTimer = setTimeout(()=>{
+      if(S.highlight === key) S.highlight = null;
+      hlTimer = null;
+      run();
+    }, 500);
+
+    /* 把本次及之后到下一帧之间的多次 input 合并成一次 run() */
+    if(dragRaf) return;
+    dragRaf = requestAnimationFrame(()=>{
+      dragRaf = null;
+      run();
+    });
   });
   S[key] = parseFloat(el.value);
   out.textContent = fmt(S[key]);
@@ -3463,7 +4242,17 @@ function updateRecBtn(){
 }
 
 function setSweepLocked(locked){
-  for(const id of ['sweepParam','sweepRecScope','btnSweepPlay','btnSweepReset']){
+  /* 录制期间除「录制」按钮本身（用于二次点击取消）外，其余
+     能改变扫掠状态或隐藏扫掠条的控件全部锁住：
+     - sweepParam / sweepRecScope：改参数或范围会中断扫掠；
+     - btnSweepPlay / btnSweepReset：会与录制竞争 rafId；
+     - btnSweepClose / btn-sweep：会关闭扫掠条，但录制仍在跑，
+       导致状态不一致。 */
+  for(const id of [
+    'sweepParam','sweepRecScope',
+    'btnSweepPlay','btnSweepReset',
+    'btnSweepClose','btn-sweep'
+  ]){
     const el = document.getElementById(id);
     if(el) el.classList.toggle('sweepLocked', locked);
   }
@@ -3519,6 +4308,7 @@ function startRecording(){
      再取流 —— 否则 captureStream 会先拿到原始分辨率 / 深色的首帧 */
   R.active  = true;
   S.lightBg = true;
+  document.body.classList.add('recording');
   sweepReset();
 
   let recorder;
@@ -3552,6 +4342,7 @@ function startRecording(){
 
     /* 录制已停，恢复深色主题并重绘 */
     S.lightBg = false;
+    document.body.classList.remove('recording');
     run();
 
     updateRecBtn();
@@ -3653,6 +4444,17 @@ function stopRecording(){
   });
 })();
 
+/* 节点/单元编号开关 */
+(function bindIds(){
+  const btn = document.getElementById('btnIds');
+  if(!btn) return;
+  btn.addEventListener('click', ()=>{
+    S.showIds = !S.showIds;
+    btn.classList.toggle('on', S.showIds);
+    run();
+  });
+})();
+
 /* 显示模式切换（全部 / 仅受力图 / 仅变形图） */
 (function bindDisplayMode(){
   const seg = document.getElementById('segDisp');
@@ -3705,15 +4507,41 @@ function stopRecording(){
 /* ---------- 单帧截图导出（PNG · 2x 分辨率） ---------- */
 function exportCanvasPNG(canvasId, baseName){
   if(!MODEL) return;
-  const canvas = document.getElementById(canvasId);
-  if(!canvas || !canvas.width) return;
+  const srcCanvas = document.getElementById(canvasId);
+  if(!srcCanvas || !srcCanvas.width) return;
 
-  /* 用 2x DPR 重绘一次（仅这一次，不动屏幕显示） */
-  if(canvasId === 'cvForce')      drawInternal(canvas, MODEL, 2);
-  else if(canvasId === 'cvD')     drawDeform(canvas, MODEL, 2);
-  else if(canvasId === 'cvLoad')  drawLoadDiagram(canvas, MODEL, 2);
+  /* 源 canvas 当前不可见（父容器 display:none 时 rect 全 0）→ 直接放弃，
+     否则 tmp 尺寸为 0，导出的 PNG 是一张缩略图，与用户预期不符。 */
+  const rect = srcCanvas.getBoundingClientRect();
+  if(rect.width < 1 || rect.height < 1){
+    console.warn('[shot] 目标 canvas 当前不可见，已跳过导出。');
+    return;
+  }
 
-  canvas.toBlob(blob => {
+  /* 用一个临时离屏 canvas 承载 2x 渲染：
+     - 不动屏幕那块 canvas，避免 2x 尺寸瞬间闪现 + toBlob 异步期间错位；
+     - 挂在 DOM 里但移出视口（left:-99999px），让 getBoundingClientRect
+       返回有效尺寸，绘制函数无需改动。 */
+  const tmp = document.createElement('canvas');
+  tmp.style.cssText =
+    `position:absolute;left:-99999px;top:0;` +
+    `width:${rect.width}px;height:${rect.height}px;` +
+    `display:block;pointer-events:none;`;
+  document.body.appendChild(tmp);
+
+  /* 绘制若抛异常，toBlob 不会执行 → tmp 会留在 DOM 里。
+     用 try/catch 兜底，失败即清理并返回。 */
+  try{
+    if(canvasId === 'cvForce')      drawInternal(tmp, MODEL, 2);
+    else if(canvasId === 'cvD')     drawDeform(tmp, MODEL, 2);
+    else if(canvasId === 'cvLoad')  drawLoadDiagram(tmp, MODEL, 2);
+  }catch(e){
+    console.error('[shot] 绘制失败：', e);
+    document.body.removeChild(tmp);
+    return;
+  }
+
+  tmp.toBlob(blob => {
     if(blob){
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -3726,8 +4554,7 @@ function exportCanvasPNG(canvasId, baseName){
       document.body.removeChild(a);
       setTimeout(()=>URL.revokeObjectURL(url), 2000);
     }
-    /* 恢复屏幕显示（原始 DPR 重绘） */
-    scheduleRender();
+    document.body.removeChild(tmp);
   }, 'image/png');
 }
 
@@ -3807,7 +4634,7 @@ const SHARE_KEYS = [
   'bc','hc','bb','hb','r',
   'q1','q2','q3','qc1','qc2','qc3','H1','H2','H3',
   'Hmode','betaF','betaJ',
-  'mScale','dScale','forceType','elFilter'
+  'mScale','dScale','forceType','elFilter','displayMode'
 ];
 
 function encodeState(){
@@ -3850,6 +4677,8 @@ function applyStateFromObj(obj){
       if(v === 'M' || v === 'N' || v === 'V') S[k] = v;
     } else if(k === 'elFilter'){
       if(v === 'all' || v === 'col' || v === 'beam') S[k] = v;
+    } else if(k === 'displayMode'){
+      if(v === 'all' || v === 'force' || v === 'deform') S[k] = v;
     } else {
       const n = parseFloat(v);
       if(!isFinite(n)) continue;
@@ -3889,60 +4718,248 @@ function applyStateFromObj(obj){
     b.classList.toggle('on', b.dataset.force === S.forceType));
   document.querySelectorAll('#segElem button').forEach(b =>
     b.classList.toggle('on', b.dataset.filter === S.elFilter));
+  document.querySelectorAll('#segDisp button').forEach(b =>
+    b.classList.toggle('on', b.dataset.disp === S.displayMode));
+
+  /* 同步 stage 显示模式类 —— 与 bindDisplayMode 点击时的写法保持一致 */
+  {
+    const stageEl = document.getElementById('stage');
+    if(stageEl){
+      stageEl.classList.remove('mode-all','mode-force','mode-deform');
+      stageEl.classList.add('mode-' + S.displayMode);
+    }
+  }
 
   applyTopoState();
   run();
   return true;
 }
 
-function shareURL(){
+/* 线上部署地址：file:// 或 localhost 打开时，二维码指向它，
+   手机才能扫得开。参数经 hash 传递，与本地完全一致。 */
+const PROD_URL = 'https://z1118pm-blip.github.io/structural-tool/';
+
+/* 生成当前工况的完整分享 URL（含 hash）。
+   file:// 与 localhost 下不能直接用 location.href —— 二维码扫出来
+   手机访问不到，此时改用线上地址，参数仍走 hash。 */
+function buildShareURL(){
   const hash = '#st=' + encodeState();
-  /* location.href.split('#')[0] 在任何协议下都能取到纯净 URL：
-     - https://xxx.github.io/repo/index.html
-     - file:///C:/.../index.html
-     - http://localhost:8000/index.html
-     直接复用当前 URL 的所有部分，无需手动判断 origin。 */
-  const url = location.href.split('#')[0] + hash;
-  const done = () => {
-    const btn = document.getElementById('btn-share');
-    if(!btn) return;
-    btn.classList.add('copied');
-    const orig = btn.textContent;
-    btn.textContent = '✓';
-    setTimeout(()=>{
-      btn.classList.remove('copied');
-      btn.textContent = orig;
-    }, 1200);
-  };
+  const host = location.hostname;
+  const isLocal = location.protocol === 'file:' ||
+                  host === 'localhost' ||
+                  host === '127.0.0.1' ||
+                  host === '';
+  const base = isLocal ? PROD_URL : location.href.split('#')[0];
+  return base + hash;
+}
+
+/* 当前弹窗里展示的 URL —— 下载二维码时复用，避免重新编码出差异 */
+let currentShareURL = '';
+
+/* 把 url 画成二维码 canvas 塞进容器。
+   依赖 qrcode-generator（CDN，见 head）。若库未加载或编码失败，
+   容器里显示一段提示文字，不阻塞其余逻辑。
+
+   注意：四个角上的 .qrCorner 是容器里已有的 span，
+   不能被 innerHTML='' 清掉 —— 所以只清掉 loading/上一次的 canvas。 */
+function renderQRCode(container, url){
+  if(!container) return;
+
+  /* 只移除旧的 canvas / loading 提示，保留角标 */
+  container.querySelectorAll('canvas, .shareQRLoading').forEach(el => el.remove());
+
+  if(typeof qrcode !== 'function'){
+    const tip = document.createElement('div');
+    tip.className = 'shareQRLoading';
+    tip.textContent = '二维码库未加载，请复制下方链接';
+    container.appendChild(tip);
+    return;
+  }
+
+  try{
+    /* typeNumber=0 让库自动选最小版本；'M' 为中等纠错级别，
+       容错率约 15%，兼顾容量和抗污损。 */
+    const qr = qrcode(0, 'M');
+    qr.addData(url);
+    qr.make();
+
+    const n   = qr.getModuleCount();
+    const box = 236 - 28;             /* 容器 236，内边距 14×2 */
+    const cell = Math.max(2, Math.floor(box / n));
+    const side = cell * n;
+
+    const canvas = document.createElement('canvas');
+    canvas.width  = side;
+    canvas.height = side;
+    canvas.style.width  = side + 'px';
+    canvas.style.height = side + 'px';
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, side, side);
+    ctx.fillStyle = '#0f172a';
+    for(let r = 0; r < n; r++){
+      for(let c = 0; c < n; c++){
+        if(qr.isDark(r, c)){
+          ctx.fillRect(c * cell, r * cell, cell, cell);
+        }
+      }
+    }
+    container.appendChild(canvas);
+  }catch(e){
+    console.error('[share] 二维码生成失败：', e);
+    const tip = document.createElement('div');
+    tip.className = 'shareQRLoading';
+    tip.textContent = '生成二维码失败，请复制下方链接';
+    container.appendChild(tip);
+  }
+}
+
+/* 下载一份高分辨率二维码 PNG。
+   屏幕上那份 canvas 是"恰好塞进容器"的分辨率，导出会偏小；
+   这里按 cell=8、四模块白边重新编码，得到约 600~800px 的方图。 */
+function downloadQRCode(){
+  if(!currentShareURL || typeof qrcode !== 'function') return;
+  try{
+    const qr = qrcode(0, 'M');
+    qr.addData(currentShareURL);
+    qr.make();
+    const n      = qr.getModuleCount();
+    const cell   = 8;
+    const margin = 4 * cell;               /* 标准 QR 要求 4 模块白边 */
+    const side   = cell * n + margin * 2;
+
+    const canvas = document.createElement('canvas');
+    canvas.width  = side;
+    canvas.height = side;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, side, side);
+    ctx.fillStyle = '#0f172a';
+    for(let r = 0; r < n; r++){
+      for(let c = 0; c < n; c++){
+        if(qr.isDark(r, c)){
+          ctx.fillRect(margin + c * cell, margin + r * cell, cell, cell);
+        }
+      }
+    }
+    canvas.toBlob(blob => {
+      if(!blob) return;
+      const u = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const ts = new Date().toISOString()
+                   .replace(/[:T]/g,'-').replace(/\..+$/,'');
+      a.href = u;
+      a.download = `structura_qr_${ts}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(()=>URL.revokeObjectURL(u), 2000);
+    }, 'image/png');
+  }catch(e){
+    console.error('[share] 二维码下载失败：', e);
+  }
+}
+
+function shareURL(){
+  const url = buildShareURL();
+  currentShareURL = url;
+
+  /* 本地打开时给一条提示：二维码指向线上地址，扫码可正常访问 */
+  const isLocal = (
+    location.protocol === 'file:' ||
+    location.hostname === 'localhost' ||
+    location.hostname === '127.0.0.1' ||
+    location.hostname === ''
+  );
+
+  const modal     = document.getElementById('modalShare');
+  const qrBox     = document.getElementById('shareQRBox');
+  const urlField  = document.getElementById('shareURLField');
+  const warnEl    = document.getElementById('shareLocalWarn');
+
+  if(modal){
+    renderQRCode(qrBox, url);
+    if(urlField){
+      urlField.value = url;
+      /* 让用户一打开就能全选复制，省一次点击 */
+      requestAnimationFrame(()=>{
+        try{ urlField.select(); }catch(e){}
+      });
+    }
+    if(warnEl){
+      if(isLocal) warnEl.removeAttribute('hidden');
+      else        warnEl.setAttribute('hidden', '');
+    }
+    modal.classList.add('open');
+  }
+
+  /* 顺带把链接写进剪贴板（模态框里的复制按钮作为兜底）。
+     剪贴板失败不弹 prompt —— 模态框已经展示 URL 字段了。 */
+  const btn = document.getElementById('btn-share');
   if(navigator.clipboard && navigator.clipboard.writeText){
-    navigator.clipboard.writeText(url).then(done).catch(()=>{
-      window.prompt('复制以下链接分享：', url);
-    });
-  }else{
-    window.prompt('复制以下链接分享：', url);
+    navigator.clipboard.writeText(url).then(()=>{
+      if(!btn) return;
+      btn.classList.add('copied');
+      const orig = btn.textContent;
+      btn.textContent = '✓';
+      setTimeout(()=>{
+        btn.classList.remove('copied');
+        btn.textContent = orig;
+      }, 1200);
+    }).catch(()=>{ /* 静默失败：模态框里有 URL 字段 */ });
   }
 }
 
 (function bindShare(){
-  const btn = document.getElementById('btn-share');
+  const btn      = document.getElementById('btn-share');
+  const modal    = document.getElementById('modalShare');
+  const btnClose = document.getElementById('btnShareClose');
+  const btnCopy  = document.getElementById('btnShareCopy');
+  const btnDl    = document.getElementById('btnShareDownload');
+  const urlField = document.getElementById('shareURLField');
+
   if(btn) btn.addEventListener('click', shareURL);
+  if(btnDl) btnDl.addEventListener('click', downloadQRCode);
+
+  const close = ()=> modal && modal.classList.remove('open');
+  if(btnClose) btnClose.addEventListener('click', close);
+  if(modal){
+    modal.addEventListener('click', e=>{
+      if(e.target === modal) close();
+    });
+  }
+  document.addEventListener('keydown', e=>{
+    if(e.key === 'Escape' && modal && modal.classList.contains('open')) close();
+  });
+
+  if(btnCopy){
+    btnCopy.addEventListener('click', ()=>{
+      const url = urlField && urlField.value ? urlField.value : buildShareURL();
+      const done = ()=>{
+        btnCopy.classList.add('copied');
+        const orig = btnCopy.textContent;
+        btnCopy.textContent = '✓';
+        setTimeout(()=>{
+          btnCopy.classList.remove('copied');
+          btnCopy.textContent = orig;
+        }, 1200);
+      };
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(url).then(done).catch(()=>{
+          /* 复制失败：把字段内容全选，让用户手动 Ctrl+C */
+          if(urlField){
+            try{ urlField.select(); }catch(e){}
+          }
+        });
+      } else if(urlField){
+        try{ urlField.select(); }catch(e){}
+      }
+    });
+  }
 })();
 
 /* ---------- 重置按钮 ---------- */
-const fmtMap = {
-  L1: v=>v.toFixed(1)+' m',  L2: v=>v.toFixed(1)+' m',  L3: v=>v.toFixed(1)+' m',
-  h1: v=>v.toFixed(1)+' m',  h2: v=>v.toFixed(1)+' m',  h3: v=>v.toFixed(1)+' m',
-  Lc: v=>v.toFixed(1)+' m',
-  bc: v=>v.toFixed(0)+' mm', hc: v=>v.toFixed(0)+' mm',
-  bb: v=>v.toFixed(0)+' mm', hb: v=>v.toFixed(0)+' mm',
-  q1: v=>v.toFixed(1)+' kN/m', q2: v=>v.toFixed(1)+' kN/m', q3: v=>v.toFixed(1)+' kN/m',
-  qc1: v=>v.toFixed(1)+' kN/m', qc2: v=>v.toFixed(1)+' kN/m', qc3: v=>v.toFixed(1)+' kN/m',
-  H1: v=>v.toFixed(1)+' kN',   H2: v=>v.toFixed(1)+' kN',   H3: v=>v.toFixed(1)+' kN',
-  r: v=>v.toFixed(2),
-  betaF: v=>v.toFixed(2),
-  betaJ: v=>v.toFixed(2),
-  mScale: v=>v.toFixed(2), dScale: v=>v.toFixed(0)
-};
+/* fmtMap 已提前到 updateRangeProgress 之后定义（见上方） */
 document.getElementById('btn-reset').addEventListener('click', ()=>{
   if(S.sweep.playing) sweepStop();
   document.querySelectorAll('input[type=range]').forEach(el=>{
@@ -3960,6 +4977,7 @@ document.getElementById('btn-reset').addEventListener('click', ()=>{
   S.forceType = 'M';
   S.elFilter = 'all';
   S.showVals = false;
+  S.showIds = false;
   S.showPDelta = false;
   S.displayMode = 'all';
   BASE = null;
@@ -3972,6 +4990,8 @@ document.getElementById('btn-reset').addEventListener('click', ()=>{
   if(segCantR) segCantR.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.cant === '1'));
   const btnV = document.getElementById('btnVals');
   if(btnV) btnV.classList.remove('on');
+  const btnIds = document.getElementById('btnIds');
+  if(btnIds) btnIds.classList.remove('on');
   const btnFz = document.getElementById('btnFreeze');
   if(btnFz) btnFz.classList.remove('on');
   const btnPD = document.getElementById('btnPDelta');
