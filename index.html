@@ -1138,21 +1138,21 @@
   .shareMeta{
     display:flex;
     align-items:center;
-    gap:10px;
-    margin-top:14px;
+    gap:8px;
+    margin-top:12px;
     font-family:'JetBrains Mono',ui-monospace,monospace;
-    font-size:9.5px;
+    font-size:8.5px;
     font-weight:600;
-    letter-spacing:2.2px;
+    letter-spacing:2px;
     color:#7dd3fc;
-    opacity:.72;
+    opacity:.5;
     user-select:none;
   }
   .shareMetaDot{
-    width:5px;height:5px;
+    width:4px;height:4px;
     border-radius:50%;
     background:var(--accent);
-    box-shadow:0 0 8px rgba(56,189,248,.85);
+    box-shadow:0 0 6px rgba(56,189,248,.6);
   }
 
   .shareHint{
@@ -1945,7 +1945,18 @@ var _hmt = _hmt || [];
 
 <!-- ============ 打赏弹窗 ============ -->
 <div class="modal" id="modalTip">
-  ...
+  <div class="modalCard modalCardTip">
+    <div class="modalHead">
+      <h2><span class="shareTitleMark">◆</span> 支持作者</h2>
+      <button class="modalClose" id="btnTipClose" title="关闭">×</button>
+    </div>
+    <div class="modalBody modalBodyTip">
+      <img src="m.jpg" alt="打赏码" class="tipQR">
+      <p class="tipLine">微信扫码 · 赞赏码</p>
+      <p class="tipMeta">金额随意 · 感谢支持</p>
+      <p class="tipSign">—— Zhao | Struct. E.</p>
+    </div>
+  </div>
 </div>
 
 <!-- ============ 分享弹窗 ============ -->
@@ -1974,10 +1985,10 @@ var _hmt = _hmt || [];
         </div>
       </div>
 
-      <!-- 装饰 meta 行 -->
+      <!-- 装饰 meta 行：品牌署名，弱化为背景纹样 -->
       <div class="shareMeta">
         <span class="shareMetaDot"></span>
-        <span>STRUCTURA · LIVE LINK</span>
+        <span>ZHAO STRUCTURAL LAB · 2026</span>
         <span class="shareMetaDot"></span>
       </div>
 
@@ -2334,14 +2345,12 @@ function analyze(p){
   /* ---- 水平力施加（nCol 柱通用） ---- */
   function applyFloorH(level, H){
     if(H <= 0) return;
+    /* computeHShare 保证 sum > 0：
+       left 模式 sum = 1；dstiff 模式 sum ≥ cE 或均分时 = nCol。
+       不再需要 sum 兜底分支。 */
     const w = computeHShare(p, nCol);
     let sum = 0;
     for(const v of w) sum += v;
-    if(sum < 1e-12){
-      const share = H / nCol;
-      for(let c=0;c<nCol;c++) F[nid(c, level)*3] += share;
-      return;
-    }
     for(let c=0;c<nCol;c++) F[nid(c, level)*3] += H * w[c] / sum;
   }
   for(let lv=1;lv<=nLev;lv++) applyFloorH(lv, p['H'+lv]);
@@ -2572,7 +2581,9 @@ function drawHUD(ctx, W, H, label, showSolver, topOffset){
   ctx.fillText('◆ ' + (label||'STATIC / LINEAR-ELASTIC'), M+4, ty);
   if(showSolver !== false){
     ctx.textAlign = 'right';
-    ctx.fillText('SOLVER: MDOF-CG · CONVERGED', W-M-4, ty);
+    /* 用词与实现对齐：analyze() 是部分主元高斯消元（直接法），
+       不是共轭梯度（CG，迭代法）。 */
+    ctx.fillText('SOLVER: MDOF-DIRECT · CONVERGED', W-M-4, ty);
   }
   ctx.restore();
 }
@@ -2817,13 +2828,6 @@ drawUDL(ctx, toS, model.nodes[el.i], model.nodes[el.j],
     const w = computeHShare(p, nCol);
     let sum = 0;
     for(const v of w) sum += v;
-    if(sum < 1e-12){
-      for(let c=0;c<nCol;c++){
-        drawHF(ctx, toS, model.nodes[nid(c, level)], H/nCol,
-               c===0 ? H.toFixed(1) : '');
-      }
-      return;
-    }
     for(let c=0;c<nCol;c++){
       const Hc = H * w[c] / sum;
       if(Hc <= 0) continue;   /* left 模式下非左柱权重为 0，不画箭头 */
@@ -3488,7 +3492,9 @@ function getMaxInternal(model, type, filter){
     const el = res.el;
     if(filter === 'col'  && el.kind !== 'col')  continue;
     if(filter === 'beam' && el.kind !== 'beam') continue;
-    const NP = 40;
+    /* 与 drawInternal 里的 NP=61 保持一致 —— 否则标题里的
+       |M|max 与图形上真正峰值有细微出入。 */
+    const NP = 61;
     for(let k=0;k<=NP;k++){
       const v = Math.abs(internalAt(res, el.L*k/NP, type));
       if(v > maxF) maxF = v;
@@ -3597,10 +3603,6 @@ function updateReadout(model){
     const w = computeHShare(p, nCol);
     let sum = 0;
     for(const v of w) sum += v;
-    if(sum < 1e-12){
-      const eq = (100/nCol).toFixed(0) + '%';
-      return new Array(nCol).fill(eq).join(' / ');
-    }
     return w.map(v => (v/sum*100).toFixed(0) + '%').join(' / ');
   }
   const aStr = allocStr();
@@ -4542,18 +4544,21 @@ function exportCanvasPNG(canvasId, baseName){
   }
 
   tmp.toBlob(blob => {
-    if(blob){
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      const ts = new Date().toISOString()
-                   .replace(/[:T]/g,'-').replace(/\..+$/,'');
-      a.href = url;
-      a.download = `${baseName}_${ts}.png`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(()=>URL.revokeObjectURL(url), 2000);
+    if(!blob){
+      console.warn('[shot] toBlob 返回空，导出失败。');
+      document.body.removeChild(tmp);
+      return;
     }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const ts = new Date().toISOString()
+                 .replace(/[:T]/g,'-').replace(/\..+$/,'');
+    a.href = url;
+    a.download = `${baseName}_${ts}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url), 2000);
     document.body.removeChild(tmp);
   }, 'image/png');
 }
@@ -4634,7 +4639,8 @@ const SHARE_KEYS = [
   'bc','hc','bb','hb','r',
   'q1','q2','q3','qc1','qc2','qc3','H1','H2','H3',
   'Hmode','betaF','betaJ',
-  'mScale','dScale','forceType','elFilter','displayMode'
+  'mScale','dScale','forceType','elFilter','displayMode',
+  'showVals','showIds','showPDelta'
 ];
 
 function encodeState(){
@@ -4679,6 +4685,8 @@ function applyStateFromObj(obj){
       if(v === 'all' || v === 'col' || v === 'beam') S[k] = v;
     } else if(k === 'displayMode'){
       if(v === 'all' || v === 'force' || v === 'deform') S[k] = v;
+    } else if(k === 'showVals' || k === 'showIds' || k === 'showPDelta'){
+      if(typeof v === 'boolean') S[k] = v;
     } else {
       const n = parseFloat(v);
       if(!isFinite(n)) continue;
@@ -4721,6 +4729,16 @@ function applyStateFromObj(obj){
   document.querySelectorAll('#segDisp button').forEach(b =>
     b.classList.toggle('on', b.dataset.disp === S.displayMode));
 
+  /* 同步三个显示开关按钮（数值 / N# / P-Δ） */
+  {
+    const btnV = document.getElementById('btnVals');
+    if(btnV) btnV.classList.toggle('on', S.showVals);
+    const btnIds = document.getElementById('btnIds');
+    if(btnIds) btnIds.classList.toggle('on', S.showIds);
+    const btnPD = document.getElementById('btnPDelta');
+    if(btnPD) btnPD.classList.toggle('on', S.showPDelta);
+  }
+
   /* 同步 stage 显示模式类 —— 与 bindDisplayMode 点击时的写法保持一致 */
   {
     const stageEl = document.getElementById('stage');
@@ -4739,17 +4757,21 @@ function applyStateFromObj(obj){
    手机才能扫得开。参数经 hash 传递，与本地完全一致。 */
 const PROD_URL = 'https://z1118pm-blip.github.io/structural-tool/';
 
+/* 判断当前是否"本地打开"（file:// 或 localhost）。 */
+function isLocalHost(){
+  const host = location.hostname;
+  return location.protocol === 'file:' ||
+         host === 'localhost' ||
+         host === '127.0.0.1' ||
+         host === '';
+}
+
 /* 生成当前工况的完整分享 URL（含 hash）。
    file:// 与 localhost 下不能直接用 location.href —— 二维码扫出来
    手机访问不到，此时改用线上地址，参数仍走 hash。 */
 function buildShareURL(){
   const hash = '#st=' + encodeState();
-  const host = location.hostname;
-  const isLocal = location.protocol === 'file:' ||
-                  host === 'localhost' ||
-                  host === '127.0.0.1' ||
-                  host === '';
-  const base = isLocal ? PROD_URL : location.href.split('#')[0];
+  const base = isLocalHost() ? PROD_URL : location.href.split('#')[0];
   return base + hash;
 }
 
@@ -4818,7 +4840,11 @@ function renderQRCode(container, url){
    屏幕上那份 canvas 是"恰好塞进容器"的分辨率，导出会偏小；
    这里按 cell=8、四模块白边重新编码，得到约 600~800px 的方图。 */
 function downloadQRCode(){
-  if(!currentShareURL || typeof qrcode !== 'function') return;
+  if(!currentShareURL) return;
+  if(typeof qrcode !== 'function'){
+    alert('二维码库未加载，无法下载。请检查网络，或直接复制下方的分享链接。');
+    return;
+  }
   try{
     const qr = qrcode(0, 'M');
     qr.addData(currentShareURL);
@@ -4865,12 +4891,7 @@ function shareURL(){
   currentShareURL = url;
 
   /* 本地打开时给一条提示：二维码指向线上地址，扫码可正常访问 */
-  const isLocal = (
-    location.protocol === 'file:' ||
-    location.hostname === 'localhost' ||
-    location.hostname === '127.0.0.1' ||
-    location.hostname === ''
-  );
+  const isLocal = isLocalHost();
 
   const modal     = document.getElementById('modalShare');
   const qrBox     = document.getElementById('shareQRBox');
@@ -4935,13 +4956,20 @@ function shareURL(){
   if(btnCopy){
     btnCopy.addEventListener('click', ()=>{
       const url = urlField && urlField.value ? urlField.value : buildShareURL();
+      /* 按钮内部是两个 span（icon + txt）。
+         不能 btnCopy.textContent = '✓' —— 那会删除 span 结构，
+         之后 textContent 恢复为纯文本时 .btnShareCopyIcon / .btnShareCopyTxt
+         的样式永久失效。这里改为只改 span 的文本。 */
+      const iconEl = btnCopy.querySelector('.btnShareCopyIcon');
+      const txtEl  = btnCopy.querySelector('.btnShareCopyTxt');
       const done = ()=>{
         btnCopy.classList.add('copied');
-        const orig = btnCopy.textContent;
-        btnCopy.textContent = '✓';
+        if(iconEl) iconEl.textContent = '✓';
+        if(txtEl)  txtEl.textContent  = '';
         setTimeout(()=>{
           btnCopy.classList.remove('copied');
-          btnCopy.textContent = orig;
+          if(iconEl) iconEl.textContent = '📋';
+          if(txtEl)  txtEl.textContent  = '复制';
         }, 1200);
       };
       if(navigator.clipboard && navigator.clipboard.writeText){
