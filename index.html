@@ -931,6 +931,27 @@
     margin-top:8px;
   }
 
+  /* ============ 分享按钮 ============ */
+  #leftFooter .btnReset.btnShare{
+    flex:0 0 44px;
+    padding:8px 0;
+    font-size:14px;
+    line-height:1;
+    background:rgba(56,189,248,.10);
+    border-color:rgba(56,189,248,.35);
+    color:#7dd3fc;
+  }
+  #leftFooter .btnReset.btnShare:hover{
+    background:rgba(56,189,248,.20);
+    border-color:#38bdf8;
+    color:#bae6fd;
+  }
+  #leftFooter .btnReset.btnShare.copied{
+    background:rgba(74,222,128,.18);
+    border-color:#4ade80;
+    color:#86efac;
+  }
+
   /* 独立打赏弹窗 */
   .modalCardTip{width:min(380px,100%)}
   .modalBodyTip{
@@ -975,6 +996,7 @@ var _hmt = _hmt || [];
 (function() {
   var hm = document.createElement("script");
   hm.src = "https://hm.baidu.com/hm.js?a740bfea63060a1ab40a92a48c671870";
+  hm.async = true;
   var s = document.getElementsByTagName("script")[0]; 
   s.parentNode.insertBefore(hm, s);
 })();
@@ -1224,6 +1246,7 @@ var _hmt = _hmt || [];
       <button id="btn-reset" class="btnReset">重置全部</button>
       <button id="btn-sweep" class="btnReset">▶ 扫掠</button>
       <button id="btn-help"  class="btnReset btnHelp">？ 使用说明</button>
+      <button id="btn-share" class="btnReset btnShare" title="复制分享链接（当前工况）">🔗</button>
       <button id="btn-tip"   class="btnReset btnTip" title="支持作者">♥</button>
     </div>
   </div>
@@ -1299,6 +1322,7 @@ var _hmt = _hmt || [];
             <div class="segMini" id="segView">
               <button type="button" id="btnVals">数值</button>
               <button type="button" id="btnFreeze">冻结</button>
+              <button type="button" id="btnShotForce" title="导出内力图为 PNG（2x）">📷</button>
             </div>
           </div>
         </div>
@@ -1341,6 +1365,7 @@ var _hmt = _hmt || [];
           <span class="barLbl">放大 k<sub>D</sub></span>
           <input type="range" id="dScale" min="10" max="20000" step="10" value="100">
           <b id="v-dScale" class="barVal">100</b>
+          <button type="button" id="btnShotDeform" class="barBtn" title="导出变形图为 PNG（2x）">📷</button>
         </div>
       </div>
     </div>
@@ -1951,8 +1976,8 @@ function elemDisp(res, x){
 /* =====================================================================
    6. 画布工具
    ===================================================================== */
-function setupCanvas(canvas){
-  let dpr = window.devicePixelRatio || 1;
+function setupCanvas(canvas, overrideDPR){
+  let dpr = overrideDPR || window.devicePixelRatio || 1;
   const rect = canvas.getBoundingClientRect();
   const W = Math.max(120, rect.width);
   const H = Math.max(120, rect.height);
@@ -2088,16 +2113,18 @@ function drawSupports(ctx, model, toS, base){
 /* =====================================================================
    7. 荷载简图
    ===================================================================== */
-function drawLoadDiagram(canvas, model){
-  const {ctx,W,H} = setupCanvas(canvas);
-  /* 有 H 时左侧留箭头空间；无 H 时给左右更多余量让模型居中 */
+function drawLoadDiagram(canvas, model, dprOverride){
+  const {ctx,W,H} = setupCanvas(canvas, dprOverride);
+  /* 有 H 时左侧留箭头空间；无 H 时给左右更多余量让模型居中。
+     showDim：宽度 ≥ 300px 时叠加尺寸线与截面信息（窄屏隐藏，避免拥挤） */
   const pH = model.p;
   const hasH = (pH.H1 + pH.H2 + pH.H3) > 0;
+  const showDim = W >= 300;
   const {toS} = makeTransform(model, W, H, {
-    padL: hasH ? 60 : 44,
-    padR: 44,
+    padL: showDim ? (hasH ? 82 : 74) : (hasH ? 60 : 44),
+    padR: showDim ? 60 : 44,
     padT: 52,
-    padB: 32
+    padB: showDim ? 62 : 32
   });
 
   const T = theme();
@@ -2187,6 +2214,121 @@ function drawLoadDiagram(canvas, model){
   for(let lv=1; lv<=model.nLev; lv++){
     drawFloorH(lv, p['H'+lv], 'H'+subs[lv]);
   }
+
+  /* 尺寸线 + 截面信息（仅当画布足够宽时） */
+  if(showDim){
+    drawDims(ctx, model, toS, T);
+    drawSectionInfo(ctx, model, W, T);
+  }
+}
+
+/* ============================================================
+   尺寸线：水平（dir='h'） / 垂直（dir='v'）
+   两端画短 tick，中间写标签；垂直方向文字旋转 -90° 沿尺寸线
+   ============================================================ */
+function drawDimLine(ctx, x1, y1, x2, y2, label, color, dir){
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.fillStyle   = color;
+  ctx.lineWidth   = 0.9;
+  ctx.setLineDash([]);
+
+  if(dir === 'h'){
+    ctx.beginPath();
+    ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x1, y1 - 4); ctx.lineTo(x1, y1 + 4);
+    ctx.moveTo(x2, y2 - 4); ctx.lineTo(x2, y2 + 4);
+    ctx.stroke();
+    ctx.font = '10.5px ui-sans-serif,system-ui,sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(label, (x1 + x2) / 2, y1 - 6);
+  } else {
+    ctx.beginPath();
+    ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x1 - 4, y1); ctx.lineTo(x1 + 4, y1);
+    ctx.moveTo(x2 - 4, y2); ctx.lineTo(x2 + 4, y2);
+    ctx.stroke();
+    /* 文字旋转 -90°：沿尺寸线方向从下往上读 */
+    ctx.save();
+    ctx.translate(x1 - 8, (y1 + y2) / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.font = '10.5px ui-sans-serif,system-ui,sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(label, 0, 0);
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+/* 尺寸线总调度：底部跨度 + 悬挑；左侧层高 */
+function drawDims(ctx, model, toS, T){
+  const p   = model.p;
+  const nBay = model.nBay, nLev = model.nLev, nCol = model.nCol;
+
+  /* 各柱柱底屏幕 x / y（柱底 y 全部相同） */
+  const [, yBase] = toS(0, 0);
+  const dimY = yBase + 30;
+  const xCols = [];
+  for(let c=0; c<nCol; c++){
+    const n = model.nodes[c*(nLev+1)];
+    xCols.push(toS(n.x, n.y)[0]);
+  }
+
+  /* 底部跨度尺寸线 */
+  const subs = ['₀','₁','₂','₃'];
+  for(let c=0; c<nBay; c++){
+    const Lval = p['L'+(c+1)];
+    drawDimLine(ctx,
+      xCols[c], dimY, xCols[c+1], dimY,
+      `L${subs[c+1]} = ${Lval.toFixed(1)}`,
+      T.frameThin, 'h');
+  }
+
+  /* 悬挑尺寸线（如启用） */
+  if(p.hasCant){
+    const nCant = model.nodes.find(n => n.cant);
+    if(nCant){
+      const xb = toS(nCant.x, nCant.y)[0];
+      drawDimLine(ctx,
+        xCols[nBay], dimY, xb, dimY,
+        `Lc = ${p.Lc.toFixed(1)}`,
+        T.frameThin, 'h');
+    }
+  }
+
+  /* 左侧层高尺寸线 */
+  const dimX = xCols[0] - 34;
+  const yLev = [];
+  for(let lv=0; lv<=nLev; lv++){
+    const n = model.nodes[lv];   /* 左柱第 lv 个节点 */
+    yLev.push(toS(n.x, n.y)[1]);
+  }
+  for(let lv=1; lv<=nLev; lv++){
+    const hval = p['h'+lv];
+    drawDimLine(ctx,
+      dimX, yLev[lv], dimX, yLev[lv-1],
+      `h${subs[lv]} = ${hval.toFixed(1)}`,
+      T.frameThin, 'v');
+  }
+}
+
+/* 截面信息：画布右上角两行小字 */
+function drawSectionInfo(ctx, model, W, T){
+  const p = model.p;
+  ctx.save();
+  ctx.font = '11px ui-sans-serif,system-ui,sans-serif';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = T.frameThin;
+  ctx.fillText(`柱 ${p.bc}×${p.hc} mm`, W - 14, 14);
+  ctx.fillText(`梁 ${p.bb}×${p.hb} mm`, W - 14, 30);
+  ctx.restore();
 }
 
 function drawUDL(ctx, toS, ni, nj, q, showLabel, labelTxt, placeAbove){
@@ -2359,12 +2501,12 @@ function forceStyleOf(type, kind){
   return (kind === 'col') ? s.col : s.beam;
 }
 
-function drawInternal(canvas, model){
+function drawInternal(canvas, model, dprOverride){
   const type = model.p.forceType;
   const FSTYLE = S.lightBg ? FORCE_STYLE_LIGHT[type] : FORCE_STYLE[type];
   const T = theme();
   const filter = model.p.elFilter;
-  const {ctx,W,H} = setupCanvas(canvas);
+  const {ctx,W,H} = setupCanvas(canvas, dprOverride);
   /* 与变形图保持一致的纵向留白，使两图视觉尺寸相同 */
   const {toS} = makeTransform(model, W, H, {
     padL: 120, padT: 100, padR: 60, padB: 36
@@ -2595,9 +2737,9 @@ function drawInternal(canvas, model){
 /* =====================================================================
    9. 变形图
    ===================================================================== */
-function drawDeform(canvas, model){
+function drawDeform(canvas, model, dprOverride){
   const T = theme();
-  const {ctx,W,H} = setupCanvas(canvas);
+  const {ctx,W,H} = setupCanvas(canvas, dprOverride);
   /* 仅变形图模式下，叠加层变横排通栏，图形上/左留白可大幅收缩 */
   const pad = (model.p.displayMode === 'deform')
     ? {padL: 56, padT: 100, padR: 80, padB: 42}
@@ -2829,6 +2971,21 @@ function updateReadout(model){
 }
 
 function run(){
+  /* 拓扑或几何变更时自动解冻对比基准，避免旧坐标错位 */
+  if(BASE){
+    const p0 = BASE.p;
+    const geoChanged = (
+      p0.nBay !== S.nBay || p0.nLev !== S.nLev || p0.hasCant !== S.hasCant ||
+      p0.L1 !== S.L1 || p0.L2 !== S.L2 || p0.L3 !== S.L3 ||
+      p0.h1 !== S.h1 || p0.h2 !== S.h2 || p0.h3 !== S.h3 ||
+      p0.Lc !== S.Lc
+    );
+    if(geoChanged){
+      BASE = null;
+      const btnFz = document.getElementById('btnFreeze');
+      if(btnFz) btnFz.classList.remove('on');
+    }
+  }
   try{
     MODEL = analyze(S);
   }catch(err){
@@ -2983,9 +3140,14 @@ function updateTabInd(){
   const btns = bar.querySelectorAll('button[data-tab]');
   const idx = [...btns].findIndex(b => b.classList.contains('on'));
   if(idx < 0) return;
-  const w = bar.clientWidth / btns.length;
+  /* tabBar 有 padding:0 8px，clientWidth 含 padding；
+     按钮实际可用宽度要减掉左右 padding，指示器也要整体右移 padL。 */
+  const cs   = getComputedStyle(bar);
+  const padL = parseFloat(cs.paddingLeft)  || 0;
+  const padR = parseFloat(cs.paddingRight) || 0;
+  const w    = (bar.clientWidth - padL - padR) / btns.length;
   ind.style.width = w + 'px';
-  ind.style.transform = `translateX(${idx * w}px)`;
+  ind.style.transform = `translateX(${padL + idx * w}px)`;
 }
 
 /* ---------- Tab 绑定 ---------- */
@@ -3540,6 +3702,42 @@ function stopRecording(){
   });
 })();
 
+/* ---------- 单帧截图导出（PNG · 2x 分辨率） ---------- */
+function exportCanvasPNG(canvasId, baseName){
+  if(!MODEL) return;
+  const canvas = document.getElementById(canvasId);
+  if(!canvas || !canvas.width) return;
+
+  /* 用 2x DPR 重绘一次（仅这一次，不动屏幕显示） */
+  if(canvasId === 'cvForce')      drawInternal(canvas, MODEL, 2);
+  else if(canvasId === 'cvD')     drawDeform(canvas, MODEL, 2);
+  else if(canvasId === 'cvLoad')  drawLoadDiagram(canvas, MODEL, 2);
+
+  canvas.toBlob(blob => {
+    if(blob){
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const ts = new Date().toISOString()
+                   .replace(/[:T]/g,'-').replace(/\..+$/,'');
+      a.href = url;
+      a.download = `${baseName}_${ts}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(()=>URL.revokeObjectURL(url), 2000);
+    }
+    /* 恢复屏幕显示（原始 DPR 重绘） */
+    scheduleRender();
+  }, 'image/png');
+}
+
+(function bindShot(){
+  const b1 = document.getElementById('btnShotForce');
+  const b2 = document.getElementById('btnShotDeform');
+  if(b1) b1.addEventListener('click', ()=> exportCanvasPNG('cvForce', 'internal_diagram'));
+  if(b2) b2.addEventListener('click', ()=> exportCanvasPNG('cvD',     'deformation'));
+})();
+
 (function bindHmode(){
   const seg = document.getElementById('segHmode');
   if(!seg) return;
@@ -3602,6 +3800,134 @@ function stopRecording(){
   });
 })();
 
+/* ---------- 参数存 URL ---------- */
+const SHARE_KEYS = [
+  'nBay','nLev','hasCant',
+  'L1','L2','L3','h1','h2','h3','Lc',
+  'bc','hc','bb','hb','r',
+  'q1','q2','q3','qc1','qc2','qc3','H1','H2','H3',
+  'Hmode','betaF','betaJ',
+  'mScale','dScale','forceType','elFilter'
+];
+
+function encodeState(){
+  const obj = {};
+  for(const k of SHARE_KEYS) obj[k] = S[k];
+  return btoa(JSON.stringify(obj))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+
+function decodeState(str){
+  try{
+    let b64 = str.replace(/-/g, '+').replace(/_/g, '/');
+    while(b64.length % 4) b64 += '=';
+    const obj = JSON.parse(atob(b64));
+    if(!obj || typeof obj !== 'object') return null;
+    return obj;
+  }catch(e){ return null; }
+}
+
+function applyStateFromObj(obj){
+  if(!obj) return false;
+
+  /* 拓扑：合法性校验 */
+  const nb = parseInt(obj.nBay);
+  const nl = parseInt(obj.nLev);
+  if(nb >= 1 && nb <= 3) S.nBay = nb;
+  if(nl >= 1 && nl <= 3) S.nLev = nl;
+  if(typeof obj.hasCant === 'boolean') S.hasCant = obj.hasCant;
+
+  /* 滑块 + 枚举：白名单校验 */
+  for(const k of SHARE_KEYS){
+    if(k === 'nBay' || k === 'nLev' || k === 'hasCant') continue;
+    if(!(k in obj)) continue;
+    const v = obj[k];
+    if(k === 'Hmode'){
+      if(v === 'left' || v === 'dstiff') S[k] = v;
+    } else if(k === 'forceType'){
+      if(v === 'M' || v === 'N' || v === 'V') S[k] = v;
+    } else if(k === 'elFilter'){
+      if(v === 'all' || v === 'col' || v === 'beam') S[k] = v;
+    } else {
+      const n = parseFloat(v);
+      if(!isFinite(n)) continue;
+      const el = document.getElementById(k);
+      if(el && el.type === 'range'){
+        const lo = parseFloat(el.min), hi = parseFloat(el.max);
+        S[k] = Math.max(lo, Math.min(hi, n));
+      } else {
+        S[k] = n;
+      }
+    }
+  }
+
+  /* 同步拓扑按钮 */
+  document.querySelectorAll('#segBay button').forEach(b =>
+    b.classList.toggle('on', parseInt(b.dataset.bay) === S.nBay));
+  document.querySelectorAll('#segLev button').forEach(b =>
+    b.classList.toggle('on', parseInt(b.dataset.lev) === S.nLev));
+  document.querySelectorAll('#segCant button').forEach(b =>
+    b.classList.toggle('on', (b.dataset.cant === '1') === S.hasCant));
+
+  /* 同步滑块 UI */
+  for(const k of SHARE_KEYS){
+    const el = document.getElementById(k);
+    if(el && el.type === 'range'){
+      el.value = S[k];
+      const out = document.getElementById('v-'+k);
+      if(out && fmtMap[k]) out.textContent = fmtMap[k](parseFloat(S[k]));
+      updateRangeProgress(el);
+    }
+  }
+
+  /* 同步分段按钮 */
+  document.querySelectorAll('#segHmode button').forEach(b =>
+    b.classList.toggle('on', b.dataset.mode === S.Hmode));
+  document.querySelectorAll('#segForce button').forEach(b =>
+    b.classList.toggle('on', b.dataset.force === S.forceType));
+  document.querySelectorAll('#segElem button').forEach(b =>
+    b.classList.toggle('on', b.dataset.filter === S.elFilter));
+
+  applyTopoState();
+  run();
+  return true;
+}
+
+function shareURL(){
+  const hash = '#st=' + encodeState();
+  /* location.href.split('#')[0] 在任何协议下都能取到纯净 URL：
+     - https://xxx.github.io/repo/index.html
+     - file:///C:/.../index.html
+     - http://localhost:8000/index.html
+     直接复用当前 URL 的所有部分，无需手动判断 origin。 */
+  const url = location.href.split('#')[0] + hash;
+  const done = () => {
+    const btn = document.getElementById('btn-share');
+    if(!btn) return;
+    btn.classList.add('copied');
+    const orig = btn.textContent;
+    btn.textContent = '✓';
+    setTimeout(()=>{
+      btn.classList.remove('copied');
+      btn.textContent = orig;
+    }, 1200);
+  };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(url).then(done).catch(()=>{
+      window.prompt('复制以下链接分享：', url);
+    });
+  }else{
+    window.prompt('复制以下链接分享：', url);
+  }
+}
+
+(function bindShare(){
+  const btn = document.getElementById('btn-share');
+  if(btn) btn.addEventListener('click', shareURL);
+})();
+
 /* ---------- 重置按钮 ---------- */
 const fmtMap = {
   L1: v=>v.toFixed(1)+' m',  L2: v=>v.toFixed(1)+' m',  L3: v=>v.toFixed(1)+' m',
@@ -3618,6 +3944,7 @@ const fmtMap = {
   mScale: v=>v.toFixed(2), dScale: v=>v.toFixed(0)
 };
 document.getElementById('btn-reset').addEventListener('click', ()=>{
+  if(S.sweep.playing) sweepStop();
   document.querySelectorAll('input[type=range]').forEach(el=>{
     el.value = el.defaultValue;
     const v = parseFloat(el.value);
@@ -3660,6 +3987,11 @@ document.getElementById('btn-reset').addEventListener('click', ()=>{
   const segE = document.getElementById('segElem');
   if(segE) segE.querySelectorAll('button[data-filter]').forEach(b=>b.classList.toggle('on', b.dataset.filter === 'all'));
   applyTopoState();
+  /* 若当前 URL 带分享 hash，重置时一并清掉 —— 避免刷新又回到旧工况。
+     用 replaceState 而非 location.hash=''，避免污染历史栈。 */
+  if(location.hash){
+    history.replaceState(null, '', location.pathname + location.search);
+  }
   run();
 });
 
@@ -3683,7 +4015,17 @@ if(window.ResizeObserver){
 
 /* ---------- 启动 ---------- */
 applyTopoState();
-run();
+
+/* 优先从 URL hash 恢复状态；否则默认运行 */
+(function boot(){
+  const m = location.hash.match(/^#st=(.+)$/);
+  if(m){
+    const obj = decodeState(m[1]);
+    if(obj && applyStateFromObj(obj)) return;  /* applyStateFromObj 内部已 run() */
+  }
+  run();
+})();
+
 requestAnimationFrame(()=>{
   updateTabInd();
   window.addEventListener('resize', updateTabInd);
