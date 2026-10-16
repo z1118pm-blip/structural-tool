@@ -1,0 +1,3682 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>力学概念训练器 · 平面刚架线弹性静力分析</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    background:#eef1f6;color:#1f2937;overflow:hidden;
+  }
+  #app{display:flex;height:100vh}
+
+  /* ---------- 左侧栏 ---------- */
+  #leftCol{
+    flex:0 0 376px;display:flex;flex-direction:column;
+    background:#fff;border-right:1px solid #dde3ec;min-width:0;
+    overflow:hidden;
+  }
+
+  /* 模型摘要卡 */
+  .modelSummary{
+    flex:0 0 auto;
+    padding:10px 16px 12px;
+    border-bottom:1px solid #eef1f6;
+    background:linear-gradient(180deg, rgba(56,189,248,0.03), transparent);
+  }
+  .modelSummary .msTop{
+    font-size:13px;font-weight:600;color:#0f172a;
+    letter-spacing:.2px;line-height:1.3;
+  }
+  .modelSummary .msTop .msTag{
+    display:inline-block;
+    font-size:10.5px;font-weight:600;
+    padding:1px 7px;border-radius:5px;
+    background:rgba(56,189,248,0.12);
+    color:#0284c7;margin-left:6px;
+    vertical-align:1px;letter-spacing:.2px;
+  }
+  .modelSummary .msLine{
+    font-size:11px;color:#64748b;line-height:1.6;
+    font-variant-numeric:tabular-nums;
+    font-family:'JetBrains Mono',ui-monospace,monospace;
+    letter-spacing:.1px;
+  }
+
+  /* Tab 栏 */
+  .tabBar{
+    flex:0 0 auto;display:flex;position:relative;
+    border-bottom:1px solid #eef1f6;
+    padding:0 8px;background:transparent;
+  }
+  .tabBar button{
+    flex:1;padding:11px 0 10px;
+    font-size:12.5px;font-weight:500;font-family:inherit;
+    color:#94a3b8;background:transparent;border:none;cursor:pointer;
+    transition:color .18s;letter-spacing:.2px;
+    position:relative;z-index:1;
+  }
+  .tabBar button:hover{color:#475569}
+  .tabBar button.on{color:#0f172a;font-weight:600}
+  .tabInd{
+    position:absolute;bottom:-1px;left:0;
+    height:2px;background:#2563eb;border-radius:2px 2px 0 0;
+    width:0;
+    transition:transform .28s cubic-bezier(.4,0,.2,1), width .28s cubic-bezier(.4,0,.2,1);
+    pointer-events:none;
+  }
+
+  /* 底栏 */
+  #leftFooter{
+    flex:0 0 auto;
+    display:flex;gap:8px;
+    padding:10px 16px;
+    border-top:1px solid #eef1f6;
+    background:transparent;
+  }
+  #leftFooter .btnReset{flex:1}
+  /* Tab 内容容器 */
+  .tabContent{
+    flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;
+    scrollbar-width:thin;
+    scrollbar-color:rgba(37,99,235,.30) transparent;
+  }
+  .tabContent::-webkit-scrollbar,
+  #readout::-webkit-scrollbar,
+  .modalBody::-webkit-scrollbar{width:6px;height:6px}
+  .tabContent::-webkit-scrollbar-track,
+  #readout::-webkit-scrollbar-track,
+  .modalBody::-webkit-scrollbar-track{background:transparent}
+  .tabContent::-webkit-scrollbar-thumb,
+  #readout::-webkit-scrollbar-thumb,
+  .modalBody::-webkit-scrollbar-thumb{
+    background:rgba(37,99,235,.28);
+    border-radius:3px;
+    border:0;
+  }
+  .tabContent::-webkit-scrollbar-thumb:hover,
+  #readout::-webkit-scrollbar-thumb:hover,
+  .modalBody::-webkit-scrollbar-thumb:hover{
+    background:rgba(37,99,235,.55);
+  }
+  .tabContent::-webkit-scrollbar-button,
+  #readout::-webkit-scrollbar-button,
+  .modalBody::-webkit-scrollbar-button{display:none;height:0;width:0}
+  .tabContent::-webkit-scrollbar-corner,
+  #readout::-webkit-scrollbar-corner,
+  .modalBody::-webkit-scrollbar-corner{background:transparent}
+  .tabPanel{padding:14px 16px 24px}
+  .tabPanel:not(.on){display:none}
+
+  .group{margin-bottom:14px}
+  .gtitle{
+    font-size:11px;font-weight:700;color:#475569;letter-spacing:.8px;
+    margin-bottom:10px;padding-left:8px;line-height:1.25;
+    border-left:2.5px solid #2563eb;
+  }
+  .ctrl{margin-bottom:9px}
+  .ctrl .head{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;margin-bottom:4px}
+  .ctrl .head span{color:#475569;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ctrl .head b{font-weight:600;color:#0f172a;font-variant-numeric:tabular-nums;font-size:12px;margin-left:6px;white-space:nowrap}
+  .ctrl.is-disabled{
+    opacity:.32;pointer-events:none;
+    filter:grayscale(.4);
+    transition:opacity .18s, filter .18s;
+  }
+  .ctrl.is-disabled .head span{font-style:italic}
+  .hint{font-size:10.5px;color:#94a3b8;margin-top:-4px;margin-bottom:8px;line-height:1.5}
+  .seg + .hint{margin-top:6px}
+
+  input[type=range]{
+    -webkit-appearance:none;appearance:none;width:100%;height:5px;border-radius:3px;
+    background:linear-gradient(90deg,
+      #2563eb 0%, #2563eb var(--p,50%),
+      #e2e8f0 var(--p,50%), #e2e8f0 100%);
+    outline:none;cursor:pointer;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;appearance:none;width:14px;height:16px;
+    background:linear-gradient(180deg, #fff, #cbd5e1);
+    border:1.5px solid #2563eb;
+    clip-path:polygon(50% 0, 100% 26%, 100% 74%, 50% 100%, 0 74%, 0 26%);
+    box-shadow:0 2px 8px rgba(37,99,235,.5);
+    cursor:pointer;transition:transform .12s, box-shadow .12s;
+  }
+  input[type=range]:hover::-webkit-slider-thumb{
+    transform:scale(1.15);
+    box-shadow:0 0 14px rgba(37,99,235,.85);
+  }
+  input[type=range]::-moz-range-thumb{
+    width:12px;height:14px;
+    background:linear-gradient(180deg, #fff, #cbd5e1);
+    border:1.5px solid #2563eb;
+    clip-path:polygon(50% 0, 100% 26%, 100% 74%, 50% 100%, 0 74%, 0 26%);
+    box-shadow:0 2px 8px rgba(37,99,235,.5);
+    cursor:pointer;
+  }
+
+  .seg{display:flex;gap:6px}
+  .seg button{
+    flex:1;padding:7px 0;font-size:12px;font-family:inherit;cursor:pointer;
+    border:1px solid #dde3ec;background:#f8fafc;color:#475569;border-radius:7px;
+    transition:all .15s;
+  }
+  .seg button:hover{background:#f1f5f9}
+  .seg button.on{
+    background:#2563eb;border-color:#2563eb;color:#fff;font-weight:600;
+    box-shadow:0 2px 8px rgba(37,99,235,.3);
+  }
+
+  .btnReset{
+    width:100%;padding:8px 0;font-size:12px;font-family:inherit;cursor:pointer;
+    border:1px solid #dde3ec;background:#f8fafc;color:#334155;border-radius:7px;
+    transition:all .15s;
+  }
+  .btnReset:hover{background:#f1f5f9;border-color:#cbd5e1}
+  .btnHelp{
+    background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8;font-weight:600;
+  }
+  .btnHelp:hover{background:#dbeafe;border-color:#93c5fd}
+
+  /* ---------- 右侧图形区 ---------- */
+  #stage{
+    flex:1;min-width:0;padding:10px;gap:10px;
+    display:grid;
+    grid-template-columns:340px 1fr;
+    grid-template-rows:1fr 1fr;
+    position:relative;
+  }
+  /* rowTop / rowBottom 变成"透明容器"，其子元素直接参与上面的 grid */
+  #stage .rowTop, #stage .rowBottom{display:contents}
+  /* 显示模式：浮层在右上角，不占 grid 行 */
+  #stageModeBar{
+    position:absolute;
+    top:16px;
+    right:16px;
+    z-index:10;
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    pointer-events:none;
+  }
+  #stageModeBar > *{pointer-events:auto}
+  #readout{grid-column:1;grid-row:1;min-height:0}
+  #chartForce{grid-column:2;grid-row:1;min-height:0}
+  #chartLoad{grid-column:1;grid-row:2;min-height:0}
+  #chartDeform{grid-column:2;grid-row:2;min-height:0}
+
+  /* 内力图卡 tagBar 下移，给浮动工具条让位 */
+  #chartForce .tagBar{top:48px}
+
+  #readout{
+    flex:0 0 300px;background:#fff;border-radius:10px;
+    box-shadow:0 1px 3px rgba(15,23,42,.07);
+    padding:14px;overflow-y:auto;min-height:0;
+    font-size:11.5px;color:#64748b;line-height:1.65;
+    font-variant-numeric:tabular-nums;
+  }
+  #chartLoad{flex:0 0 300px}
+
+  .chart{
+    position:relative;background:#fff;border-radius:10px;
+    box-shadow:0 1px 3px rgba(15,23,42,.07);
+    overflow:hidden;min-height:0;
+    display:flex;flex-direction:column;
+  }
+  .chart > canvas{
+    flex:1;min-height:0;display:block;width:100%;
+  }
+  .chart.grow{flex:1 1 auto}
+
+  .chartBar{
+    flex:0 0 auto;
+    display:flex;align-items:center;gap:8px;
+    padding:6px 14px 10px;
+    border-top:1px solid #eef1f6;
+    background:#fafbfc;
+  }
+  /* 内力图卡的 chartBar：单行三组（k_F / β_f / β_j） */
+  #chartForce .chartBar{
+    gap:10px;
+  }
+  .cbRow{
+    display:flex;align-items:center;gap:8px;
+  }
+  .cbRowSplit{
+    flex:1 1 auto;
+    min-width:0;
+    display:grid;
+    grid-template-columns:auto minmax(40px,1fr) auto
+                          auto minmax(40px,1fr) auto
+                          auto minmax(40px,1fr) auto;
+    gap:6px;
+    align-items:center;
+  }
+  .chartBar .barLbl{font-size:10.5px;color:#94a3b8;white-space:nowrap}
+  .chartBar input[type=range]{width:100%}
+  .chartBar .barVal{
+    font-size:11px;font-weight:600;color:#0f172a;
+    font-variant-numeric:tabular-nums;
+    min-width:42px;text-align:right;white-space:nowrap;
+  }
+  .chartBar .barVal.wide{min-width:170px}
+
+  #readout .rTitle{
+    font-size:10.5px;font-weight:700;color:#94a3b8;letter-spacing:1.1px;
+    margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #eef1f6;
+  }
+  #readout .rGroup{margin-bottom:14px}
+  #readout .rGroup:last-of-type{margin-bottom:8px}
+  #readout .rGroupTitle{
+    font-size:10.5px;font-weight:700;color:#475569;letter-spacing:.5px;
+    margin-bottom:5px;
+  }
+  #readout .rRow{display:flex;justify-content:space-between;gap:8px;padding:2px 0}
+  #readout .rRow .lbl{color:#94a3b8;white-space:nowrap}
+  #readout .rRow .val{color:#0f172a;font-weight:600;text-align:right;word-break:break-word}
+  #readout .rFoot{
+    margin-top:12px;padding-top:8px;border-top:1px dashed #eef1f6;
+    font-size:10px;color:#cbd5e1;
+  }
+  .tagBar{
+    position:absolute;top:9px;left:12px;right:12px;
+    display:flex;justify-content:space-between;align-items:center;gap:10px;
+    pointer-events:none;z-index:2;
+  }
+  .tagBar .tag{
+    font-size:11.5px;font-weight:600;color:#94a3b8;letter-spacing:.4px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .segMiniGroup{display:flex;gap:8px;pointer-events:auto;flex:0 0 auto}
+  .segMini{display:flex;gap:2px;pointer-events:auto}
+  .segMini button{
+    padding:2px 9px;font-size:10.5px;font-family:inherit;cursor:pointer;
+    border-radius:5px;border:1px solid #dde3ec;
+    background:rgba(248,250,252,.85);color:#475569;
+    transition:all .15s;
+  }
+  .segMini button:hover{background:#f1f5f9}
+  .segMini button.on{
+    background:#2563eb;border-color:#2563eb;color:#fff;font-weight:600;
+  }
+
+  /* 变形图左上角叠加读数 */
+  .deformOverlay{
+    position:absolute;top:12px;left:12px;
+    background:rgba(255,255,255,0.72);
+    border:1px solid rgba(226,232,240,0.6);
+    border-radius:8px;
+    padding:9px 12px 8px;
+    font-size:11px;color:#64748b;line-height:1.6;
+    font-variant-numeric:tabular-nums;
+    min-width:150px;
+    pointer-events:none;z-index:3;
+  }
+  .deformOverlay .dTitle{
+    font-size:10.5px;font-weight:700;color:#94a3b8;
+    letter-spacing:.8px;margin-bottom:5px;
+    padding-bottom:4px;border-bottom:1px solid #f1f5f9;
+  }
+  .deformOverlay .dRow{
+    display:flex;flex-direction:column;
+    padding:3px 0;
+  }
+  .deformOverlay .dRow span{color:#94a3b8;white-space:nowrap;font-size:10.5px}
+  .deformOverlay .dRow b{color:#0f172a;font-weight:600;font-size:12px;padding-left:2px}
+
+  /* ---------- 使用说明模态框 ---------- */
+  .modal{
+    display:none;position:fixed;inset:0;z-index:100;
+    background:rgba(15,23,42,.55);
+    align-items:center;justify-content:center;
+    padding:20px;
+  }
+  .modal.open{display:flex}
+  .modalCard{
+    background:#fff;border-radius:12px;
+    width:min(820px,100%);max-height:88vh;
+    display:flex;flex-direction:column;
+    box-shadow:0 20px 60px rgba(15,23,42,.35);
+  }
+  .modalHead{
+    flex:0 0 auto;padding:16px 22px;
+    border-bottom:1px solid #eef1f6;
+    display:flex;justify-content:space-between;align-items:center;
+  }
+  .modalHead h2{font-size:16px;font-weight:700;color:#0f172a}
+  .modalClose{
+    width:30px;height:30px;border-radius:7px;border:1px solid #e2e8f0;
+    background:#f8fafc;color:#64748b;cursor:pointer;font-size:17px;
+    display:flex;align-items:center;justify-content:center;
+    line-height:1;font-family:inherit;
+  }
+  .modalClose:hover{background:#f1f5f9;color:#0f172a}
+  .modalBody{
+    flex:1 1 auto;overflow-y:auto;padding:18px 24px 28px;
+    font-size:13px;line-height:1.75;color:#334155;
+  }
+  .modalBody h3{
+    font-size:13.5px;font-weight:700;margin:18px 0 7px;color:#0f172a;
+    padding-bottom:4px;border-bottom:1px solid #eef1f6;
+  }
+  .modalBody h3:first-child{margin-top:0;border-bottom:none;padding-bottom:0}
+  .modalBody p{margin-bottom:6px}
+  .modalBody ul{margin:4px 0 8px 22px}
+  .modalBody li{margin-bottom:3px}
+  .modalBody code{
+    background:#f1f5f9;padding:1px 6px;border-radius:3px;
+    font-size:12px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+    color:#0f172a;
+  }
+  .modalBody strong{color:#0f172a;font-weight:600}
+  .modalBody .note{
+    background:#fffbeb;border-left:3px solid #fbbf24;
+    padding:9px 13px;border-radius:0 5px 5px 0;margin:8px 0 12px;
+    font-size:12.5px;color:#78350f;line-height:1.6;
+  }
+  .modalBody table{
+    width:100%;border-collapse:collapse;font-size:12px;
+    margin:6px 0 12px;
+  }
+  .modalBody th, .modalBody td{
+    border:1px solid #e2e8f0;padding:5px 10px;text-align:left;
+    vertical-align:top;
+  }
+  .modalBody th{background:#f8fafc;font-weight:600;color:#0f172a}
+
+  /* ---------- 窄屏 ---------- */
+  @media(max-width:1020px){
+    body{overflow:auto}
+    #app{flex-direction:column;height:auto;min-height:100vh}
+    #leftCol{flex:0 0 auto;border-right:none;border-bottom:1px solid #dde3ec}
+    .tabContent{overflow:visible}
+    #stage{
+      flex:0 0 auto;height:auto;padding:10px;
+      display:grid;grid-template-columns:1fr;grid-template-rows:auto;
+      gap:10px;
+    }
+    #stageModeBar{
+      position:static;
+      grid-column:1;grid-row:auto;
+      justify-content:flex-start;
+      padding:0 4px;
+      pointer-events:auto;
+    }
+    #stageWatermark{
+      right:14px;
+      bottom:52px;
+      font-size:10px;
+      letter-spacing:1.4px;
+    }
+    #chartForce .tagBar{top:9px}
+    #readout{grid-column:1;grid-row:auto;max-height:320px}
+    #chartForce{grid-column:1;grid-row:auto;min-height:340px}
+    #chartLoad{grid-column:1;grid-row:auto;min-height:340px}
+    #chartDeform{grid-column:1;grid-row:auto;min-height:340px}
+    /* 窄屏下单列堆叠，忽略跨行 */
+    #stage.mode-force  #chartForce{grid-row:auto}
+    #stage.mode-deform #chartDeform{grid-row:auto}
+  }
+
+  /* ============================================================
+     深色主题覆盖（放在最后，用同优先级后置覆盖上面的浅色样式）
+     ============================================================ */
+  :root{
+    --bg:#0a0f1a;
+    --panel:#0f172a;
+    --line:#1e293b;
+    --line2:#334155;
+    --tx:#e5e7eb;
+    --tx2:#94a3b8;
+    --tx3:#64748b;
+    --accent:#38bdf8;
+  }
+
+  body{
+    background:
+      repeating-linear-gradient(0deg,
+        rgba(56,189,248,.026) 0, rgba(56,189,248,.026) 1px,
+        transparent 1px, transparent 24px),
+      repeating-linear-gradient(90deg,
+        rgba(56,189,248,.026) 0, rgba(56,189,248,.026) 1px,
+        transparent 1px, transparent 24px),
+      radial-gradient(1200px 800px at 12% -10%, rgba(56,189,248,.10), transparent 62%),
+      radial-gradient(900px 600px at 100% 110%, rgba(14,165,233,.07), transparent 60%),
+      var(--bg);
+    background-attachment:fixed;
+    color:var(--tx);
+    font-family:'Inter','PingFang SC','Microsoft YaHei',-apple-system,BlinkMacSystemFont,sans-serif;
+  }
+
+  /* 左侧栏深色化 */
+  #leftCol{background:var(--panel);border-right:1px solid var(--line)}
+
+  .gtitle{color:#7dd3fc;border-left-color:var(--accent)}
+
+  .modelSummary{
+    border-bottom-color:var(--line);
+    background:linear-gradient(180deg, rgba(56,189,248,0.05), transparent);
+  }
+  .modelSummary .msTop{color:#f1f5f9}
+  .modelSummary .msTop .msTag{
+    background:rgba(56,189,248,0.15);color:#7dd3fc;
+  }
+  .modelSummary .msLine{color:var(--tx3)}
+
+  .tabBar{border-bottom-color:var(--line)}
+  .tabBar button{color:var(--tx3)}
+  .tabBar button:hover{color:var(--tx2)}
+  .tabBar button.on{
+    color:#f1f5f9;
+    text-shadow:0 0 6px rgba(56,189,248,.4);
+  }
+  .tabInd{
+    background:var(--accent);
+    box-shadow:0 0 8px rgba(56,189,248,.55);
+  }
+
+  #leftFooter{
+    border-top-color:var(--line);
+  }
+  .ctrl .head span{color:var(--tx2)}
+  .ctrl .head b{
+    color:#f1f5f9;
+    font-family:'JetBrains Mono',ui-monospace,Menlo,monospace;
+    letter-spacing:.2px;
+  }
+  .hint{color:var(--tx3)}
+
+  /* 滑块深色化 */
+  input[type=range]{
+    background:linear-gradient(90deg,
+      var(--accent) 0%, var(--accent) var(--p,50%),
+      #1e293b var(--p,50%), #1e293b 100%);
+  }
+  input[type=range]::-webkit-slider-thumb{
+    background:linear-gradient(180deg, #f8fafc, #94a3b8);
+    border:1.5px solid var(--accent);
+    box-shadow:0 0 8px rgba(56,189,248,.55);
+  }
+  input[type=range]:hover::-webkit-slider-thumb{
+    box-shadow:0 0 12px rgba(56,189,248,.65);
+  }
+  input[type=range]::-moz-range-thumb{
+    background:linear-gradient(180deg, #f8fafc, #94a3b8);
+    border:1.5px solid var(--accent);
+    box-shadow:0 0 12px rgba(56,189,248,.75);
+  }
+
+  /* 分段按钮 */
+  .seg button{
+    background:#0b1220;border-color:var(--line);color:var(--tx2);
+  }
+  .seg button:hover{background:#111c2f}
+  .seg button.on{
+    background:linear-gradient(180deg,#0ea5e9,#0284c7);
+    border-color:#38bdf8;color:#fff;
+    box-shadow:0 0 0 1px rgba(56,189,248,.25);
+  }
+
+  /* 按钮 */
+  .btnReset{
+    background:#0b1220;border-color:var(--line);color:var(--tx2);
+  }
+  .btnReset:hover{background:#111c2f;border-color:var(--line2)}
+  .btnHelp{
+    background:rgba(14,165,233,.12);
+    border-color:rgba(56,189,248,.40);
+    color:#7dd3fc;
+  }
+  .btnHelp:hover{background:rgba(14,165,233,.20);border-color:#38bdf8}
+
+  /* 右侧舞台背景透明 */
+  #stage{background:transparent}
+
+  /* 卡片（读数 + 3 个图形）升级圆角与阴影，保留白底便于看图纸 */
+  .chart, #readout{
+    border-radius:14px;
+    box-shadow:
+      0 1px 0 rgba(255,255,255,.04) inset,
+      0 10px 30px rgba(0,0,0,.45);
+  }
+
+  /* 模态框阴影加深 */
+  .modalCard{box-shadow:0 24px 80px rgba(0,0,0,.65)}
+
+  /* 品牌头 */
+  .brand{
+    position:relative;
+    display:flex;align-items:center;gap:12px;
+    padding:12px 16px 12px;
+  }
+  /* 底部渐变线（替代 border-bottom） */
+  .brand::after{
+    content:'';position:absolute;left:0;right:0;bottom:0;height:1px;
+    background:linear-gradient(90deg,
+      transparent 0%,
+      rgba(56,189,248,.60) 22%,
+      rgba(56,189,248,.60) 78%,
+      transparent 100%);
+    pointer-events:none;
+  }
+  /* 图标：SVG 线框刚架 + 四角 L 形刻线 */
+  .brandIcon{
+    position:relative;flex:0 0 auto;
+    width:44px;height:44px;
+    display:flex;align-items:center;justify-content:center;
+    border-radius:10px;
+    overflow:hidden;
+    /* 四角 L 形刻线 */
+    background:
+      linear-gradient(#38bdf8,#38bdf8) left  top    / 8px 2px no-repeat,
+      linear-gradient(#38bdf8,#38bdf8) left  top    / 2px 8px no-repeat,
+      linear-gradient(#38bdf8,#38bdf8) right top    / 8px 2px no-repeat,
+      linear-gradient(#38bdf8,#38bdf8) right top    / 2px 8px no-repeat,
+      linear-gradient(#38bdf8,#38bdf8) left  bottom / 8px 2px no-repeat,
+      linear-gradient(#38bdf8,#38bdf8) left  bottom / 2px 8px no-repeat,
+      linear-gradient(#38bdf8,#38bdf8) right bottom / 8px 2px no-repeat,
+      linear-gradient(#38bdf8,#38bdf8) right bottom / 2px 8px no-repeat,
+      rgba(56,189,248,.06);
+    box-shadow:0 0 12px rgba(56,189,248,.14);
+  }
+  .brandIcon img{
+    width:34px;height:34px;display:block;object-fit:cover;
+    border-radius:4px;
+    /* 关键：黑底 PNG 在深色面板上"融底" */
+    mix-blend-mode:lighten;
+    filter:contrast(1.08) brightness(1.05);
+  }
+  .brandText{flex:1;min-width:0}
+  .brandRow{
+    display:flex;justify-content:space-between;align-items:center;
+    gap:8px;
+  }
+  .brandName{
+    font-size:19px;font-weight:600;letter-spacing:-.01em;line-height:1.2;
+    font-family:'Inter','PingFang SC','Microsoft YaHei',sans-serif;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    background:linear-gradient(135deg, #f8fafc 0%, #e0f2fe 45%, #7dd3fc 100%);
+    -webkit-background-clip:text;
+    background-clip:text;
+    -webkit-text-fill-color:transparent;
+    color:#f1f5f9;
+  }
+  .brandVer{
+    font-family:'JetBrains Mono',ui-monospace,monospace;
+    font-size:10px;font-weight:600;letter-spacing:.3px;line-height:1.4;
+    color:#7dd3fc;white-space:nowrap;flex:0 0 auto;
+    padding:2px 8px;border-radius:999px;
+    border:1px solid rgba(56,189,248,.45);
+    background:rgba(56,189,248,.08);
+    box-shadow:0 0 10px rgba(56,189,248,.18) inset;
+  }
+  .brandRule{
+    height:1px;width:56px;margin:5px 0 4px;
+    background:linear-gradient(90deg, rgba(56,189,248,.85), rgba(56,189,248,0));
+    border-radius:1px;
+  }
+  .brandSub{
+    font-size:11px;color:#94a3b8;
+    line-height:1.5;letter-spacing:.2px;
+  }
+
+  /* 品牌头署名 */
+  .brandSign{
+    font-family:'JetBrains Mono',ui-monospace,monospace;
+    font-size:10px;
+    letter-spacing:1.6px;
+    color:#7dd3fc;
+    opacity:.62;
+    margin-top:3px;
+    user-select:none;
+  }
+
+  /* 右区右下角水印 */
+  #stageWatermark{
+    position:absolute;
+    right:22px;
+    bottom:56px;
+    z-index:9;
+    pointer-events:none;
+    user-select:none;
+    font-family:'JetBrains Mono',ui-monospace,monospace;
+    font-size:11px;
+    font-weight:500;
+    letter-spacing:1.8px;
+    color:rgba(125,211,252,.52);
+    text-shadow:0 0 10px rgba(56,189,248,.28);
+    white-space:nowrap;
+  }
+
+  /* 窄屏下的深色边框 */
+  @media(max-width:1020px){
+    #leftCol{border-bottom-color:var(--line)}
+  }
+
+  /* ============ 深色主题补全 ============ */
+  /* 辅图（读数 / 荷载简图）：沉底 */
+  .chart, #readout{
+    background:#0d1424;
+    border:1px solid rgba(30,41,59,.9);
+  }
+  #readout{position:relative}
+
+  /* 主图（弯矩 / 变形）：浮起 */
+  #chartForce, #chartDeform{
+    background:#0b1220;
+    border:1px solid rgba(56,189,248,.22);
+    border-radius:16px;
+    box-shadow:
+      0 1px 0 rgba(255,255,255,.05) inset,
+      0 12px 40px rgba(0,0,0,.60),
+      0 0 30px rgba(56,189,248,.08);
+  }
+
+  /* 顶部显示模式栏（深色） */
+  #stageModeBar .segMini button{
+    padding:4px 12px;
+    font-size:11px;
+  }
+
+  /* 卡片底部操作条 */
+  .chartBar{
+    background:transparent;
+    border-top:1px solid var(--line);
+  }
+  .chartBar .barLbl{color:var(--tx3)}
+  .chartBar .barVal{color:#f1f5f9}
+  .chartBar .barBtn{
+    padding:3px 10px;font-size:11px;font-family:inherit;cursor:pointer;
+    border-radius:6px;border:1px solid var(--line);
+    background:#0b1220;color:#7dd3fc;
+    transition:all .15s;white-space:nowrap;
+  }
+  .chartBar .barBtn:hover{background:#111c2f;border-color:rgba(56,189,248,.45)}
+  /* (autoTag 样式已随自动适配功能一并移除) */
+
+  /* 卡片左上角标签（"弯矩图 M"/"荷载简图"） */
+  .tagBar .tag{color:#7dd3fc}
+
+  /* 梁/柱筛选按钮（深色） */
+  .segMini button{
+    background:rgba(11,18,32,.72);
+    border-color:var(--line);
+    color:var(--tx2);
+    backdrop-filter:blur(4px);
+  }
+  .segMini button:hover{background:rgba(17,28,47,.92)}
+  .segMini button.on{
+    background:linear-gradient(180deg,#0ea5e9,#0284c7);
+    border-color:#38bdf8;color:#fff;font-weight:600;
+  }
+
+  /* 读数面板 */
+  #readout{color:var(--tx2)}
+  #readout .rTitle{color:var(--tx3);border-bottom-color:var(--line)}
+  #readout .rGroupTitle{color:var(--tx2)}
+  #readout .rRow .lbl{color:rgba(100,116,139,.82)}
+  #readout .rRow .val{
+    color:#f8fafc;
+    font-family:'JetBrains Mono',ui-monospace,monospace;
+    font-size:13px;
+    letter-spacing:-.01em;
+  }
+  #readout .rFoot{color:var(--tx3);border-top-color:var(--line)}
+
+  /* 变形图左上角叠加层 */
+  .deformOverlay{
+    background:rgba(15,23,42,.78);
+    border:1px solid rgba(56,189,248,.22);
+    box-shadow:0 4px 20px rgba(0,0,0,.45);
+  }
+  .deformOverlay .dTitle{color:var(--tx3);border-bottom-color:var(--line)}
+  .deformOverlay .dRow span{color:var(--tx3)}
+  .deformOverlay .dRow b{color:#7dd3fc}
+
+  /* 使用说明模态框 */
+  .modal{background:rgba(2,6,23,.78)}
+  .modalCard{background:var(--panel);border:1px solid var(--line)}
+  .modalHead{border-bottom-color:var(--line)}
+  .modalHead h2{color:#f1f5f9}
+  .modalClose{background:#0b1220;border-color:var(--line);color:var(--tx2)}
+  .modalClose:hover{background:#111c2f;color:#f1f5f9}
+  .modalBody{color:var(--tx2)}
+  .modalBody h3{color:#f1f5f9;border-bottom-color:var(--line)}
+  .modalBody code{background:#0b1220;color:#7dd3fc}
+  .modalBody strong{color:#f1f5f9}
+  .modalBody .note{background:rgba(251,191,36,.10);border-left-color:#fbbf24;color:#fcd34d}
+  .modalBody th, .modalBody td{border-color:var(--line)}
+  .modalBody th{background:#0b1220;color:#f1f5f9}
+
+  /* ============ 显示模式：仅受力 / 仅变形 ============ */
+  /* 力/变形图跨右侧两行占满全高；荷载图保持左下格 —— 位置大小与「全部」完全一致 */
+  #stage.mode-force #chartDeform{display:none}
+  #stage.mode-deform #chartForce{display:none}
+  @media(min-width:1021px){
+    #stage.mode-force #chartForce{grid-row:1 / 3}
+    #stage.mode-deform #chartDeform{grid-row:1 / 3}
+  }
+
+  /* 仅变形图：叠加层横排通栏，高度大幅压缩，腾出纵向空间给图形 */
+  #stage.mode-deform .deformOverlay{
+    right:12px;
+    min-width:0;
+    display:flex;align-items:center;gap:22px;
+  }
+  #stage.mode-deform .deformOverlay .dTitle{
+    margin-bottom:0;padding-bottom:0;border-bottom:none;white-space:nowrap;
+  }
+  #stage.mode-deform .deformOverlay .dRow{
+    flex-direction:row;align-items:baseline;gap:8px;padding:0;
+  }
+
+  /* 滚动条深色化 */
+  .tabContent, #readout, .modalBody{
+    scrollbar-color:rgba(56,189,248,.22) transparent;
+  }
+  .tabContent::-webkit-scrollbar-thumb,
+  #readout::-webkit-scrollbar-thumb,
+  .modalBody::-webkit-scrollbar-thumb{
+    background:rgba(56,189,248,.18);
+    border-radius:3px;
+  }
+  .tabContent::-webkit-scrollbar-thumb:hover,
+  #readout::-webkit-scrollbar-thumb:hover,
+  .modalBody::-webkit-scrollbar-thumb:hover{
+    background:rgba(56,189,248,.45);
+    box-shadow:0 0 8px rgba(56,189,248,.55);
+  }
+
+  /* ============ 参数扫掠 ============ */
+  #sweepBar{
+    flex:0 0 auto;
+    display:none;
+    flex-direction:column;
+    align-items:stretch;
+    gap:6px;
+    padding:8px 16px;
+    border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg, rgba(56,189,248,0.04), transparent);
+  }
+  #sweepBar.on{display:flex}
+
+  .sweepRow{
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .sweepRow .sweepSel{
+    flex:1 1 auto;
+    min-width:0;
+  }
+  .sweepRow.btns .sweepSel{
+    flex:0 0 auto;
+    min-width:80px;
+  }
+
+  .sweepSel{
+    flex:1 1 auto;min-width:0;
+    padding:5px 24px 5px 8px;
+    font-size:11.5px;font-family:inherit;
+    color:var(--tx);
+    background:#0b1220;
+    border:1px solid var(--line);
+    border-radius:6px;
+    cursor:pointer;
+    outline:none;
+    color-scheme:dark;
+    appearance:none;
+    -webkit-appearance:none;
+    background-image:
+      linear-gradient(45deg, transparent 50%, #7dd3fc 50%),
+      linear-gradient(135deg, #7dd3fc 50%, transparent 50%);
+    background-position:
+      calc(100% - 12px) 50%,
+      calc(100% - 8px) 50%;
+    background-size:4px 4px, 4px 4px;
+    background-repeat:no-repeat;
+  }
+  .sweepSel:hover{border-color:var(--line2)}
+  .sweepSel:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(56,189,248,.15)}
+  .sweepSel optgroup{background:#0b1220;color:#7dd3fc;font-style:normal;font-weight:700}
+  .sweepSel option{background:#0b1220;color:var(--tx);padding:4px 8px}
+
+  .btnSweep{
+    flex:0 0 auto;
+    padding:5px 11px;
+    font-size:11.5px;font-family:inherit;font-weight:600;
+    color:#7dd3fc;
+    background:#0b1220;
+    border:1px solid var(--line);
+    border-radius:6px;
+    cursor:pointer;
+    transition:all .15s;
+    white-space:nowrap;
+    line-height:1.4;
+  }
+  .btnSweep:hover{background:#111c2f;border-color:rgba(56,189,248,.45)}
+  .btnSweep.playing{
+    background:linear-gradient(180deg,#0ea5e9,#0284c7);
+    border-color:#38bdf8;color:#fff;
+    box-shadow:0 0 10px rgba(56,189,248,.35);
+  }
+  #btn-sweep.on{
+    background:rgba(14,165,233,.20);
+    border-color:#38bdf8;color:#7dd3fc;
+  }
+  /* 录制按钮 */
+  #btnSweepRec.rec{
+    background:linear-gradient(180deg,#ef4444,#b91c1c);
+    border-color:#ef4444;color:#fff;
+    animation:sweepRecPulse 1.2s ease-in-out infinite;
+  }
+  @keyframes sweepRecPulse{
+    0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.55)}
+    50%    {box-shadow:0 0 12px 2px rgba(239,68,68,.75)}
+  }
+  .sweepLocked{opacity:.4;pointer-events:none;filter:grayscale(.5)}
+
+  /* ============ 打赏 ============ */
+  /* 底栏 ♥ 按钮 */
+  #leftFooter .btnReset.btnTip{
+    flex:0 0 44px;
+    padding:8px 0;
+    font-size:14px;
+    line-height:1;
+    background:rgba(244,63,94,.10);
+    border-color:rgba(244,63,94,.35);
+    color:#fb7185;
+  }
+  #leftFooter .btnReset.btnTip:hover{
+    background:rgba(244,63,94,.20);
+    border-color:#fb7185;
+    color:#fda4af;
+  }
+
+  /* 说明框内嵌打赏区 */
+  .tipInline{
+    display:flex;align-items:center;gap:22px;
+    margin:12px 0 4px;
+    padding:16px 18px;
+    background:rgba(56,189,248,.04);
+    border:1px solid var(--line);
+    border-radius:12px;
+  }
+  .tipInline img{
+    flex:0 0 auto;
+    width:220px;height:220px;
+    object-fit:contain;
+    border-radius:10px;
+    background:#fff;
+    padding:8px;
+    border:1px solid var(--line);
+    box-shadow:0 6px 18px rgba(0,0,0,.25);
+  }
+  .tipInline .tipText{
+    font-size:13px;
+    line-height:2.0;
+    color:var(--tx2);
+  }
+  .tipInline .tipSign{
+    font-family:'JetBrains Mono',ui-monospace,monospace;
+    font-size:11.5px;
+    letter-spacing:1.4px;
+    color:var(--tx3);
+    margin-top:8px;
+  }
+
+  /* 独立打赏弹窗 */
+  .modalCardTip{width:min(380px,100%)}
+  .modalBodyTip{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    text-align:center;
+    padding:22px 24px 28px;
+  }
+  .tipQR{
+    width:220px;height:220px;
+    object-fit:contain;
+    border-radius:10px;
+    background:#fff;
+    padding:8px;
+    border:1px solid var(--line);
+    box-shadow:0 8px 24px rgba(0,0,0,.35);
+  }
+  .tipLine{
+    margin-top:14px;
+    font-size:13px;
+    color:var(--tx2);
+    line-height:1.8;
+  }
+  .tipMeta{
+    font-size:12px;
+    color:var(--tx3);
+    margin-top:2px;
+  }
+  .tipSign{
+    margin-top:12px;
+    font-family:'JetBrains Mono',ui-monospace,monospace;
+    font-size:11px;
+    letter-spacing:1.4px;
+    color:var(--tx3);
+    opacity:.7;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div id="leftCol">
+    <div class="brand">
+      <div class="brandIcon">
+        <img src="1.png" alt="力学概念训练器">
+      </div>
+      <div class="brandText">
+        <div class="brandRow">
+          <span class="brandName">力学概念训练器</span>
+          <span class="brandVer">v0.1</span>
+        </div>
+        <div class="brandRule"></div>
+        <div class="brandSub">基于矩阵位移法的平面刚架线弹性静力分析</div>
+        <div class="brandSign">Zhao | Struct. E.</div>
+      </div>
+    </div>
+
+    <!-- 模型摘要卡 -->
+    <div class="modelSummary" id="modelSummary">
+      <div class="msTop" id="msTop">2 跨 × 2 层<span class="msTag">右悬挑</span></div>
+      <div class="msLine" id="msSpans">6.0 / 6.0 m</div>
+      <div class="msLine" id="msHeights">4.0 / 4.0 m</div>
+    </div>
+
+    <!-- Tab 栏 -->
+    <div class="tabBar" id="tabBar">
+      <button type="button" data-tab="model" class="on">模型</button>
+      <button type="button" data-tab="load">荷载</button>
+      <div class="tabInd" id="tabInd"></div>
+    </div>
+
+    <!-- Tab 内容 -->
+    <div class="tabContent" id="tabContent">
+
+      <!-- ============ Tab 1: 模型 ============ -->
+      <div class="tabPanel on" data-tab="model">
+        <div class="group">
+          <div class="gtitle">结构拓扑</div>
+          <div class="ctrl">
+            <div class="head"><span>跨数</span></div>
+            <div class="seg" id="segBay">
+              <button type="button" data-bay="1">1 跨</button>
+              <button type="button" data-bay="2" class="on">2 跨</button>
+              <button type="button" data-bay="3">3 跨</button>
+            </div>
+          </div>
+          <div class="ctrl">
+            <div class="head"><span>层数</span></div>
+            <div class="seg" id="segLev">
+              <button type="button" data-lev="1">1 层</button>
+              <button type="button" data-lev="2" class="on">2 层</button>
+              <button type="button" data-lev="3">3 层</button>
+            </div>
+          </div>
+          <div class="ctrl">
+            <div class="head"><span>右侧悬挑</span></div>
+            <div class="seg" id="segCant">
+              <button type="button" data-cant="0">无</button>
+              <button type="button" data-cant="1" class="on">有</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="group">
+          <div class="gtitle">几何尺寸</div>
+          <div class="ctrl" id="row-L1">
+            <div class="head"><span>左跨 L₁</span><b id="v-L1">6.0 m</b></div>
+            <input type="range" id="L1" min="3" max="12" step="0.1" value="6">
+          </div>
+          <div class="ctrl" id="row-L2">
+            <div class="head"><span>第二跨 L₂</span><b id="v-L2">6.0 m</b></div>
+            <input type="range" id="L2" min="3" max="12" step="0.1" value="6">
+          </div>
+          <div class="ctrl" id="row-L3">
+            <div class="head"><span>第三跨 L₃</span><b id="v-L3">6.0 m</b></div>
+            <input type="range" id="L3" min="3" max="12" step="0.1" value="6">
+          </div>
+          <div class="ctrl" id="row-h1">
+            <div class="head"><span>一层层高 h₁</span><b id="v-h1">4.0 m</b></div>
+            <input type="range" id="h1" min="2.5" max="7" step="0.1" value="4">
+          </div>
+          <div class="ctrl" id="row-h2">
+            <div class="head"><span>二层层高 h₂</span><b id="v-h2">4.0 m</b></div>
+            <input type="range" id="h2" min="2.5" max="7" step="0.1" value="4">
+          </div>
+          <div class="ctrl" id="row-h3">
+            <div class="head"><span>三层层高 h₃</span><b id="v-h3">4.0 m</b></div>
+            <input type="range" id="h3" min="2.5" max="7" step="0.1" value="4">
+          </div>
+          <div class="ctrl" id="row-Lc">
+            <div class="head"><span>右侧悬挑长度 L<sub>c</sub></span><b id="v-Lc">1.5 m</b></div>
+            <input type="range" id="Lc" min="0.5" max="4" step="0.1" value="1.5">
+          </div>
+        </div>
+
+        <div class="group">
+          <div class="gtitle">材料与截面（C30）</div>
+          <div class="ctrl" id="row-bc">
+            <div class="head"><span>边柱宽 b<sub>c</sub>（出平面）</span><b id="v-bc">400 mm</b></div>
+            <input type="range" id="bc" min="200" max="800" step="50" value="400">
+          </div>
+          <div class="ctrl" id="row-hc">
+            <div class="head"><span>边柱高 h<sub>c</sub>（平面内）</span><b id="v-hc">400 mm</b></div>
+            <input type="range" id="hc" min="200" max="800" step="50" value="400">
+          </div>
+          <div class="ctrl" id="row-bb">
+            <div class="head"><span>梁宽 b<sub>b</sub></span><b id="v-bb">250 mm</b></div>
+            <input type="range" id="bb" min="150" max="500" step="50" value="250">
+          </div>
+          <div class="ctrl" id="row-hb">
+            <div class="head"><span>梁高 h<sub>b</sub></span><b id="v-hb">500 mm</b></div>
+            <input type="range" id="hb" min="300" max="900" step="50" value="500">
+          </div>
+          <div class="ctrl" id="row-r">
+            <div class="head"><span>内柱 / 边柱刚度比 r</span><b id="v-r">1.00</b></div>
+            <input type="range" id="r" min="0.25" max="4" step="0.05" value="1">
+          </div>
+          <div class="hint">内柱 EI、EA 均为边柱的 r 倍。r &gt; 1 时内柱更刚，水平力分配更偏向内柱。</div>
+        </div>
+      </div>
+
+      <!-- ============ Tab 2: 荷载 ============ -->
+      <div class="tabPanel" data-tab="load">
+        <div class="group">
+          <div class="gtitle">跨内梁均布</div>
+          <div class="ctrl" id="row-q1">
+            <div class="head"><span>一层梁 q₁</span><b id="v-q1">0 kN/m</b></div>
+            <input type="range" id="q1" min="0" max="100" step="0.5" value="0">
+          </div>
+          <div class="ctrl" id="row-q2">
+            <div class="head"><span>二层梁 q₂</span><b id="v-q2">0 kN/m</b></div>
+            <input type="range" id="q2" min="0" max="100" step="0.5" value="0">
+          </div>
+          <div class="ctrl" id="row-q3">
+            <div class="head"><span>三层梁 q₃</span><b id="v-q3">0 kN/m</b></div>
+            <input type="range" id="q3" min="0" max="100" step="0.5" value="0">
+          </div>
+        </div>
+
+        <div class="group">
+          <div class="gtitle">右侧悬挑均布</div>
+          <div class="ctrl" id="row-qc1">
+            <div class="head"><span>一层悬挑 q<sub>c1</sub></span><b id="v-qc1">0 kN/m</b></div>
+            <input type="range" id="qc1" min="0" max="100" step="0.5" value="0">
+          </div>
+          <div class="ctrl" id="row-qc2">
+            <div class="head"><span>二层悬挑 q<sub>c2</sub></span><b id="v-qc2">0 kN/m</b></div>
+            <input type="range" id="qc2" min="0" max="100" step="0.5" value="0">
+          </div>
+          <div class="ctrl" id="row-qc3">
+            <div class="head"><span>三层悬挑 q<sub>c3</sub></span><b id="v-qc3">0 kN/m</b></div>
+            <input type="range" id="qc3" min="0" max="100" step="0.5" value="0">
+          </div>
+        </div>
+
+        <div class="group">
+          <div class="gtitle">水平力</div>
+          <div class="ctrl" id="row-H1">
+            <div class="head"><span>一层 H₁</span><b id="v-H1">0 kN</b></div>
+            <input type="range" id="H1" min="0" max="100" step="0.5" value="0">
+          </div>
+          <div class="ctrl" id="row-H2">
+            <div class="head"><span>二层 H₂</span><b id="v-H2">0 kN</b></div>
+            <input type="range" id="H2" min="0" max="100" step="0.5" value="0">
+          </div>
+          <div class="ctrl" id="row-H3">
+            <div class="head"><span>三层 H₃</span><b id="v-H3">0 kN</b></div>
+            <input type="range" id="H3" min="0" max="100" step="0.5" value="0">
+          </div>
+          <div class="ctrl">
+            <div class="head"><span>施加方式</span></div>
+            <div class="seg" id="segHmode">
+              <button type="button" data-mode="left" class="on">仅左柱</button>
+              <button type="button" data-mode="dstiff">D 值法</button>
+            </div>
+          </div>
+          <div class="hint">仅左柱：全部加于左柱顶（模拟风压）；D 值法：按柱侧移刚度分配（模拟地震）</div>
+        </div>
+
+        <div class="group">
+          <div class="gtitle">二阶效应</div>
+          <div class="ctrl">
+            <div class="seg">
+              <button type="button" id="btnPDelta">P-Δ 放大系数 B</button>
+            </div>
+          </div>
+          <div class="hint">开启后，变形图叠加层显示 B = 1/(1−ΣN/ΣN_cr)。近似值，不做二阶迭代。</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 参数扫掠条 -->
+    <div id="sweepBar">
+      <div class="sweepRow">
+        <select id="sweepParam" class="sweepSel" title="选择要扫掠的参数">
+          <optgroup label="截面">
+            <option value="bc">边柱宽 bc</option>
+            <option value="hc">边柱高 hc</option>
+            <option value="bb">梁宽 bb</option>
+            <option value="hb">梁高 hb</option>
+            <option value="r">内/边柱刚度比 r</option>
+          </optgroup>
+          <optgroup label="跨内梁均布">
+            <option value="q1">一层梁 q₁</option>
+            <option value="q2">二层梁 q₂</option>
+            <option value="q3">三层梁 q₃</option>
+          </optgroup>
+          <optgroup label="悬挑均布">
+            <option value="qc1">一层悬挑 qc₁</option>
+            <option value="qc2">二层悬挑 qc₂</option>
+            <option value="qc3">三层悬挑 qc₃</option>
+          </optgroup>
+          <optgroup label="水平力">
+            <option value="H1">一层水平力 H₁</option>
+            <option value="H2">二层水平力 H₂</option>
+            <option value="H3">三层水平力 H₃</option>
+          </optgroup>
+          <optgroup label="边界刚度">
+            <option value="betaF">柱脚 β_f</option>
+            <option value="betaJ">梁端 β_j</option>
+          </optgroup>
+        </select>
+      </div>
+      <div class="sweepRow btns">
+        <select id="sweepRecScope" class="sweepSel" title="录制范围">
+          <option value="force">内力图</option>
+          <option value="deform">变形图</option>
+        </select>
+        <button type="button" id="btnSweepPlay"  class="btnSweep" title="循环播放（再点一次停止）">▶ 播放</button>
+        <button type="button" id="btnSweepRec"   class="btnSweep" title="录制为视频（自动选 mp4 / webm，再点一次取消）">⬇ 录制</button>
+        <button type="button" id="btnSweepReset" class="btnSweep" title="回到最小值">⟲</button>
+        <button type="button" id="btnSweepClose" class="btnSweep" title="关闭">×</button>
+      </div>
+    </div>
+
+    <!-- 底栏 -->
+    <div id="leftFooter">
+      <button id="btn-reset" class="btnReset">重置全部</button>
+      <button id="btn-sweep" class="btnReset">▶ 扫掠</button>
+      <button id="btn-help"  class="btnReset btnHelp">？ 使用说明</button>
+      <button id="btn-tip"   class="btnReset btnTip" title="支持作者">♥</button>
+    </div>
+  </div>
+
+  <!-- ============ 右侧图形区 ============ -->
+  <main id="stage">
+
+    <!-- 右下角水印 -->
+    <div id="stageWatermark">Zhao | Struct. E.</div>
+
+    <!-- 顶部：显示模式（全局布局级开关） -->
+    <div id="stageModeBar">
+      <div class="segMini" id="segDisp">
+        <button type="button" data-disp="all" class="on">全部</button>
+        <button type="button" data-disp="force">仅受力图</button>
+        <button type="button" data-disp="deform">仅变形图</button>
+      </div>
+    </div>
+
+    <div class="rowTop">
+      <aside id="readout">
+        <div class="rTitle">实时读数</div>
+
+        <div class="rGroup">
+          <div class="rGroupTitle">模型</div>
+          <div class="rRow"><span class="lbl">截面（边柱 / 梁）</span><span class="val" id="r-colsec">—</span></div>
+          <div class="rRow"><span class="lbl">内柱 / 边柱刚度比 r</span><span class="val" id="r-kmid">—</span></div>
+          <div class="rRow" style="padding-top:6px">
+            <span class="lbl" style="color:#cbd5e1">ρ = (EI<sub>b</sub>/L) / (EI<sub>c</sub>/h)</span>
+            <span class="val" style="color:#cbd5e1;font-weight:400">逐层逐跨</span>
+          </div>
+          <div id="r-rhoBox"></div>
+        </div>
+
+
+
+
+
+        <div class="rGroup">
+          <div class="rGroupTitle">水平力分配（按柱，左→右）</div>
+          <div class="rRow" id="row-alloc1"><span class="lbl">一层</span><span class="val" id="r-alloc1">—</span></div>
+          <div class="rRow" id="row-alloc2"><span class="lbl">二层</span><span class="val" id="r-alloc2">—</span></div>
+          <div class="rRow" id="row-alloc3" style="display:none"><span class="lbl">三层</span><span class="val" id="r-alloc3">—</span></div>
+        </div>
+
+        <div class="rGroup">
+          <div class="rGroupTitle">支座反力（柱脚）</div>
+          <div class="rRow" id="row-R0"><span class="lbl" id="lbl-R0">柱 1 Rx / Ry / M</span><span class="val" id="r-R0">—</span></div>
+          <div class="rRow" id="row-R1"><span class="lbl" id="lbl-R1">柱 2 Rx / Ry / M</span><span class="val" id="r-R1">—</span></div>
+          <div class="rRow" id="row-R2"><span class="lbl" id="lbl-R2">柱 3 Rx / Ry / M</span><span class="val" id="r-R2">—</span></div>
+          <div class="rRow" id="row-R3" style="display:none"><span class="lbl" id="lbl-R3">柱 4 Rx / Ry / M</span><span class="val" id="r-R3">—</span></div>
+          <div class="rRow"><span class="lbl" style="color:#cbd5e1">kN / kN / kN·m</span><span class="val" style="color:#cbd5e1;font-weight:400">+右 / +上 / 逆时针</span></div>
+        </div>
+
+        <div class="rFoot" id="r-resid">—</div>
+      </aside>
+
+      <div class="chart grow" id="chartForce">
+        <canvas id="cvForce"></canvas>
+        <div class="tagBar">
+          <span class="tag" id="tagForce">弯矩图 M</span>
+          <div class="segMiniGroup">
+            <div class="segMini" id="segForce">
+              <button type="button" data-force="M" class="on">M</button>
+              <button type="button" data-force="N">N</button>
+              <button type="button" data-force="V">V</button>
+            </div>
+            <div class="segMini" id="segElem">
+              <button type="button" data-filter="all" class="on">全部</button>
+              <button type="button" data-filter="col">柱</button>
+              <button type="button" data-filter="beam">梁</button>
+            </div>
+            <div class="segMini" id="segView">
+              <button type="button" id="btnVals">数值</button>
+              <button type="button" id="btnFreeze">冻结</button>
+            </div>
+          </div>
+        </div>
+        <div class="chartBar chartBar2">
+          <div class="cbRow cbRowSplit">
+            <span class="barLbl">放大 k<sub>F</sub></span>
+            <input type="range" id="mScale" min="0.05" max="10" step="0.05" value="1">
+            <b id="v-mScale" class="barVal">1.00</b>
+            <span class="barLbl">β<sub>f</sub></span>
+            <input type="range" id="betaF" min="0" max="1" step="0.01" value="1">
+            <b id="v-betaF" class="barVal">1.00</b>
+            <span class="barLbl">β<sub>j</sub></span>
+            <input type="range" id="betaJ" min="0" max="1" step="0.01" value="1">
+            <b id="v-betaJ" class="barVal">1.00</b>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="rowBottom">
+      <div class="chart" id="chartLoad">
+        <canvas id="cvLoad"></canvas>
+        <div class="tagBar"><span class="tag">荷载简图</span></div>
+        <div class="chartBar">
+          <span class="barLbl">施加荷载</span>
+          <b class="barVal wide" id="loadSum">ΣV = 0 · ΣH = 0</b>
+        </div>
+      </div>
+
+      <div class="chart grow" id="chartDeform">
+        <canvas id="cvD"></canvas>
+        <div class="deformOverlay">
+          <div class="dTitle">变形图</div>
+          <div class="dRow"><span>最大位移</span><b id="r-maxD">—</b></div>
+          <div class="dRow"><span>最大层间位移角</span><b id="r-drift">—</b></div>
+          <div class="dRow"><span>侧移刚度 K</span><b id="r-K">—</b></div>
+          <div class="dRow" id="rowPD" style="display:none"><span>P-Δ 放大系数 B</span><b id="r-pd">—</b></div>
+        </div>
+        <div class="chartBar">
+          <span class="barLbl">放大 k<sub>D</sub></span>
+          <input type="range" id="dScale" min="10" max="20000" step="10" value="100">
+          <b id="v-dScale" class="barVal">100</b>
+        </div>
+      </div>
+    </div>
+  </main>
+
+</div>
+
+<!-- ============ 使用说明模态框 ============ -->
+<div class="modal" id="modalHelp">
+  <div class="modalCard">
+    <div class="modalHead">
+      <h2>使用说明 · 假设与计算方法</h2>
+      <button class="modalClose" id="btnHelpClose" title="关闭">×</button>
+    </div>
+    <div class="modalBody">
+
+      <h3>一、工具定位</h3>
+      <p>本工具是<strong>力学概念自检工具</strong>，用于帮助结构工程师快速验证对平面刚架受力性能的直觉判断。它<strong>不是工程设计或规范校核工具</strong>，计算结果的精度、荷载组合、稳定验算、抗震设计等内容均<strong>不适用于实际工程</strong>。默认的混凝土强度等级（C30）与截面尺寸仅用于提供量级参考，不作为设计依据。</p>
+
+      <h3>二、计算模型与基本假设</h3>
+      <ul>
+        <li><strong>结构模型</strong>：平面刚架，参数化拓扑 —— 1~3 跨 × 1~3 层，可选右侧悬挑。柱列数 = 跨数 + 1；跨内梁数 = 跨数 × 层数；悬挑梁数 = 层数（开启悬挑时）。</li>
+        <li><strong>材料</strong>：均质、各向同性、线弹性。混凝土弹性模量 E = 3.0×10⁷ kN/m²（C30 规范值）。</li>
+        <li><strong>变形</strong>：小变形、小应变。不考虑几何非线性（不做 P-Δ 分析）。</li>
+        <li><strong>单元</strong>：平面梁单元，每节点 3 个自由度（水平、竖向、转角）。</li>
+        <li><strong>忽略</strong>：剪切变形、扭转变形、材料非线性、节点域变形、施工阶段效应、温度作用、收缩徐变、钢筋与混凝土滑移。</li>
+      </ul>
+
+      <h3>三、截面与刚度</h3>
+      <ul>
+        <li>柱截面：b<sub>c</sub> × h<sub>c</sub>（出平面 × 平面内），I<sub>c</sub> = b<sub>c</sub>·h<sub>c</sub>³/12，A<sub>c</sub> = b<sub>c</sub>·h<sub>c</sub>。</li>
+        <li>梁截面：b<sub>b</sub> × h<sub>b</sub>（水平 × 竖向），I<sub>b</sub> = b<sub>b</sub>·h<sub>b</sub>³/12，A<sub>b</sub> = b<sub>b</sub>·h<sub>b</sub>。</li>
+        <li><strong>中柱刚度比 r</strong>：中柱的 EI 与 EA 均为边柱的 r 倍。用于演示"柱刚度差异如何影响水平力分配"，界面保持简洁不展开为多组截面参数。</li>
+        <li>截面按矩形实心计算，不考虑楼板共同工作、钢筋（纵筋与箍筋）等实际构造。</li>
+      </ul>
+
+      <h3>四、边界条件</h3>
+      <p><strong>柱脚（β<sub>f</sub>）</strong></p>
+      <ul>
+        <li>平动（水平、竖向）始终约束。</li>
+        <li>转动：β<sub>f</sub> = 1 时完全固定；β<sub>f</sub> = 0 时完全铰接；0 &lt; β<sub>f</sub> &lt; 1 时按弹性转动弹簧处理。</li>
+        <li>弹簧刚度采用启发式公式 <code>k_θ = (4EI_c/h₁)·β_f/(1−β_f)</code>，使 β<sub>f</sub> 在 0.5 附近时弹簧刚度量级与柱自身转动刚度相近。<strong>它不是从节点平衡精确推导的弹簧刚度</strong>，只用于演示"从铰接到固定的连续过渡"。</li>
+        <li>绘制柱脚符号：β<sub>f</sub> ≥ 0.99 画固定支座，β<sub>f</sub> ≤ 0.01 画铰接，中间画弹簧符号。</li>
+      </ul>
+
+      <p style="margin-top:8px"><strong>梁端（β<sub>j</sub>）</strong></p>
+      <ul>
+        <li>通过修正梁单元局部刚度矩阵实现半刚接。</li>
+        <li>采用标准半刚接梁单元模型，引入端部柔度参数 <code>α = (1−β_j)/(4β_j)</code>，对以下四项进行修正：
+          <table>
+            <tr><th>项</th><th>修正后</th></tr>
+            <tr><td>横向刚度 k<sub>vv</sub></td><td>12EI/L³ · 1/(1+6α)</td></tr>
+            <tr><td>耦合项 k<sub>vθ</sub></td><td>6EI/L² · (1+2α)/(1+8α+12α²)</td></tr>
+            <tr><td>转动自项 k<sub>θθ</sub></td><td>4EI/L · (1+3α)/(1+8α+12α²)</td></tr>
+            <tr><td>转动互项 k<sub>θθ'</sub></td><td>2EI/L · 1/(1+8α+12α²)</td></tr>
+            <tr><td>固端弯矩</td><td>wL²/12 · (1+6α)/(1+8α+12α²)</td></tr>
+          </table>
+        </li>
+        <li>β<sub>j</sub> = 1（α = 0）退化为标准刚接梁单元；β<sub>j</sub> = 0（α → ∞）退化为两端铰接。</li>
+      </ul>
+
+      <h3>五、荷载</h3>
+      <ul>
+        <li><strong>梁均布荷载</strong> q₁、q₂、q₃：分别作用于一层、二层、三层跨内梁。代码内部以局部坐标 <code>w = −q</code> 输入。</li>
+        <li><strong>悬挑均布荷载</strong> q<sub>c1</sub>、q<sub>c2</sub>、q<sub>c3</sub>：作用于右侧各层悬挑梁，长度 L<sub>c</sub>。悬挑梁为右柱节点伸出的标准刚接单元，<strong>不参与 β<sub>j</sub> 半刚接修正</strong>。</li>
+        <li><strong>水平力</strong> H₁、H₂、H₃：两种施加方式
+          <ul style="margin-top:3px">
+            <li><strong>仅左柱</strong>：全部施加于左柱顶节点，模拟风压从左侧来。</li>
+            <li><strong>D 值法</strong>：按各柱侧移刚度分配。同层各柱端部约束相同，柱侧移刚度 ∝ EI<sub>c</sub>；内柱 EI<sub>c</sub> = r·边柱 EI<sub>c</sub>，边柱取 1、内柱取 r，归一化后分配。模拟地震作用按刚度分配。</li>
+          </ul>
+        </li>
+        <li>所有荷载为静力荷载，不考虑动力放大、偶然偏心、荷载组合系数。</li>
+      </ul>
+
+      <h3>六、求解方法</h3>
+      <ul>
+        <li>采用矩阵位移法（直接刚度法）：组装整体刚度矩阵 K，组装等效节点荷载向量 F，施加边界条件后高斯消元求解 K·U = F。</li>
+        <li>高斯消元使用部分主元法；对角元 &lt; 1e-14 时判定为奇异并提示。</li>
+        <li>反力由 <code>R = K_struct·U − F</code> 计算（K_struct 不含弹簧贡献）。对于弹性柱脚，代码里从 K·U 中扣除弹簧力 k<sub>θ</sub>·θ 后得到弹簧反力矩。</li>
+      </ul>
+
+      <h3>七、内力符号约定</h3>
+      <ul>
+        <li><strong>轴力 N</strong>：拉为正，压为负。</li>
+        <li><strong>剪力 V</strong>：与单元局部坐标一致，V(x) = dM/dx = f₁ + w·x。</li>
+        <li><strong>弯矩 M</strong>：M(x) = −f₂ + f₁·x + w·x²/2。弯矩图绘于受拉侧。</li>
+        <li>内力图正方向与单元局部坐标的 y 轴一致（柱竖向、梁横向）。</li>
+      </ul>
+
+      <h3>八、已知近似与局限</h3>
+      <div class="note">
+        以下几点是模型的简化，使用时需注意。用于教学演示足够，但<strong>不能作为设计依据</strong>。
+      </div>
+      <ol style="margin-left:22px">
+        <li style="margin-bottom:5px"><strong>β<sub>f</sub> 弹簧刚度</strong>为启发式，不是严格推导的弹簧刚度。主要用于演示从铰接到固定的趋势，不能与真实转动弹簧刚度值对应。</li>
+        <li style="margin-bottom:5px"><strong>β<sub>j</sub> 修正的梁单元</strong>是标准半刚接模型，但对多层多跨刚架，节点处柱的转动约束没有单独建模（即梁端的半刚接在节点处自动与柱刚接），这会影响含半刚接节点刚架的整体刚度。</li>
+        <li style="margin-bottom:5px"><strong>D 值法分配</strong>用的是<strong>端点转动弹簧约束下单柱的侧移刚度系数</strong>（见 <code>colKeff</code>），不是规范的 D 值法 α<sub>c</sub> 表法。两者在「两端完全固接 / 完全铰接」的极端情况给出一致结果，中间过渡段不同。此外：
+          <ul style="margin-top:3px">
+            <li>柱脚 β<sub>f</sub> 是真正的柱脚转动弹簧，可直接作为下端点弹簧；</li>
+            <li>梁端 β<sub>j</sub> 描述的是<strong>梁端半刚接</strong>，把它直接当作柱顶上端转动弹簧是近似 —— 真实节点处柱顶约束由梁的抗弯刚度决定；</li>
+            <li>同层三柱端部约束未逐柱区分（当前取相同约束），梁的弯曲变形对柱顶约束的影响未单独建模。</li>
+          </ul>
+        </li>
+        <li style="margin-bottom:5px"><strong>无二阶效应</strong>：不做 P-Δ 分析，不放大侧移和弯矩。</li>
+        <li style="margin-bottom:5px"><strong>无节点域</strong>：节点处按纯刚接或纯铰接处理，未考虑节点域剪切变形。</li>
+        <li style="margin-bottom:5px"><strong>悬挑梁简化</strong>：悬挑梁按标准刚接单元处理，不参与 β<sub>j</sub> 半刚接修正；悬挑端为自由端，未建模实际边梁的弹性约束。</li>
+        <li style="margin-bottom:5px"><strong>每根杆件一个单元</strong>：对于只有均布荷载的情况已足够精确，但对有多个集中力或复杂荷载的杆件精度有限。</li>
+        <li style="margin-bottom:5px"><strong>无剪切变形</strong>：按 Euler-Bernoulli 梁理论，忽略 Timoshenko 梁的剪切效应。</li>
+        <li style="margin-bottom:5px"><strong>无材料非线性</strong>：不考虑混凝土开裂、钢筋屈服等实际非线性效应。</li>
+        <li style="margin-bottom:5px"><strong>线弹性范围</strong>：计算结果可用于叠加，但不适用于承载能力极限状态验算。</li>
+        <li><strong>规范背景</strong>：默认采用中国现行规范体系（GB 50010、GB 50011 等），但<strong>不做规范校核</strong>，仅作为量级参考。</li>
+      </ol>
+
+      <h3>九、力学概念自检建议</h3>
+      <ul>
+        <li><strong>框架作用</strong>：把 β<sub>j</sub> 从 1 拖到 0，观察中柱上下轴力差从不为 0 变为 0，验证"梁对柱的约束如何影响竖向荷载传递"。</li>
+        <li><strong>水平力分配</strong>：切换「仅左柱」与「D 值法」，观察柱脚 Rx 的差别；把 r 调到 2 或 4，对比两种模式下柱脚反力的差异。</li>
+        <li><strong>节点刚度的影响</strong>：把 β<sub>f</sub> 从 1 拖到 0，观察侧移刚度 K 和最大层间位移角如何变化。</li>
+        <li><strong>弯矩重分布</strong>：把 β<sub>j</sub> 从 1 拖到 0，观察梁端弯矩如何消失、跨中弯矩如何增大。</li>
+        <li><strong>支座约束的影响</strong>：把 β<sub>f</sub> 从 1 拖到 0.5 再拖到 0，观察柱脚反力矩从最大值降到 0 的过程。</li>
+        <li><strong>悬挑引起的偏心弯矩</strong>：把 q<sub>c1</sub>、q<sub>c2</sub> 调到 20 kN/m（其他荷载置 0），观察右柱顶出现的不平衡弯矩如何传到柱脚 —— 这是纯竖向荷载（H = 0）下的不对称侧移，与水平力侧移机制完全不同。</li>
+      </ul>
+
+      <h3>十、支持作者</h3>
+      <p>如果这个工具帮你理清过某个力学概念，可以请作者喝杯咖啡。</p>
+      <div class="tipInline">
+        <img src="m.jpg" alt="打赏码">
+        <div class="tipText">
+          <p>微信扫码 · 赞赏码</p>
+          <p>金额随意 · 感谢支持</p>
+          <p class="tipSign">—— Zhao | Struct. E.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ============ 打赏弹窗 ============ -->
+<div class="modal" id="modalTip">
+  <div class="modalCard modalCardTip">
+    <div class="modalHead">
+      <h2>支持作者</h2>
+      <button class="modalClose" id="btnTipClose" title="关闭">×</button>
+    </div>
+    <div class="modalBody modalBodyTip">
+      <img src="m.jpg" alt="打赏码" class="tipQR">
+      <p class="tipLine">微信扫码 · 赞赏码</p>
+      <p class="tipMeta">金额随意 · 感谢支持</p>
+      <p class="tipSign">—— Zhao | Struct. E.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* =====================================================================
+   1. 状态
+   ===================================================================== */
+const E_CONC = 3.0e7;
+
+const S = {
+  /* 拓扑 */
+  nBay:2, nLev:2, hasCant:true,
+  /* 几何（L3/h3 预置，第 2 步启用） */
+  L1:6, L2:6, L3:6,
+  h1:4, h2:4, h3:4,
+  Lc:1.5,
+  /* 截面 */
+  bc:400, hc:400, bb:250, hb:500,
+  /* 荷载（q3/qc3/H3 预置，第 2 步启用） */
+  q1:0, q2:0, q3:0,
+  qc1:0, qc2:0, qc3:0,
+  H1:0, H2:0, H3:0,
+  Hmode:'left',
+  forceType:'M',
+  r:1.0,
+  betaF:1.0,
+  betaJ:1.0,
+  mScale:1.0,
+  dScale:100,
+  elFilter:'all',
+  showVals:false,
+  showPDelta:false,
+  displayMode:'all',
+  highlight:null,
+  lightBg:false,
+  sweep:{
+    active:false,
+    param:'bc',
+    playing:false,
+    loop:true,
+    rafId:null,
+    t0:0,
+    startVal:0,
+    span:0
+  },
+  rec:{
+    active:false,
+    cancel:false,
+    chunks:[],
+    recorder:null,
+    mime:'',
+    scope:'force'
+  }
+};
+
+/* =====================================================================
+   2. 线性代数
+   ===================================================================== */
+const zeros = (n,m) => Array.from({length:n}, () => new Float64Array(m));
+
+function matMul(A,B){
+  const n=A.length, k=B.length, m=B[0].length;
+  const C=zeros(n,m);
+  for(let i=0;i<n;i++){
+    for(let p=0;p<k;p++){
+      const a=A[i][p]; if(a===0) continue;
+      for(let j=0;j<m;j++) C[i][j]+=a*B[p][j];
+    }
+  }
+  return C;
+}
+function transpose(A){
+  const n=A.length, m=A[0].length, B=zeros(m,n);
+  for(let i=0;i<n;i++) for(let j=0;j<m;j++) B[j][i]=A[i][j];
+  return B;
+}
+function matVec(A,v){
+  const n=A.length, m=v.length, r=new Float64Array(n);
+  for(let i=0;i<n;i++){
+    let s=0;
+    for(let j=0;j<m;j++) s+=A[i][j]*v[j];
+    r[i]=s;
+  }
+  return r;
+}
+
+/* =====================================================================
+   3. 单元矩阵
+   ===================================================================== */
+function localK(el){
+  const {EA,EI,L}=el;
+  const a=EA/L;
+  let b=12*EI/(L*L*L);
+  let c=6*EI/(L*L);
+  let d=4*EI/L;
+  let e=2*EI/L;
+
+  if(el.kind === 'beam' && el.alpha > 0){
+    const al = el.alpha;
+    const D  = 1 + 8*al + 12*al*al;
+    b = 12*EI/(L*L*L) / (1 + 6*al);
+    c = 6*EI/(L*L) * (1 + 2*al) / D;
+    d = (4*EI/L) * (1 + 3*al) / D;
+    e = (2*EI/L) / D;
+  }
+
+  return [
+    [ a,  0,  0, -a,  0,  0],
+    [ 0,  b,  c,  0, -b,  c],
+    [ 0,  c,  d,  0, -c,  e],
+    [-a,  0,  0,  a,  0,  0],
+    [ 0, -b, -c,  0,  b, -c],
+    [ 0,  c,  e,  0, -c,  d]
+  ];
+}
+function Tmat(el){
+  const {cs,sn}=el;
+  return [
+    [ cs, sn, 0,   0,  0, 0],
+    [-sn, cs, 0,   0,  0, 0],
+    [  0,  0, 1,   0,  0, 0],
+    [  0,  0, 0,  cs, sn, 0],
+    [  0,  0, 0, -sn, cs, 0],
+    [  0,  0, 0,   0,  0, 1]
+  ];
+}
+function globalK(el){
+  const T=Tmat(el);
+  return matMul(matMul(transpose(T), localK(el)), T);
+}
+function localEqLoad(el){
+  const {w,L}=el;
+  let pFe = w*L*L/12;
+
+  if(el.kind === 'beam' && el.alpha > 0){
+    const al = el.alpha;
+    const D  = 1 + 8*al + 12*al*al;
+    pFe = (w*L*L/12) * (1 + 6*al) / D;
+  }
+
+  return [0, w*L/2, pFe, 0, w*L/2, -pFe];
+}
+function globalEqLoad(el){
+  return matVec(transpose(Tmat(el)), localEqLoad(el));
+}
+
+/* =====================================================================
+   4. 建模 + 求解
+   ===================================================================== */
+/* 单柱侧移刚度系数（相对 12EI/L³ 归一化）。
+   物理模型：一根柱，下端转动弹簧 k_b、上端转动弹簧 k_t，
+   两端水平位移自由 → 侧移刚度 = 12EI/L³ × 本函数返回值。
+
+   ⚠ 这不是规范的 D 值法 α_c：
+   - D 值法 α_c 是「梁柱线刚度比 K」的函数（查表/公式）；
+   - 本函数是「端点转动弹簧刚度」的函数，直接由弹簧刚度求。
+   两者在两端完全固接（→1）/完全铰接（→0.25）时一致，中间过渡段不同。
+
+   ⚠ 端点弹簧的含义是近似的：
+   - 柱脚 β_f 是真正的柱脚转动弹簧，可直接作为下端点弹簧；
+   - 梁端 β_j 描述的是「梁端半刚接」，不是「柱顶转动弹簧」。
+     真实节点处柱顶约束由梁的抗弯刚度决定，本处直接借用了 β_j。 */
+function colKeff(betaF, betaJ){
+  const kB = betaF >= 0.999 ? Infinity :
+             betaF <= 0.001 ? 0 : 4*betaF/(1-betaF);
+  const kT = betaJ >= 0.999 ? Infinity :
+             betaJ <= 0.001 ? 0 : 4*betaJ/(1-betaJ);
+  if(!isFinite(kB) && !isFinite(kT)) return 12;
+  if(!isFinite(kB)) return 12*(1+kT)/(4+kT);
+  if(!isFinite(kT)) return 12*(1+kB)/(4+kB);
+  return 12*(kB + kT + kB*kT)/(12 + 4*kB + 4*kT + kB*kT);
+}
+
+function analyze(p){
+  const nBay = p.nBay;
+  const nLev = p.nLev;
+  const nCol = nBay + 1;                    // 柱列数 = 跨数 + 1
+
+  /* ---- 坐标累加 ---- */
+  const X = [0];
+  for(let i=0;i<nBay;i++) X.push(X[i] + p['L'+(i+1)]);
+  const Y = [0];
+  for(let i=0;i<nLev;i++) Y.push(Y[i] + p['h'+(i+1)]);
+
+  /* ---- 节点：主结构 + 可选右侧悬挑 ---- */
+  const nodes = [];
+  for(let c=0;c<nCol;c++)
+    for(let lv=0;lv<=nLev;lv++)
+      nodes.push({x:X[c], y:Y[lv], col:c, lev:lv});
+  if(p.hasCant){
+    for(let lv=1;lv<=nLev;lv++)
+      nodes.push({x:X[nBay]+p.Lc, y:Y[lv], col:nBay, lev:lv, cant:true});
+  }
+
+  /* 编号：nid(c,lv) 主结构；cantNid(lv) 悬挑端（挂在末尾） */
+  const nid = (c,lv) => c*(nLev+1) + lv;
+  const cantNid = (lv) => nCol*(nLev+1) + (lv-1);
+
+  /* ---- 截面特性 ---- */
+  const bcM=p.bc/1000, hcM=p.hc/1000;
+  const bbM=p.bb/1000, hbM=p.hb/1000;
+  const Ic = bcM*Math.pow(hcM,3)/12;
+  const Ib = bbM*Math.pow(hbM,3)/12;
+  const Ac = bcM*hcM;
+  const Ab = bbM*hbM;
+  const EIc = E_CONC*Ic;
+  const EIb = E_CONC*Ib;
+  const EAc = E_CONC*Ac;
+  const EAb = E_CONC*Ab;
+
+  const els=[];
+  const isMidCol = (c) => (c>0 && c<nBay);   // 内柱判定：0 < c < nBay
+
+  /* ---- 柱：nCol 列 × nLev 根 ---- */
+  for(let c=0;c<nCol;c++){
+    const kc = isMidCol(c) ? p.r : 1.0;
+    const EAcc = EAc * kc;
+    const EIcc = EIc * kc;
+    for(let lv=0;lv<nLev;lv++){
+      const i=nid(c,lv), j=nid(c,lv+1);
+      const dx=nodes[j].x-nodes[i].x, dy=nodes[j].y-nodes[i].y;
+      const L=Math.hypot(dx,dy);
+      els.push({i,j,L,cs:dx/L,sn:dy/L,EA:EAcc,EI:EIcc,w:0,q:0,kind:'col',lev:lv+1});
+    }
+  }
+
+  /* ---- 半刚接参数 ---- */
+  let alphaJ = 0;
+  if(p.betaJ < 0.99){
+    alphaJ = (p.betaJ <= 0.01) ? 1e6 : (1 - p.betaJ) / (4 * p.betaJ);
+  }
+
+  /* ---- 跨内梁：nLev 层 × nBay 跨 ---- */
+  for(let lv=1;lv<=nLev;lv++){
+    const q = p['q'+lv];
+    for(let c=0;c<nBay;c++){
+      const i=nid(c,lv), j=nid(c+1,lv);
+      const dx=nodes[j].x-nodes[i].x, dy=nodes[j].y-nodes[i].y;
+      const L=Math.hypot(dx,dy);
+      els.push({i,j,L,cs:dx/L,sn:dy/L,EA:EAb,EI:EIb,w:-q,q,
+                kind:'beam',alpha:alphaJ,lev:lv,bay:c+1});
+    }
+  }
+
+  /* ---- 悬挑梁：仅右侧，nLev 根 ---- */
+  if(p.hasCant){
+    for(let lv=1;lv<=nLev;lv++){
+      const q = p['qc'+lv];
+      const i = nid(nBay,lv);
+      const j = cantNid(lv);
+      const dx=nodes[j].x-nodes[i].x, dy=nodes[j].y-nodes[i].y;
+      const L=Math.hypot(dx,dy);
+      els.push({i,j,L,cs:dx/L,sn:dy/L,EA:EAb,EI:EIb,w:-q,q,
+                kind:'beam',isCant:true,alpha:0,lev:lv});
+    }
+  }
+
+  const ndof = nodes.length*3;
+  const K = zeros(ndof,ndof);
+  const F = new Float64Array(ndof);
+
+  for(const el of els){
+    const kg = globalK(el);
+    const d=[el.i*3, el.i*3+1, el.i*3+2, el.j*3, el.j*3+1, el.j*3+2];
+    for(let a=0;a<6;a++)
+      for(let b=0;b<6;b++)
+        K[d[a]][d[b]] += kg[a][b];
+
+    const pg = globalEqLoad(el);
+    for(let a=0;a<6;a++) F[d[a]] += pg[a];
+  }
+
+  /* ---- 水平力施加（nCol 柱通用） ---- */
+  function applyFloorH(level, H){
+    if(H <= 0) return;
+    if(p.Hmode === 'left'){
+      F[nid(0, level)*3] += H;
+      return;
+    }
+    /* D 值法：每列相对刚度 = colKeff × kc，kc 边柱 1、内柱 r */
+    const cE = colKeff(p.betaF, p.betaJ);
+    if(!isFinite(cE) || cE < 1e-12){
+      const share = H / nCol;
+      for(let c=0;c<nCol;c++) F[nid(c, level)*3] += share;
+      return;
+    }
+    let sum = 0;
+    const w = [];
+    for(let c=0;c<nCol;c++){
+      const kc = isMidCol(c) ? p.r : 1.0;
+      const wc = cE * kc;
+      w.push(wc); sum += wc;
+    }
+    for(let c=0;c<nCol;c++) F[nid(c, level)*3] += H * w[c] / sum;
+  }
+  for(let lv=1;lv<=nLev;lv++) applyFloorH(lv, p['H'+lv]);
+
+  /* ---- 柱脚：nCol 个 ---- */
+  const fixed=new Set();
+  const rotSpring = new Float64Array(ndof);
+  const hFloor1 = Y[1] - Y[0];
+  for(let c=0;c<nCol;c++){
+    const n = nid(c,0);
+    fixed.add(n*3);
+    fixed.add(n*3+1);
+    const thz = n*3 + 2;
+    if(p.betaF >= 0.99){
+      fixed.add(thz);
+    } else if(p.betaF > 0.01){
+      const kc = isMidCol(c) ? p.r : 1.0;
+      const EIcol = EIc * kc;
+      const Rf = (4*EIcol/hFloor1) * p.betaF / (1 - p.betaF);
+      rotSpring[thz] = Rf;
+    }
+  }
+  for(let i=0;i<ndof;i++){
+    if(rotSpring[i] > 0) K[i][i] += rotSpring[i];
+  }
+
+  const free=[];
+  for(let i=0;i<ndof;i++) if(!fixed.has(i)) free.push(i);
+
+  /* ---- 高斯消元 ---- */
+  const nf=free.length;
+  const A=zeros(nf,nf+1);
+  for(let a=0;a<nf;a++){
+    const ia=free[a];
+    for(let b=0;b<nf;b++) A[a][b]=K[ia][free[b]];
+    A[a][nf]=F[ia];
+  }
+  for(let col=0;col<nf;col++){
+    let piv=col;
+    for(let r=col+1;r<nf;r++)
+      if(Math.abs(A[r][col])>Math.abs(A[piv][col])) piv=r;
+    if(piv!==col){ const t=A[piv]; A[piv]=A[col]; A[col]=t; }
+    const pv=A[col][col];
+    if(Math.abs(pv)<1e-14){
+      throw new Error('刚度矩阵奇异：结构可能几何可变或存在机构。');
+    }
+    for(let r=col+1;r<nf;r++){
+      const f=A[r][col]/pv;
+      if(f===0) continue;
+      for(let cc=col;cc<=nf;cc++) A[r][cc]-=f*A[col][cc];
+    }
+  }
+  const U=new Float64Array(ndof);
+  for(let a=nf-1;a>=0;a--){
+    if(Math.abs(A[a][a])<1e-14){
+      throw new Error('回代失败：对角元近零。');
+    }
+    let s=A[a][nf];
+    for(let b=a+1;b<nf;b++) s-=A[a][b]*U[free[b]];
+    U[free[a]]=s/A[a][a];
+  }
+
+  /* ---- 杆端力 ---- */
+  const results = els.map(el=>{
+    const d=[el.i*3, el.i*3+1, el.i*3+2, el.j*3, el.j*3+1, el.j*3+2];
+    const ug=new Float64Array(6);
+    for(let a=0;a<6;a++) ug[a]=U[d[a]];
+    const ul = matVec(Tmat(el), ug);
+    const ku = matVec(localK(el), ul);
+    const pl = localEqLoad(el);
+    const f  = new Float64Array(6);
+    for(let a=0;a<6;a++) f[a]=ku[a]-pl[a];
+    return {el, f, ug};
+  });
+
+  /* ---- 反力 ---- */
+  const KU = matVec(K, U);
+  const R  = new Float64Array(ndof);
+  for(let i=0;i<ndof;i++) R[i] = KU[i] - F[i];
+  for(let i=0;i<ndof;i++){
+    if(rotSpring[i] > 0) R[i] -= rotSpring[i] * U[i];
+  }
+
+  /* ---- 平衡残差 ---- */
+  let Rx=0, Ry=0;
+  for(let c=0;c<nCol;c++){
+    const n = nid(c,0);
+    Rx += R[n*3];
+    Ry += R[n*3+1];
+  }
+  let appliedFx = 0;
+  for(let lv=1;lv<=nLev;lv++) appliedFx += p['H'+lv];
+  let appliedFy = 0;
+  for(let lv=1;lv<=nLev;lv++){
+    const q = p['q'+lv];
+    for(let c=0;c<nBay;c++) appliedFy -= q * (X[c+1]-X[c]);
+    if(p.hasCant) appliedFy -= p['qc'+lv] * p.Lc;
+  }
+  const residX = appliedFx + Rx;
+  const residY = appliedFy + Ry;
+
+  /* ---- ρ：逐层逐跨 ---- */
+  const rho = [];
+  for(let lv=1;lv<=nLev;lv++){
+    const hlv = Y[lv] - Y[lv-1];
+    const row = [];
+    for(let c=0;c<nBay;c++){
+      const Lc = X[c+1] - X[c];
+      row.push((EIb / Lc) / (EIc / hlv));
+    }
+    rho.push(row);
+  }
+  return {nodes, els, U, results, p, R, residX, residY,
+          nBay, nLev, nCol, nid, rho};
+}
+
+/* =====================================================================
+   5. 内力与位移插值
+   ===================================================================== */
+function momentAt(res, x){
+  const {el,f}=res;
+  return -f[2] + f[1]*x + el.w*x*x/2;
+}
+function shearAt(res, x){
+  const {el,f}=res;
+  return f[1] + el.w*x;
+}
+function axialAt(res, x){
+  return -res.f[0];
+}
+function internalAt(res, x, type){
+  if(type === 'N') return axialAt(res, x);
+  if(type === 'V') return shearAt(res, x);
+  return momentAt(res, x);
+}
+
+/* 单元内部任意点的位移。
+   弯曲挠度由 EI·v'' = M(x) 双重积分得到（用端点位移 vi/vj 定常数），
+   而不是 Hermite 形函数 + 固端特解 —— 后者对半刚接 (βj<1) 和悬挑都不成立。
+   内力 M(x) = -f[2] + f[1]·x + w·x²/2 取自单元端力 res.f，已含半刚接修正。 */
+function elemDisp(res, x){
+  const {el, ug, f} = res;
+  const {L,cs,sn,EI,w}=el;
+  const ul = matVec(Tmat(el), ug);
+  const xi = x/L;
+
+  const ulx = (1-xi)*ul[0] + xi*ul[3];
+  const vi  = ul[1], vj = ul[4];
+
+  /* 双重积分结果：
+       v(x) = vi + (vj-vi)·ξ + c·[ f[2]/2 − f[1]L(1+ξ)/6 − wL²(1+ξ+ξ²)/24 ]
+     其中 c = L²ξ(1-ξ)/EI。固端梁退化时等于标准解 w·x²(L-x)²/(24EI)。 */
+  const c = L*L*xi*(1-xi)/EI;
+  const vly = vi + (vj-vi)*xi
+            + c * ( f[2]/2
+                  - f[1]*L*(1+xi)/6
+                  - w*L*L*(1+xi+xi*xi)/24 );
+
+  return [cs*ulx - sn*vly, sn*ulx + cs*vly];
+}
+
+/* =====================================================================
+   6. 画布工具
+   ===================================================================== */
+function setupCanvas(canvas){
+  let dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const W = Math.max(120, rect.width);
+  const H = Math.max(120, rect.height);
+  /* 录制期间限制物理像素 ≤ 1920×1080：
+     H.264/VP9 在超高分辨率 + 高对比边缘下，色度子采样伪影会明显放大。
+     只影响录制出的视频，屏幕显示不变。 */
+  if(S.rec && S.rec.active){
+    dpr = Math.min(dpr, 1920 / W, 1080 / H);
+  }
+  canvas.width  = Math.round(W*dpr);
+  canvas.height = Math.round(H*dpr);
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  return {ctx,W,H};
+}
+
+function makeTransform(model, W, H, pad){
+  let padL, padR, padT, padB;
+  if(typeof pad === 'number'){
+    padL = padR = padT = padB = pad;
+  }else{
+    padL = pad.padL ?? 74;
+    padR = pad.padR ?? 74;
+    padT = pad.padT ?? 74;
+    padB = pad.padB ?? 74;
+  }
+  const xs = model.nodes.map(n=>n.x);
+  const ys = model.nodes.map(n=>n.y);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs);
+  const y0 = Math.min(...ys), y1 = Math.max(...ys);
+
+  const availW = W - padL - padR;
+  const availH = H - padT - padB;
+  const sc = Math.min(availW/(x1-x0||1), availH/(y1-y0||1));
+  const dw = (x1-x0)*sc, dh = (y1-y0)*sc;
+  const left   = padL + (availW - dw)/2;
+  const bottom = H - padB - (availH - dh)/2;
+
+  const toS = (x,y) => [ left + (x-x0)*sc , bottom - (y-y0)*sc ];
+  return {toS, sc, x0, y0};
+}
+
+function elemLineWidth(el, model){
+  if(!model.p) return 3;
+  if(el.kind === 'col'){
+    return Math.max(3.5, Math.min(9, 2.5 + model.p.hc/130));
+  } else {
+    return Math.max(3.5, Math.min(9, 2.5 + model.p.hb/130));
+  }
+}
+
+function drawFrameLines(ctx, model, toS, color, lwBase, dashed, useSectionWidth){
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineCap = 'round';
+  if(dashed) ctx.setLineDash([5,4]);
+  for(const el of model.els){
+    ctx.lineWidth = useSectionWidth ? elemLineWidth(el, model) : lwBase;
+    const a = model.nodes[el.i], b = model.nodes[el.j];
+    const [ax,ay] = toS(a.x,a.y);
+    const [bx,by] = toS(b.x,b.y);
+    ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(bx,by); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+/* 柱脚符号：固定 / 铰接 / 弹性弹簧 三档 */
+function drawSupports(ctx, model, toS, base){
+  const T = theme();
+  const nCol = model.nCol || 3;
+  const nLev = model.nLev || 2;
+  /* 与 drawFrameLines(useSectionWidth) 里柱的线宽保持一致 */
+  const colW = model.p ? Math.max(3.5, Math.min(9, 2.5 + model.p.hc/130)) : 5;
+  for(let c=0;c<nCol;c++){
+    const n = model.nodes[c*(nLev+1)];
+    const [sx,sy] = toS(n.x, n.y);
+
+    /* 柱底 → 支座符号顶端的连接线：与柱同宽，避免"柱子被切断" */
+    const topY = (base >= 0.99) ? sy + 9
+               : (base <= 0.01) ? sy + 11
+               :                  sy + 4;
+    ctx.strokeStyle = T.support;
+    ctx.lineWidth   = colW;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.lineTo(sx, topY);
+    ctx.stroke();
+
+    ctx.strokeStyle = T.support;
+    ctx.lineWidth = 1.6;
+
+    if(base >= 0.99){
+      /* 固定：横线 + 斜线 */
+      ctx.beginPath(); ctx.moveTo(sx-11, sy+9); ctx.lineTo(sx+11, sy+9); ctx.stroke();
+      for(let k=-9;k<=9;k+=6){
+        ctx.beginPath(); ctx.moveTo(sx+k, sy+9); ctx.lineTo(sx+k-5, sy+16); ctx.stroke();
+      }
+    } else if(base <= 0.01){
+      /* 铰接：圆圈 + 横线 + 斜线 */
+      ctx.beginPath(); ctx.moveTo(sx-11, sy+11); ctx.lineTo(sx+11, sy+11); ctx.stroke();
+      for(let k=-9;k<=9;k+=6){
+        ctx.beginPath(); ctx.moveTo(sx+k, sy+11); ctx.lineTo(sx+k-5, sy+18); ctx.stroke();
+      }
+      ctx.beginPath(); ctx.arc(sx, sy, 4.5, 0, Math.PI*2);
+      ctx.fillStyle = T.supportFill; ctx.fill();
+      ctx.strokeStyle = T.support; ctx.lineWidth = 1.6; ctx.stroke();
+    } else {
+      /* 弹性：Z 字弹簧 + 横线 + 斜线 */
+      const y0 = sy + 4;
+      const yBottom = sy + 22;
+      ctx.beginPath();
+      ctx.moveTo(sx, y0);
+      const nZig = 5;
+      const yStep = (yBottom - y0) / nZig;
+      for(let k=0;k<nZig;k++){
+        const yy1 = y0 + yStep*(k+0.5);
+        const yy2 = y0 + yStep*(k+1);
+        const xoff = (k%2 === 0) ? 5 : -5;
+        ctx.lineTo(sx + xoff, yy1);
+        if(k < nZig-1) ctx.lineTo(sx - xoff, yy2);
+        else ctx.lineTo(sx, yy2);
+      }
+      ctx.stroke();
+      /* 地面 */
+      ctx.beginPath(); ctx.moveTo(sx-11, yBottom+2); ctx.lineTo(sx+11, yBottom+2); ctx.stroke();
+      for(let k=-9;k<=9;k+=6){
+        ctx.beginPath(); ctx.moveTo(sx+k, yBottom+2); ctx.lineTo(sx+k-5, yBottom+9); ctx.stroke();
+      }
+    }
+  }
+}
+
+/* =====================================================================
+   7. 荷载简图
+   ===================================================================== */
+function drawLoadDiagram(canvas, model){
+  const {ctx,W,H} = setupCanvas(canvas);
+  /* 有 H 时左侧留箭头空间；无 H 时给左右更多余量让模型居中 */
+  const pH = model.p;
+  const hasH = (pH.H1 + pH.H2 + pH.H3) > 0;
+  const {toS} = makeTransform(model, W, H, {
+    padL: hasH ? 60 : 44,
+    padR: 44,
+    padT: 52,
+    padB: 32
+  });
+
+  const T = theme();
+  ctx.fillStyle=T.bg; ctx.fillRect(0,0,W,H);
+
+  drawFrameLines(ctx, model, toS, T.frame, 2.5, false, true);
+  drawSupports(ctx, model, toS, model.p.betaF);
+
+  ctx.fillStyle=T.node;
+  for(const n of model.nodes){
+    if(Math.abs(n.y) < 1e-9) continue;   /* 柱底不画圆点，避免视觉上把柱子切断 */
+    const [sx,sy]=toS(n.x,n.y);
+    ctx.beginPath(); ctx.arc(sx,sy,2.6,0,Math.PI*2); ctx.fill();
+  }
+
+  /* βj < 0.99：跨内梁两端画半刚接圈（纯视觉，与是否有荷载无关）
+     βj 越接近 0 圈越大、越亮 —— 直观提示"梁端正在从刚接向铰接过渡" */
+  if(model.p.betaJ < 0.99){
+    const t   = 1 - model.p.betaJ;              /* 0 → 1 */
+    const R   = 4 + t*2;                        /* 半径 4 → 6 */
+    const lw  = 1.4 + t*1.2;                    /* 线宽 1.4 → 2.6 */
+    const seen = new Set();
+    for(const el of model.els){
+      if(el.kind !== 'beam' || el.isCant) continue;
+      for(const nidx of [el.i, el.j]){
+        if(seen.has(nidx)) continue;
+        seen.add(nidx);
+        const node = model.nodes[nidx];
+        const [hx, hy] = toS(node.x, node.y);
+        ctx.beginPath();
+        ctx.arc(hx, hy, R, 0, Math.PI*2);
+        ctx.fillStyle   = T.bg;
+        ctx.fill();
+        ctx.strokeStyle = T.hArrow;
+        ctx.lineWidth   = lw;
+        ctx.stroke();
+      }
+    }
+  }
+
+  const p = model.p;
+  for(const el of model.els){
+    if(el.kind !== 'beam') continue;
+    const lv = el.lev;
+    let q = 0, showLabel = false, labelTxt = '';
+    if(el.isCant){
+      q = p['qc'+lv];
+      labelTxt = `q_c${lv} = ${q.toFixed(1)} kN/m`;
+      showLabel = true;
+    } else {
+      q = p['q'+lv];
+      showLabel = (el.bay === 1);  // 只标第一跨
+    }
+    if(q <= 0) continue;
+    /* 奇偶层上下交错：奇数层标下方、偶数层标上方 —— 避免楼层标签堆叠 */
+    const placeAbove = (lv % 2 === 0);
+    drawUDL(ctx, toS, model.nodes[el.i], model.nodes[el.j], q, showLabel, labelTxt, placeAbove);
+  }
+
+  function drawFloorH(level, H, lblTotal){
+    if(H <= 0) return;
+    const nCol = model.nCol, nid = model.nid;
+    if(p.Hmode === 'left'){
+      drawHF(ctx, toS, model.nodes[nid(0, level)], H, `${lblTotal}=${H.toFixed(1)} kN`);
+      return;
+    }
+    const isMid = c => (c>0 && c<nCol-1);
+    const cE = colKeff(p.betaF, p.betaJ);
+    const parts = [];
+    if(!isFinite(cE) || cE < 1e-12){
+      for(let c=0;c<nCol;c++) parts.push(H/nCol);
+    } else {
+      let sum = 0;
+      const w = [];
+      for(let c=0;c<nCol;c++){
+        const kc = isMid(c) ? p.r : 1.0;
+        w.push(cE * kc); sum += cE * kc;
+      }
+      for(let c=0;c<nCol;c++) parts.push(H * w[c] / sum);
+    }
+    for(let c=0;c<nCol;c++){
+      drawHF(ctx, toS, model.nodes[nid(c, level)], parts[c],
+             c===0 ? `${lblTotal}=${H.toFixed(1)} kN` : '');
+    }
+  }
+  const subs = ['₀','₁','₂','₃'];
+  for(let lv=1; lv<=model.nLev; lv++){
+    drawFloorH(lv, p['H'+lv], 'H'+subs[lv]);
+  }
+}
+
+function drawUDL(ctx, toS, ni, nj, q, showLabel, labelTxt, placeAbove){
+  const T = theme();
+  const [x1,y1] = toS(ni.x, ni.y);
+  const [x2,y2] = toS(nj.x, nj.y);
+
+  const arrowLen = 16 + Math.min(20, q/25);
+  const N = 10;
+
+  ctx.strokeStyle = T.udl;
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.moveTo(x1, y1 - arrowLen);
+  ctx.lineTo(x2, y2 - arrowLen);
+  ctx.stroke();
+
+  for(let k=0;k<N;k++){
+    const t = (k + 0.5)/N;
+    const bx = x1 + (x2-x1)*t;
+    const by = y1 + (y2-y1)*t;
+    ctx.beginPath();
+    ctx.moveTo(bx, by - arrowLen);
+    ctx.lineTo(bx, by - 5);
+    ctx.strokeStyle = T.udl;
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(bx - 3.5, by - 9);
+    ctx.lineTo(bx, by - 2.5);
+    ctx.lineTo(bx + 3.5, by - 9);
+    ctx.closePath();
+    ctx.fillStyle = T.udl;
+    ctx.fill();
+  }
+
+  if(showLabel){
+    const mx = (x1+x2)/2;
+    const txt = labelTxt || `q = ${q.toFixed(1)} kN/m`;
+    ctx.font = 'bold 11px ui-sans-serif,system-ui,sans-serif';
+    ctx.textAlign = 'center';
+
+    if(placeAbove){
+      /* 梁上方：出箭头再往上 22px */
+      const my = (y1+y2)/2 - arrowLen - 22;
+      ctx.textBaseline = 'bottom';
+      const w = ctx.measureText(txt).width;
+      ctx.fillStyle = T.udlLabelBg;
+      ctx.fillRect(mx - w/2 - 4, my - 13, w + 8, 15);
+      ctx.fillStyle = T.udlLabel;
+      ctx.fillText(txt, mx, my);
+    } else {
+      /* 梁下方：14px 处 */
+      const my = (y1+y2)/2 + 14;
+      ctx.textBaseline = 'top';
+      const w = ctx.measureText(txt).width;
+      ctx.fillStyle = T.udlLabelBg;
+      ctx.fillRect(mx - w/2 - 4, my - 2, w + 8, 15);
+      ctx.fillStyle = T.udlLabel;
+      ctx.fillText(txt, mx, my);
+    }
+
+    ctx.textAlign = 'start';
+    ctx.textBaseline = 'alphabetic';
+  }
+}
+
+function drawHF(ctx, toS, node, H, label){
+  const T = theme();
+  const [sx, sy] = toS(node.x, node.y);
+  const arrowLen = Math.min(72, 34 + H/22);
+  const tipX  = sx;
+  const tailX = sx - arrowLen;
+
+  ctx.beginPath();
+  ctx.moveTo(tailX, sy);
+  ctx.lineTo(tipX, sy);
+  ctx.strokeStyle = T.hArrow;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  const headLen = 10;
+  ctx.beginPath();
+  ctx.moveTo(tipX, sy);
+  ctx.lineTo(tipX - headLen, sy - 4.5);
+  ctx.lineTo(tipX - headLen, sy + 4.5);
+  ctx.closePath();
+  ctx.fillStyle = T.hArrow;
+  ctx.fill();
+
+  if(label){
+    const midX = (tailX + tipX)/2;
+    ctx.fillStyle = T.hLabel;
+    ctx.font = 'bold 11px ui-sans-serif,system-ui,sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(label, midX, sy - 6);
+    ctx.textAlign = 'start';
+    ctx.textBaseline = 'alphabetic';
+  }
+}
+
+/* =====================================================================
+   8. 内力图（M / N / V）
+   ===================================================================== */
+const THEME = {
+  dark: {
+    bg:'#0b1220',
+    frame:'#cbd5e1',
+    frameThin:'#94a3b8',
+    frameGhost:'#475569',
+    node:'#e2e8f0',
+    nodeBlue:'#7dd3fc',
+    support:'#94a3b8',
+    supportFill:'#0b1220',
+    udl:'#f87171',
+    udlLabel:'#fca5a5',
+    udlLabelBg:'rgba(11,18,32,0.78)',
+    hArrow:'#38bdf8',
+    hLabel:'#7dd3fc',
+    deformCurve:'#38bdf8',
+    freezeLine:'rgba(148,163,184,0.55)',
+    antiCurve:'#f8fafc'
+  },
+  light: {
+    bg:'#ffffff',
+    frame:'#334155',
+    frameThin:'#64748b',
+    frameGhost:'#cbd5e1',
+    node:'#475569',
+    nodeBlue:'#0284c7',
+    support:'#475569',
+    supportFill:'#ffffff',
+    udl:'#dc2626',
+    udlLabel:'#dc2626',
+    udlLabelBg:'rgba(255,255,255,0.90)',
+    hArrow:'#0284c7',
+    hLabel:'#0369a1',
+    deformCurve:'#0284c7',
+    freezeLine:'rgba(71,85,105,0.55)',
+    antiCurve:'#0f172a'
+  }
+};
+function theme(){ return S.lightBg ? THEME.light : THEME.dark; }
+
+const FORCE_STYLE = {
+  M: { ref: 200, unit: 'kN·m', tag: '弯矩图 M', lbl: '|M|max',
+       col:  { color:'#f97316', fill:'rgba(249,115,22,0.32)' },
+       beam: { color:'#fde68a', fill:'rgba(253,230,138,0.30)' } },
+  N: { ref: 500, unit: 'kN', tag: '轴力图 N', lbl: '|N|max',
+       col:  { color:'#a855f7', fill:'rgba(168,85,247,0.30)' },
+       beam: { color:'#fbcfe8', fill:'rgba(251,207,232,0.28)' } },
+  V: { ref: 200, unit: 'kN', tag: '剪力图 V', lbl: '|V|max',
+       col:  { color:'#22d3ee', fill:'rgba(34,211,238,0.28)' },
+       beam: { color:'#4ade80', fill:'rgba(74,222,128,0.28)' } }
+};
+const FORCE_STYLE_LIGHT = {
+  M: { ref: 200, unit: 'kN·m', tag: '弯矩图 M', lbl: '|M|max',
+       col:  { color:'#ea580c', fill:'rgba(234,88,12,0.26)' },
+       beam: { color:'#ca8a04', fill:'rgba(202,138,4,0.24)' } },
+  N: { ref: 500, unit: 'kN', tag: '轴力图 N', lbl: '|N|max',
+       col:  { color:'#7c3aed', fill:'rgba(124,58,237,0.24)' },
+       beam: { color:'#be185d', fill:'rgba(190,24,93,0.22)' } },
+  V: { ref: 200, unit: 'kN', tag: '剪力图 V', lbl: '|V|max',
+       col:  { color:'#0891b2', fill:'rgba(8,145,178,0.24)' },
+       beam: { color:'#15803d', fill:'rgba(21,128,61,0.24)' } }
+};
+function forceStyleOf(type, kind){
+  const s = S.lightBg ? FORCE_STYLE_LIGHT[type] : FORCE_STYLE[type];
+  return (kind === 'col') ? s.col : s.beam;
+}
+
+function drawInternal(canvas, model){
+  const type = model.p.forceType;
+  const FSTYLE = S.lightBg ? FORCE_STYLE_LIGHT[type] : FORCE_STYLE[type];
+  const T = theme();
+  const filter = model.p.elFilter;
+  const {ctx,W,H} = setupCanvas(canvas);
+  /* 与变形图保持一致的纵向留白，使两图视觉尺寸相同 */
+  const {toS} = makeTransform(model, W, H, {
+    padL: 120, padT: 100, padR: 60, padB: 36
+  });
+
+  ctx.fillStyle=T.bg; ctx.fillRect(0,0,W,H);
+
+  const NP = 61;
+  const targetPx = Math.min(W,H)*0.055;
+
+  /* 对比模式：先画基准（浅灰虚线），再画当前 */
+  if(BASE){
+    ctx.save();
+    ctx.strokeStyle = T.freezeLine;
+    ctx.lineWidth = 1.2;
+    ctx.setLineDash([5,4]);
+    for(const res of BASE.results){
+      const el = res.el;
+      if(filter === 'col'  && el.kind !== 'col')  continue;
+      if(filter === 'beam' && el.kind !== 'beam') continue;
+      const ni = BASE.nodes[el.i], nj = BASE.nodes[el.j];
+      const nx = -el.sn, ny = -el.cs;
+      ctx.beginPath();
+      for(let k=0;k<=NP;k++){
+        const x = el.L*k/NP;
+        const val = internalAt(res, x, type);
+        const xi = x/el.L;
+        const bx = ni.x + (nj.x-ni.x)*xi;
+        const by = ni.y + (nj.y-ni.y)*xi;
+        const [sx,sy] = toS(bx,by);
+        const off = -(val/FSTYLE.ref)*targetPx*BASE.p.mScale;
+        const px = sx + nx*off, py = sy + ny*off;
+        if(k===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+      }
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  for(let e=0;e<model.results.length;e++){
+    const res = model.results[e];
+    const el  = res.el;
+    if(filter === 'col'  && el.kind !== 'col')  continue;
+    if(filter === 'beam' && el.kind !== 'beam') continue;
+
+    const st  = forceStyleOf(type, el.kind);
+    const ni  = model.nodes[el.i], nj = model.nodes[el.j];
+
+    const nx = -el.sn, ny = -el.cs;
+    const base  = [];
+    const curve = [];
+    for(let k=0;k<=NP;k++){
+      const x = el.L*k/NP;
+      const val = internalAt(res, x, type);
+      const xi = x/el.L;
+      const bx = ni.x + (nj.x-ni.x)*xi;
+      const by = ni.y + (nj.y-ni.y)*xi;
+      const [sx,sy] = toS(bx,by);
+      base.push([sx,sy]);
+      const off = -(val/FSTYLE.ref)*targetPx*model.p.mScale;
+      curve.push([sx + nx*off, sy + ny*off]);
+    }
+
+    ctx.beginPath();
+    ctx.moveTo(curve[0][0], curve[0][1]);
+    for(let k=1;k<curve.length;k++) ctx.lineTo(curve[k][0], curve[k][1]);
+    for(let k=base.length-1;k>=0;k--) ctx.lineTo(base[k][0], base[k][1]);
+    ctx.closePath();
+    ctx.fillStyle = st.fill;
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(curve[0][0], curve[0][1]);
+    for(let k=1;k<curve.length;k++) ctx.lineTo(curve[k][0], curve[k][1]);
+    ctx.strokeStyle = st.color;
+    ctx.lineWidth = 1.7;
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+  }
+
+  drawFrameLines(ctx, model, toS, T.frameThin, 1.5, false, false);
+  drawSupports(ctx, model, toS, model.p.betaF);
+
+  if(model.p.showVals){
+    ctx.font = 'bold 10.5px ui-sans-serif,system-ui,sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    const NZ = 0.05;  // 小于此值视为 0，不标注
+
+    for(const res of model.results){
+      const el = res.el;
+      if(filter === 'col'  && el.kind !== 'col')  continue;
+      if(filter === 'beam' && el.kind !== 'beam') continue;
+      ctx.fillStyle = forceStyleOf(type, el.kind).color;
+      const v0 = internalAt(res, 0, type);
+      const vL = internalAt(res, el.L, type);
+      const ni = model.nodes[el.i], nj = model.nodes[el.j];
+      const [ix, iy] = toS(ni.x, ni.y);
+      const [jx, jy] = toS(nj.x, nj.y);
+      const dxu = jx - ix, dyu = jy - iy;
+      const Lu = Math.hypot(dxu, dyu) || 1;
+      const ux = dxu/Lu, uy = dyu/Lu;
+
+      if(el.kind === 'col'){
+        /* 柱：左柱、右柱标左侧（朝跨内），中柱标右侧 —— 避免柱标签撞柱、撞边缘 */
+        const side = (ni.col === 1) ? 1 : -1;
+        const off = 22;
+        if(Math.abs(v0) > NZ){
+          ctx.fillText(v0.toFixed(1), ix + side*off, iy);
+        }
+        if(Math.abs(vL) > NZ){
+          ctx.fillText(vL.toFixed(1), jx + side*off, jy + 8);
+        }
+      } else {
+        /* 梁：i 端偏内侧上方，j 端偏内侧上方 */
+        const offX = 30, offY = -14;
+        if(Math.abs(v0) > NZ){
+          ctx.fillText(v0.toFixed(1), ix + ux*offX, iy + uy*offX + offY);
+        }
+        if(Math.abs(vL) > NZ){
+          ctx.fillText(vL.toFixed(1), jx - ux*offX, jy - uy*offX + offY);
+        }
+      }
+    }
+
+    ctx.textAlign = 'start';
+    ctx.textBaseline = 'alphabetic';
+  }
+
+  /* 反弯点标注（仅弯矩图）：仅标构件内部 M 严格变号处
+     —— 端点处的零（铰端 / 自由端 / 节点自平衡）不算反弯点 */
+  if(type === 'M'){
+    ctx.strokeStyle = T.antiCurve;
+    ctx.lineWidth = 1.6;
+    for(const res of model.results){
+      const el = res.el;
+      if(filter === 'col'  && el.kind !== 'col')  continue;
+      if(filter === 'beam' && el.kind !== 'beam') continue;
+
+      const N = 60;
+      /* 以单元最大 |M| 为参照设定容差 */
+      let Mscale = 0;
+      for(let k=0;k<=N;k++){
+        Mscale = Math.max(Mscale, Math.abs(internalAt(res, el.L*k/N, 'M')));
+      }
+      if(Mscale < 1e-9) continue;          // 全零单元：无内部反弯点
+      const TOL = Mscale * 1e-3;
+
+      /* 端点接近 0（铰端 / 自由端 / 节点自平衡）→ 检测范围向内缩至 (5%, 95%) */
+      const M0 = internalAt(res, 0, 'M');
+      const ML = internalAt(res, el.L, 'M');
+      const kStart = Math.abs(M0) < TOL ? 3 : 0;
+      const kEnd   = Math.abs(ML) < TOL ? N-3 : N;
+      if(kStart >= kEnd) continue;
+
+      let prevV = internalAt(res, el.L*kStart/N, 'M');
+      let prevX = el.L*kStart/N;
+      for(let k=kStart+1;k<=kEnd;k++){
+        const x = el.L*k/N;
+        const v = internalAt(res, x, 'M');
+        if(Math.abs(prevV) > TOL && Math.abs(v) > TOL
+           && (prevV < 0) !== (v < 0)){
+          const xz = prevX + (x-prevX) * (-prevV)/(v-prevV);
+          const xi = xz/el.L;
+          const ni = model.nodes[el.i], nj = model.nodes[el.j];
+          const bx = ni.x + (nj.x-ni.x)*xi;
+          const by = ni.y + (nj.y-ni.y)*xi;
+          const [sx,sy] = toS(bx,by);
+          ctx.beginPath(); ctx.arc(sx,sy,3.2,0,Math.PI*2); ctx.stroke();
+        }
+        prevV = v; prevX = x;
+      }
+    }
+  }
+
+  /* 拖动高亮叠加 */
+  if(model.p.highlight){
+    ctx.save();
+    ctx.strokeStyle = T.hArrow;
+    ctx.lineWidth = 3.5;
+    ctx.shadowColor = T.hArrow;
+    ctx.shadowBlur = 12;
+    ctx.lineCap = 'round';
+    for(const el of model.els){
+      if(!isElemHighlighted(el, model.p.highlight, model)) continue;
+      const a = model.nodes[el.i], b = model.nodes[el.j];
+      const [ax,ay] = toS(a.x,a.y);
+      const [bx,by] = toS(b.x,b.y);
+      ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(bx,by); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  ctx.fillStyle=T.node;
+  for(const n of model.nodes){
+    if(n.y === 0) continue;   /* 柱底不画圆点 */
+    const [sx,sy]=toS(n.x,n.y);
+    ctx.beginPath(); ctx.arc(sx,sy,2.0,0,Math.PI*2); ctx.fill();
+  }
+
+  /* βj < 0.99：跨内梁两端画半刚接圈（与荷载简图一致）
+     βj 越接近 0，圈越大越亮 —— 直观提示「梁端正从刚接向铰接过渡」 */
+  if(model.p.betaJ < 0.99){
+    const t   = 1 - model.p.betaJ;
+    const R   = 5 + t*3;
+    const lw  = 1.4 + t*1.2;
+    const seen = new Set();
+    for(const el of model.els){
+      if(el.kind !== 'beam' || el.isCant) continue;
+      for(const nidx of [el.i, el.j]){
+        if(seen.has(nidx)) continue;
+        seen.add(nidx);
+        const node = model.nodes[nidx];
+        const [hx, hy] = toS(node.x, node.y);
+        ctx.beginPath();
+        ctx.arc(hx, hy, R, 0, Math.PI*2);
+        ctx.fillStyle   = T.bg;
+        ctx.fill();
+        ctx.strokeStyle = T.hArrow;
+        ctx.lineWidth   = lw;
+        ctx.stroke();
+      }
+    }
+  }
+}
+
+/* =====================================================================
+   9. 变形图
+   ===================================================================== */
+function drawDeform(canvas, model){
+  const T = theme();
+  const {ctx,W,H} = setupCanvas(canvas);
+  /* 仅变形图模式下，叠加层变横排通栏，图形上/左留白可大幅收缩 */
+  const pad = (model.p.displayMode === 'deform')
+    ? {padL: 56, padT: 100, padR: 80, padB: 42}
+    : {padL: 170, padT: 100, padR: 60, padB: 36};
+  const {toS} = makeTransform(model, W, H, pad);
+
+  ctx.fillStyle=T.bg; ctx.fillRect(0,0,W,H);
+
+  const NP = 26;
+  const curves = [];
+
+  for(const res of model.results){
+    const el = res.el;
+    const ni = model.nodes[el.i], nj = model.nodes[el.j];
+    const pts = [];
+    for(let k=0;k<=NP;k++){
+      const xi = k/NP;
+      const x  = xi*el.L;
+      const bx = ni.x + (nj.x-ni.x)*xi;
+      const by = ni.y + (nj.y-ni.y)*xi;
+      const [dx,dy] = elemDisp(res, x);
+      pts.push({bx,by,dx,dy});
+    }
+    curves.push(pts);
+  }
+
+  const F = model.p.dScale;
+
+  drawFrameLines(ctx, model, toS, T.frameGhost, 1.5, true, false);
+
+  ctx.strokeStyle = T.deformCurve;
+  ctx.lineJoin = 'round';
+  ctx.lineCap  = 'round';
+  for(let e=0;e<curves.length;e++){
+    const pts = curves[e];
+    const el  = model.results[e].el;
+    ctx.lineWidth = elemLineWidth(el, model) * 0.6;
+    ctx.beginPath();
+    for(let k=0;k<pts.length;k++){
+      const p = pts[k];
+      const [sx,sy] = toS(p.bx + F*p.dx, p.by + F*p.dy);
+      if(k===0) ctx.moveTo(sx,sy); else ctx.lineTo(sx,sy);
+    }
+    ctx.stroke();
+  }
+
+  ctx.fillStyle=T.nodeBlue;
+  for(let idx=0; idx<model.nodes.length; idx++){
+    const n = model.nodes[idx];
+    if(n.y === 0) continue;   /* 柱底不画圆点 */
+    const ux = model.U[idx*3], uy = model.U[idx*3+1];
+    const [sx,sy] = toS(n.x + F*ux, n.y + F*uy);
+    ctx.beginPath(); ctx.arc(sx,sy,2.8,0,Math.PI*2); ctx.fill();
+  }
+  drawSupports(ctx, model, toS, model.p.betaF);
+}
+
+/* =====================================================================
+   10. 主流程
+   ===================================================================== */
+let MODEL = null;
+let BASE  = null;   // 冻结的基准结果（对比模式）
+
+/* ---------- 内力最大值（用于卡片标题） ---------- */
+function getMaxInternal(model, type, filter){
+  let maxF = 0;
+  for(const res of model.results){
+    const el = res.el;
+    if(filter === 'col'  && el.kind !== 'col')  continue;
+    if(filter === 'beam' && el.kind !== 'beam') continue;
+    const NP = 40;
+    for(let k=0;k<=NP;k++){
+      const v = Math.abs(internalAt(res, el.L*k/NP, type));
+      if(v > maxF) maxF = v;
+    }
+  }
+  return maxF;
+}
+
+function updateReadout(model){
+  const p = model.p;
+
+  document.getElementById('r-colsec').textContent =
+    `柱 ${p.bc}×${p.hc} · 梁 ${p.bb}×${p.hb} mm`;
+  document.getElementById('r-kmid').textContent = p.r.toFixed(2);
+
+  /* ρ 表：逐层逐跨（每跨一个值，左→右） */
+  {
+    const box = document.getElementById('r-rhoBox');
+    if(box){
+      let html = '';
+      for(let lv=1; lv<=model.nLev; lv++){
+        const row = model.rho[lv-1] || [];
+        const vals = row.map(v => v.toFixed(2)).join(' / ');
+        html += `<div class="rRow"><span class="lbl">${lv} 层</span><span class="val">${vals}</span></div>`;
+      }
+      box.innerHTML = html;
+    }
+  }
+
+  let maxD = 0;
+  for(const res of model.results){
+    const el = res.el;
+    const N = 26;
+    for(let k=0;k<=N;k++){
+      const x = el.L * k / N;
+      const [dx, dy] = elemDisp(res, x);
+      const d = Math.hypot(dx, dy);
+      if(d > maxD) maxD = d;
+    }
+  }
+  document.getElementById('r-maxD').textContent = (maxD * 1000).toFixed(3) + ' mm';
+
+  let maxDrift = 0, driftFloor = 0;
+  for(let c=0;c<model.nCol;c++){
+    for(let lv=1; lv<=model.nLev; lv++){
+      const uLo = model.U[model.nid(c, lv-1)*3];
+      const uHi = model.U[model.nid(c, lv)*3];
+      const hlv = p['h'+lv];
+      const d = Math.abs(uHi - uLo) / hlv;
+      if(d > maxDrift){ maxDrift = d; driftFloor = lv; }
+    }
+  }
+  document.getElementById('r-drift').textContent =
+    maxDrift > 0 ? `1/${Math.round(1/maxDrift)}（${driftFloor}层）` : '1/∞（无水平力）';
+
+  let totalH = 0;
+  for(let lv=1; lv<=model.nLev; lv++) totalH += p['H'+lv];
+  let uTopAvg = 0;
+  for(let c=0;c<model.nCol;c++) uTopAvg += model.U[model.nid(c, model.nLev)*3];
+  uTopAvg /= model.nCol;
+  document.getElementById('r-K').textContent =
+    (totalH > 0 && Math.abs(uTopAvg) > 1e-12)
+      ? (totalH / Math.abs(uTopAvg)).toFixed(1) + ' kN/m'
+      : '—（无水平力）';
+
+  /* P-Δ 放大系数（近似） */
+  const rowPD = document.getElementById('rowPD');
+  if(p.showPDelta){
+    rowPD.style.display = '';
+    let sumRy = 0;
+    for(let c=0;c<model.nCol;c++) sumRy += model.R[model.nid(c,0)*3 + 1];
+    let hTot = 0;
+    for(let lv=1; lv<=model.nLev; lv++) hTot += p['h'+lv];
+    if(totalH > 0 && Math.abs(uTopAvg) > 1e-10 && Math.abs(sumRy) > 1e-6){
+      const Ncr = totalH * hTot / Math.abs(uTopAvg);
+      const ratio = Math.abs(sumRy) / Ncr;
+      const B = 1 / (1 - ratio);
+      const sign = (B > 0) ? '' : '⚠ ';
+      document.getElementById('r-pd').textContent =
+        `${sign}${B.toFixed(3)}  (ΣN/ΣN_cr = ${ratio.toFixed(3)})`;
+    } else {
+      document.getElementById('r-pd').textContent = '—（无水平力或无轴力）';
+    }
+  } else {
+    rowPD.style.display = 'none';
+  }
+
+  /* 水平力分配比例（按柱，左→右） */
+  function allocStr(){
+    const nCol = model.nCol;
+    if(p.Hmode === 'left'){
+      const arr = new Array(nCol).fill('0%');
+      arr[0] = '100%';
+      return arr.join(' / ');
+    }
+    const cE = colKeff(p.betaF, p.betaJ);
+    if(!isFinite(cE) || cE < 1e-12){
+      const eq = (100/nCol).toFixed(0) + '%';
+      return new Array(nCol).fill(eq).join(' / ');
+    }
+    const isMid = c => (c>0 && c<nCol-1);
+    let sum = 0;
+    const w = [];
+    for(let c=0;c<nCol;c++){
+      const kc = isMid(c) ? p.r : 1.0;
+      const wc = cE * kc;
+      w.push(wc); sum += wc;
+    }
+    return w.map(v => (v/sum*100).toFixed(0) + '%').join(' / ');
+  }
+  const aStr = allocStr();
+  document.getElementById('r-alloc1').textContent = aStr;
+  document.getElementById('r-alloc2').textContent = aStr;
+  const a3 = document.getElementById('r-alloc3');
+  if(a3) a3.textContent = aStr;
+
+  /* 支座反力：按 nCol 柱逐行更新 */
+  {
+    const nCol = model.nCol;
+    for(let i=0; i<4; i++){
+      const rowEl = document.getElementById('row-R'+i);
+      const lblEl = document.getElementById('lbl-R'+i);
+      const valEl = document.getElementById('r-R'+i);
+      if(!rowEl) continue;
+      if(i >= nCol){ rowEl.style.display = 'none'; continue; }
+      rowEl.style.display = '';
+      if(lblEl){
+        let tag;
+        if(i === 0) tag = '左';
+        else if(i === nCol-1) tag = '右';
+        else tag = '内 ' + i;
+        lblEl.textContent = `${tag}柱 Rx / Ry / M`;
+      }
+      if(valEl){
+        const nd = model.nid(i, 0);
+        const rx = model.R[nd*3];
+        const ry = model.R[nd*3+1];
+        const rm = model.R[nd*3+2];
+        valEl.textContent = `${rx.toFixed(1)} / ${ry.toFixed(1)} / ${rm.toFixed(1)}`;
+      }
+    }
+  }
+
+  /* ΣV / ΣH */
+  let sumV = 0, sumH = 0;
+  for(let lv=1; lv<=model.nLev; lv++){
+    let baySum = 0;
+    for(let c=0;c<model.nBay;c++) baySum += p['L'+(c+1)];
+    sumV += p['q'+lv] * baySum;
+    if(p.hasCant) sumV += p['qc'+lv] * p.Lc;
+    sumH += p['H'+lv];
+  }
+  document.getElementById('loadSum').textContent =
+    `ΣV = ${sumV.toFixed(1)} kN · ΣH = ${sumH.toFixed(1)} kN`;
+
+  document.getElementById('r-resid').textContent =
+    `ΣFx = ${model.residX.toExponential(1)}  ΣFy = ${model.residY.toExponential(1)} kN`;
+}
+
+function run(){
+  try{
+    MODEL = analyze(S);
+  }catch(err){
+    console.error(err);
+    for(const id of ['cvLoad','cvForce','cvD']){
+      const cv = document.getElementById(id);
+      const ctx = cv.getContext('2d');
+      ctx.setTransform(1,0,0,1,0,0);
+      ctx.clearRect(0,0,cv.width,cv.height);
+      ctx.fillStyle = '#dc2626';
+      ctx.font = 'bold 15px ui-sans-serif,system-ui,sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('计算失败：' + err.message, cv.width/2, cv.height/2);
+      ctx.textAlign = 'start';
+      ctx.textBaseline = 'alphabetic';
+    }
+    for(const id of ['r-colsec','r-kmid','r-maxD','r-drift','r-K','r-R0','r-R1','r-R2','r-R3','r-alloc1','r-alloc2','r-alloc3']){
+      const el = document.getElementById(id);
+      if(el) el.textContent = '—';
+    }
+    const rhoBox = document.getElementById('r-rhoBox');
+    if(rhoBox) rhoBox.innerHTML = '';
+    const rf = document.getElementById('r-resid');
+    if(rf) rf.textContent = '计算失败：' + err.message;
+    return;
+  }
+
+  /* 内力最大值（随当前 type + filter 实时算） */
+  MODEL.maxF = getMaxInternal(MODEL, S.forceType, S.elFilter);
+
+  /* 内力图标题带最大值 */
+  {
+    const style = FORCE_STYLE[S.forceType];
+    const tagEl = document.getElementById('tagForce');
+    if(MODEL.maxF > 1e-6){
+      tagEl.textContent =
+        `${style.tag} · ${style.lbl} = ${MODEL.maxF.toFixed(1)} ${style.unit}`;
+    } else {
+      tagEl.textContent = style.tag;
+    }
+  }
+
+  drawLoadDiagram(document.getElementById('cvLoad'), MODEL);
+  drawInternal(document.getElementById('cvForce'), MODEL);
+  drawDeform(document.getElementById('cvD'), MODEL);
+  updateReadout(MODEL);
+  updateModelSummary();
+}
+
+/* ---------- 拓扑依赖弱化（不隐藏） ---------- */
+function applyTopoState(){
+  const dis = (id, d) => {
+    const el = document.getElementById('row-'+id);
+    if(el) el.classList.toggle('is-disabled', !!d);
+  };
+  /* 几何 */
+  dis('L2', S.nBay < 2);
+  dis('L3', S.nBay < 3);
+  dis('h2', S.nLev < 2);
+  dis('h3', S.nLev < 3);
+  dis('Lc', !S.hasCant);
+  /* 荷载 */
+  dis('q2', S.nLev < 2);
+  dis('q3', S.nLev < 3);
+  dis('qc1', !S.hasCant);
+  dis('qc2', !S.hasCant || S.nLev < 2);
+  dis('qc3', !S.hasCant || S.nLev < 3);
+  dis('H2', S.nLev < 2);
+  dis('H3', S.nLev < 3);
+  /* 读数行仍隐藏（输出行不弱化） */
+  const hide = (id, on) => {
+    const el = document.getElementById(id);
+    if(el) el.style.display = on ? 'none' : '';
+  };
+  hide('row-alloc2', S.nLev < 2);
+  hide('row-alloc3', S.nLev < 3);
+  hide('row-R2', S.nBay < 2);
+  hide('row-R3', S.nBay < 3);
+
+  updateSweepOptions();
+}
+
+/* ---------- 扫掠参数按拓扑过滤 ---------- */
+function updateSweepOptions(){
+  const sel = document.getElementById('sweepParam');
+  if(!sel) return;
+
+  const req = {
+    q2: ()=>S.nLev  >= 2,
+    q3: ()=>S.nLev  >= 3,
+    qc1:()=>S.hasCant,
+    qc2:()=>S.hasCant && S.nLev >= 2,
+    qc3:()=>S.hasCant && S.nLev >= 3,
+    H2: ()=>S.nLev  >= 2,
+    H3: ()=>S.nLev  >= 3
+  };
+
+  let firstVisible = null;
+  sel.querySelectorAll('option').forEach(opt=>{
+    const f  = req[opt.value];
+    const ok = f ? f() : true;
+    opt.hidden   = !ok;
+    opt.disabled = !ok;
+    if(ok && !firstVisible) firstVisible = opt.value;
+  });
+
+  /* optgroup 全空也隐藏 */
+  sel.querySelectorAll('optgroup').forEach(g=>{
+    const any = [...g.querySelectorAll('option')].some(o=>!o.hidden);
+    g.hidden = !any;
+    g.style.display = any ? '' : 'none';
+  });
+
+  /* 当前选中被隐藏或已不存在 → 切到第一个可用项，回到 min */
+  const cur = sel.querySelector(`option[value="${S.sweep.param}"]`);
+  if((!cur || cur.hidden) && firstVisible){
+    if(S.sweep.playing) sweepStop();
+    S.sweep.param = firstVisible;
+    sel.value     = firstVisible;
+    /* 扫掠条展开时才实际改值，避免未打开时乱改滑块 */
+    const bar = document.getElementById('sweepBar');
+    if(bar && bar.classList.contains('on')) sweepReset();
+  }
+}
+
+/* ---------- 模型摘要卡 ---------- */
+function updateModelSummary(){
+  const top = document.getElementById('msTop');
+  const sp  = document.getElementById('msSpans');
+  const hh  = document.getElementById('msHeights');
+  if(!top || !sp || !hh) return;
+  const bayStr = S.nBay + ' 跨';
+  const levStr = S.nLev + ' 层';
+  const tag = S.hasCant ? '<span class="msTag">右悬挑</span>' : '';
+  top.innerHTML = `${bayStr} × ${levStr}${tag}`;
+
+  const spans = [];
+  for(let i=1; i<=S.nBay; i++) spans.push(S['L'+i].toFixed(1));
+  sp.textContent = spans.join(' / ') + ' m';
+
+  const heights = [];
+  for(let i=1; i<=S.nLev; i++) heights.push(S['h'+i].toFixed(1));
+  hh.textContent = heights.join(' / ') + ' m';
+}
+
+/* ---------- Tab 指示器 ---------- */
+function updateTabInd(){
+  const bar = document.getElementById('tabBar');
+  const ind = document.getElementById('tabInd');
+  if(!bar || !ind) return;
+  const btns = bar.querySelectorAll('button[data-tab]');
+  const idx = [...btns].findIndex(b => b.classList.contains('on'));
+  if(idx < 0) return;
+  const w = bar.clientWidth / btns.length;
+  ind.style.width = w + 'px';
+  ind.style.transform = `translateX(${idx * w}px)`;
+}
+
+/* ---------- Tab 绑定 ---------- */
+(function bindTabs(){
+  const bar = document.getElementById('tabBar');
+  if(!bar) return;
+  const btns = bar.querySelectorAll('button[data-tab]');
+  const panels = document.querySelectorAll('.tabPanel');
+  btns.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const tab = btn.dataset.tab;
+      btns.forEach(b => b.classList.toggle('on', b === btn));
+      panels.forEach(p => p.classList.toggle('on', p.dataset.tab === tab));
+      updateTabInd();
+    });
+  });
+  // 窗口尺寸变化时重算
+  window.addEventListener('resize', ()=>{ requestAnimationFrame(updateTabInd); });
+})();
+
+/* ---------- 数字键 1/2 切 Tab ---------- */
+(function bindTabKeys(){
+  const order = ['model','load'];
+  document.addEventListener('keydown', e=>{
+    // 输入框内不响应
+    const t = e.target;
+    if(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+    const idx = parseInt(e.key) - 1;
+    if(idx >= 0 && idx < order.length){
+      const bar = document.getElementById('tabBar');
+      const btn = bar && bar.querySelector(`button[data-tab="${order[idx]}"]`);
+      if(btn) btn.click();
+    }
+  });
+})();
+
+/* ---------- 拖动高亮匹配 ---------- */
+function isElemHighlighted(el, hl, model){
+  if(!hl) return false;
+  if(hl === 'bc' || hl === 'hc') return el.kind === 'col';
+  if(hl === 'bb' || hl === 'hb') return el.kind === 'beam';
+  if(hl === 'r')                 return el.kind === 'col' && el.col > 0 && el.col < model.nBay;
+  if(hl === 'Lc')                return !!el.isCant;
+  if(/^L[123]$/.test(hl))        return el.kind === 'beam' && !el.isCant && el.bay === parseInt(hl[1]);
+  if(/^h[123]$/.test(hl))        return el.kind === 'col'  && el.lev === parseInt(hl[1]);
+  if(/^q[123]$/.test(hl))        return el.kind === 'beam' && !el.isCant && el.lev === parseInt(hl[1]);
+  if(/^qc[123]$/.test(hl))       return !!el.isCant && el.lev === parseInt(hl[2]);
+  if(/^H[123]$/.test(hl))        return el.kind === 'col'  && el.lev === parseInt(hl[1]);
+  if(hl === 'betaF')             return el.kind === 'col'  && el.lev === 1;
+  if(hl === 'betaJ')             return el.kind === 'beam';
+  return false;
+}
+
+/* ---------- 拓扑选择器绑定 ---------- */
+(function bindTopo(){
+  const bind = (segId, key, parse) => {
+    const seg = document.getElementById(segId);
+    if(!seg) return;
+    seg.querySelectorAll('button').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        seg.querySelectorAll('button').forEach(b=>b.classList.remove('on'));
+        btn.classList.add('on');
+        S[key] = parse(btn.dataset);
+        applyTopoState();
+        run();
+      });
+    });
+  };
+  bind('segBay',  'nBay',    d=>parseInt(d.bay));
+  bind('segLev',  'nLev',    d=>parseInt(d.lev));
+  bind('segCant', 'hasCant', d=>d.cant === '1');
+})();
+
+/* ---------- 控件绑定 ---------- */
+function updateRangeProgress(el){
+  const min = parseFloat(el.min);
+  const max = parseFloat(el.max);
+  const v   = parseFloat(el.value);
+  if(!isFinite(min) || !isFinite(max) || max === min) return;
+  const p = ((v - min) / (max - min)) * 100;
+  el.style.setProperty('--p', p.toFixed(2) + '%');
+}
+
+/* 只影响绘制、不影响求解的参数：拖动时只重绘相关 canvas，不重新 analyze */
+const DRAW_ONLY = new Set(['mScale', 'dScale']);
+function redrawOnly(key){
+  if(!MODEL) return;
+  if(key === 'mScale')       drawInternal(document.getElementById('cvForce'), MODEL);
+  else if(key === 'dScale')  drawDeform(document.getElementById('cvD'), MODEL);
+}
+
+function bindRange(id, key, fmt){
+  const el  = document.getElementById(id);
+  const out = document.getElementById('v-'+id);
+  if(!el || !out) return;
+  updateRangeProgress(el);
+  el.addEventListener('input', ()=>{
+    /* 手动拖动：暂停扫掠（扫掠自身改 value 不触发 input，不冲突） */
+    if(S.sweep && S.sweep.playing) sweepStop();
+    S[key] = parseFloat(el.value);
+    out.textContent = fmt(S[key]);
+    updateRangeProgress(el);
+
+    if(DRAW_ONLY.has(key)){
+      redrawOnly(key);
+      return;
+    }
+    /* 拖动高亮：短暂显示对应构件 */
+    S.highlight = key;
+    if(el._hlTimer) clearTimeout(el._hlTimer);
+    el._hlTimer = setTimeout(()=>{ S.highlight = null; run(); }, 500);
+    run();
+  });
+  S[key] = parseFloat(el.value);
+  out.textContent = fmt(S[key]);
+}
+
+bindRange('L1','L1', v=>v.toFixed(1)+' m');
+bindRange('L2','L2', v=>v.toFixed(1)+' m');
+bindRange('L3','L3', v=>v.toFixed(1)+' m');
+bindRange('h1','h1', v=>v.toFixed(1)+' m');
+bindRange('h2','h2', v=>v.toFixed(1)+' m');
+bindRange('h3','h3', v=>v.toFixed(1)+' m');
+bindRange('Lc','Lc', v=>v.toFixed(1)+' m');
+bindRange('bc','bc', v=>v.toFixed(0)+' mm');
+bindRange('hc','hc', v=>v.toFixed(0)+' mm');
+bindRange('bb','bb', v=>v.toFixed(0)+' mm');
+bindRange('hb','hb', v=>v.toFixed(0)+' mm');
+bindRange('q1','q1', v=>v.toFixed(1)+' kN/m');
+bindRange('q2','q2', v=>v.toFixed(1)+' kN/m');
+bindRange('q3','q3', v=>v.toFixed(1)+' kN/m');
+bindRange('qc1','qc1', v=>v.toFixed(1)+' kN/m');
+bindRange('qc2','qc2', v=>v.toFixed(1)+' kN/m');
+bindRange('qc3','qc3', v=>v.toFixed(1)+' kN/m');
+bindRange('H1','H1', v=>v.toFixed(1)+' kN');
+bindRange('H2','H2', v=>v.toFixed(1)+' kN');
+bindRange('H3','H3', v=>v.toFixed(1)+' kN');
+bindRange('r','r', v=>v.toFixed(2));
+bindRange('betaF','betaF', v=>v.toFixed(2));
+bindRange('betaJ','betaJ', v=>v.toFixed(2));
+bindRange('mScale','mScale', v=>v.toFixed(2));
+bindRange('dScale','dScale', v=>v.toFixed(0));
+
+/* ============================================================
+   参数扫掠
+   ============================================================ */
+const SWEEP_DUR = 3000;   /* 单程时长，ms */
+
+function sweepUpdatePlayBtn(){
+  const btn = document.getElementById('btnSweepPlay');
+  if(!btn) return;
+  if(S.sweep.playing){
+    btn.textContent = '■ 停止';
+    btn.classList.add('playing');
+    btn.title = S.sweep.loop ? '停止循环播放' : '暂停';
+  } else {
+    btn.textContent = '▶ 播放';
+    btn.classList.remove('playing');
+    btn.title = '循环播放（再点一次停止）';
+  }
+}
+
+function sweepSetValue(key, v){
+  const el = document.getElementById(key);
+  if(!el) return;
+  const min = parseFloat(el.min);
+  const max = parseFloat(el.max);
+  v = Math.max(min, Math.min(max, v));
+  el.value = v;
+  S[key] = v;
+  const out = document.getElementById('v-'+key);
+  if(out && fmtMap[key]) out.textContent = fmtMap[key](v);
+  updateRangeProgress(el);
+}
+
+function sweepStop(){
+  if(S.sweep.rafId){
+    cancelAnimationFrame(S.sweep.rafId);
+    S.sweep.rafId = null;
+  }
+  S.sweep.playing = false;
+  sweepUpdatePlayBtn();
+}
+
+function sweepReset(){
+  sweepStop();
+  const key = S.sweep.param;
+  const el = document.getElementById(key);
+  if(!el) return;
+  sweepSetValue(key, parseFloat(el.min));
+  run();
+}
+
+function sweepPlay(loop){
+  const key = S.sweep.param;
+  const el  = document.getElementById(key);
+  if(!el) return;
+
+  /* 拓扑依赖参数被弱化时不允许播放 */
+  const rowEl = document.getElementById('row-'+key);
+  if(rowEl && rowEl.classList.contains('is-disabled')) return;
+
+  const min = parseFloat(el.min);
+  const max = parseFloat(el.max);
+  const cur = parseFloat(el.value);
+  /* 已在 max：从 min 重播 */
+  const startVal = (max - cur < 1e-9) ? min : cur;
+  const span = max - startVal;
+
+  S.sweep.startVal = startVal;
+  S.sweep.span     = span;
+  S.sweep.t0       = performance.now();
+  S.sweep.playing  = true;
+  S.sweep.loop     = loop !== false;   /* 默认循环；录制时传 false */
+  sweepUpdatePlayBtn();
+
+  const tick = (now) => {
+    if(!S.sweep.playing) return;
+
+    /* 播放中参数变为不可用（切了拓扑）→ 自动停 */
+    const row = document.getElementById('row-'+key);
+    if(row && row.classList.contains('is-disabled')){
+      sweepStop();
+      return;
+    }
+
+    let t = (now - S.sweep.t0) / SWEEP_DUR;
+    if(t >= 1){
+      if(S.sweep.loop){
+        /* 循环：从 min 重新开始 */
+        S.sweep.startVal = min;
+        S.sweep.span     = max - min;
+        S.sweep.t0       = now;
+        t = 0;
+      } else {
+        t = 1;
+      }
+    }
+
+    const v = S.sweep.startVal + S.sweep.span * t;
+    sweepSetValue(key, v);
+    run();
+
+    if(S.sweep.loop || t < 1){
+      S.sweep.rafId = requestAnimationFrame(tick);
+    } else {
+      S.sweep.playing = false;
+      S.sweep.rafId   = null;
+      sweepUpdatePlayBtn();
+    }
+  };
+  S.sweep.rafId = requestAnimationFrame(tick);
+}
+
+function sweepToggle(){
+  if(S.sweep.playing) sweepStop();
+  else                sweepPlay();
+}
+
+(function bindSweep(){
+  const bar      = document.getElementById('sweepBar');
+  const btnBar   = document.getElementById('btn-sweep');
+  const btnClose = document.getElementById('btnSweepClose');
+  const btnPlay  = document.getElementById('btnSweepPlay');
+  const btnReset = document.getElementById('btnSweepReset');
+  const sel      = document.getElementById('sweepParam');
+  if(!bar || !btnBar || !sel) return;
+
+  S.sweep.param = sel.value;
+
+  const openSweep = () => {
+    bar.classList.add('on');
+    btnBar.classList.add('on');
+    /* 打开时把参数拉到 min，给用户一个起始点 */
+    sweepReset();
+  };
+  const closeSweep = () => {
+    sweepStop();
+    bar.classList.remove('on');
+    btnBar.classList.remove('on');
+  };
+
+  btnBar.addEventListener('click', ()=>{
+    if(bar.classList.contains('on')) closeSweep();
+    else                             openSweep();
+  });
+  if(btnClose) btnClose.addEventListener('click', closeSweep);
+  if(btnPlay)  btnPlay.addEventListener('click', sweepToggle);
+  if(btnReset) btnReset.addEventListener('click', sweepReset);
+
+  sel.addEventListener('change', ()=>{
+    sweepStop();
+    S.sweep.param = sel.value;
+    sweepReset();
+  });
+})();
+
+/* ============================================================
+   录制：直接录单个 canvas（无合成，无伪影）
+   ============================================================ */
+function updateRecBtn(){
+  const btn = document.getElementById('btnSweepRec');
+  if(!btn) return;
+  if(S.rec.active){
+    btn.textContent = '■ 录制中';
+    btn.classList.add('rec');
+    btn.title = '再点一次取消（不保存）';
+  }else{
+    btn.textContent = '⬇ 录制';
+    btn.classList.remove('rec');
+    btn.title = '录制为视频（自动选 mp4 / webm，再点一次取消）';
+  }
+}
+
+function setSweepLocked(locked){
+  for(const id of ['sweepParam','sweepRecScope','btnSweepPlay','btnSweepReset']){
+    const el = document.getElementById(id);
+    if(el) el.classList.toggle('sweepLocked', locked);
+  }
+}
+
+function startRecording(){
+  const R = S.rec;
+  if(R.active){
+    /* 再点一次 = 取消 */
+    R.cancel = true;
+    stopRecording();
+    return;
+  }
+  if(!window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream){
+    alert('当前浏览器不支持 canvas 录制，请使用 Chrome / Edge / Firefox。');
+    return;
+  }
+
+  const canvasId = { force:'cvForce', deform:'cvD' }[R.scope] || 'cvForce';
+  const src = document.getElementById(canvasId);
+  if(!src || !src.width || !src.offsetWidth){
+    alert('目标图形当前不可见（可能被显示模式隐藏），无法录制。');
+    return;
+  }
+
+  /* 选取 mime：优先 mp4，回退 webm */
+  let mime = '';
+  const candidates = [
+    'video/mp4;codecs=avc1.42E01E',   /* H.264 Baseline，兼容性最好 */
+    'video/mp4;codecs=avc1.4D401E',   /* H.264 Main */
+    'video/mp4;codecs=avc1',
+    'video/mp4;codecs=h264',
+    'video/mp4',
+    'video/webm;codecs=vp9',
+    'video/webm;codecs=vp8',
+    'video/webm'
+  ];
+  for(const m of candidates){
+    try{
+      if(MediaRecorder.isTypeSupported(m)){ mime = m; break; }
+    }catch(e){ /* 忽略非法 mime */ }
+  }
+  if(!mime){
+    alert('当前浏览器不支持 mp4 / webm 录制，请使用 Chrome 124+ / Edge 124+ / Safari 14.1+。');
+    return;
+  }
+
+  R.mime   = mime;
+  R.chunks = [];
+  R.cancel = false;
+
+  /* 先切白底 + 标记录制中（让 setupCanvas 降采样），并重绘一次，
+     再取流 —— 否则 captureStream 会先拿到原始分辨率 / 深色的首帧 */
+  R.active  = true;
+  S.lightBg = true;
+  sweepReset();
+
+  let recorder;
+  try{
+    const stream = src.captureStream(30);
+    recorder = new MediaRecorder(stream, {
+      mimeType: mime,
+      videoBitsPerSecond: 6_000_000
+    });
+  }catch(e){
+    R.active  = false;
+    S.lightBg = false;
+    run();
+    alert('录制初始化失败：' + e.message);
+    return;
+  }
+
+  recorder.ondataavailable = e => {
+    if(e.data && e.data.size > 0) R.chunks.push(e.data);
+  };
+  recorder.onstop = () => {
+    const wasCancelled = R.cancel;
+    const chunks      = R.chunks;
+    const finalMime   = R.mime;
+    const scope       = R.scope;
+
+    R.active   = false;
+    R.cancel   = false;
+    R.chunks   = [];
+    R.recorder = null;
+
+    /* 录制已停，恢复深色主题并重绘 */
+    S.lightBg = false;
+    run();
+
+    updateRecBtn();
+    setSweepLocked(false);
+
+    if(wasCancelled){
+      console.log('[rec] 已取消，未保存');
+      return;
+    }
+    if(!chunks.length){
+      alert('录制未产生数据（可能时长过短）。');
+      return;
+    }
+    const blob = new Blob(chunks, { type: finalMime });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    const ts   = new Date().toISOString()
+                    .replace(/[:T]/g,'-').replace(/\..+$/,'');
+    const ext  = finalMime.indexOf('mp4') >= 0 ? 'mp4' : 'webm';
+    a.href = url;
+    a.download = `sweep_${S.sweep.param}_${scope}_${ts}.${ext}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url), 2000);
+    console.log(`[rec] 已保存 ${a.download}  (${(blob.size/1024).toFixed(0)} KB)`);
+  };
+
+  R.recorder = recorder;
+
+  updateRecBtn();
+  setSweepLocked(true);
+
+  recorder.start(100);
+
+  /* 让录制器稳定一帧再开始播放扫掠 */
+  setTimeout(()=>{
+    if(!R.active) return;
+    sweepPlay(false);   /* 录制时只播一遍，不循环 */
+
+    const waitDone = () => {
+      if(!R.active) return;
+      if(S.sweep.playing){
+        requestAnimationFrame(waitDone);
+      }else{
+        /* 扫掠结束 → 多录 0.5s 尾帧 */
+        setTimeout(()=>{
+          if(R.active) stopRecording();
+        }, 500);
+      }
+    };
+    requestAnimationFrame(waitDone);
+  }, 120);
+}
+
+function stopRecording(){
+  const R = S.rec;
+  if(!R.active) return;
+  R.active = false;
+
+  sweepStop();
+
+  /* 只停录制器；主题恢复放到 onstop 回调里 —— 避免最后一帧录到深色 */
+  if(R.recorder && R.recorder.state !== 'inactive'){
+    try{ R.recorder.stop(); }catch(e){ /* 忽略 */ }
+  }
+}
+
+(function bindRec(){
+  const btn = document.getElementById('btnSweepRec');
+  const sel = document.getElementById('sweepRecScope');
+  if(sel) S.rec.scope = sel.value;
+  if(btn) btn.addEventListener('click', startRecording);
+  if(sel) sel.addEventListener('change', ()=>{ S.rec.scope = sel.value; });
+})();
+
+/* 梁/柱显示筛选 */
+(function bindElem(){
+  const seg = document.getElementById('segElem');
+  if(!seg) return;
+  seg.querySelectorAll('button[data-filter]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      seg.querySelectorAll('button[data-filter]').forEach(b=>b.classList.remove('on'));
+      btn.classList.add('on');
+      S.elFilter = btn.dataset.filter;
+      run();
+    });
+  });
+})();
+
+/* 数值显示开关 */
+(function bindVals(){
+  const btn = document.getElementById('btnVals');
+  if(!btn) return;
+  btn.addEventListener('click', ()=>{
+    S.showVals = !S.showVals;
+    btn.classList.toggle('on', S.showVals);
+    run();
+  });
+})();
+
+/* 显示模式切换（全部 / 仅受力图 / 仅变形图） */
+(function bindDisplayMode(){
+  const seg = document.getElementById('segDisp');
+  const stageEl = document.getElementById('stage');
+  if(!seg || !stageEl) return;
+  seg.querySelectorAll('button').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      seg.querySelectorAll('button').forEach(b=>b.classList.remove('on'));
+      btn.classList.add('on');
+      const mode = btn.dataset.disp;
+      S.displayMode = mode;
+      stageEl.classList.remove('mode-all','mode-force','mode-deform');
+      stageEl.classList.add('mode-' + mode);
+      scheduleRender();
+    });
+  });
+})();
+
+/* P-Δ 开关 */
+(function bindPDelta(){
+  const btn = document.getElementById('btnPDelta');
+  if(!btn) return;
+  btn.addEventListener('click', ()=>{
+    S.showPDelta = !S.showPDelta;
+    btn.classList.toggle('on', S.showPDelta);
+    run();
+  });
+})();
+
+/* 冻结基准（对比模式） */
+(function bindFreeze(){
+  const btn = document.getElementById('btnFreeze');
+  if(!btn) return;
+  btn.addEventListener('click', ()=>{
+    if(BASE){
+      BASE = null;
+      btn.classList.remove('on');
+    } else {
+      if(!MODEL) return;
+      BASE = {
+        nodes: MODEL.nodes, els: MODEL.els,
+        results: MODEL.results, U: MODEL.U, p: {...MODEL.p}
+      };
+      btn.classList.add('on');
+    }
+    run();
+  });
+})();
+
+(function bindHmode(){
+  const seg = document.getElementById('segHmode');
+  if(!seg) return;
+  seg.querySelectorAll('button').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      seg.querySelectorAll('button').forEach(b=>b.classList.remove('on'));
+      btn.classList.add('on');
+      S.Hmode = btn.dataset.mode;
+      run();
+    });
+  });
+})();
+
+(function bindForce(){
+  const seg = document.getElementById('segForce');
+  if(!seg) return;
+  seg.querySelectorAll('button').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      seg.querySelectorAll('button').forEach(b=>b.classList.remove('on'));
+      btn.classList.add('on');
+      S.forceType = btn.dataset.force;
+      run();
+    });
+  });
+})();
+
+/* ---------- 使用说明模态框 ---------- */
+(function bindHelp(){
+  const modal = document.getElementById('modalHelp');
+  const btnOpen = document.getElementById('btn-help');
+  const btnClose = document.getElementById('btnHelpClose');
+  if(!modal || !btnOpen) return;
+
+  const open  = ()=> modal.classList.add('open');
+  const close = ()=> modal.classList.remove('open');
+
+  btnOpen.addEventListener('click', open);
+  if(btnClose) btnClose.addEventListener('click', close);
+  modal.addEventListener('click', e=>{ if(e.target === modal) close(); });
+  document.addEventListener('keydown', e=>{
+    if(e.key === 'Escape' && modal.classList.contains('open')) close();
+  });
+})();
+
+/* ---------- 打赏模态框 ---------- */
+(function bindTip(){
+  const modal = document.getElementById('modalTip');
+  const btnOpen = document.getElementById('btn-tip');
+  const btnClose = document.getElementById('btnTipClose');
+  if(!modal || !btnOpen) return;
+
+  const open  = ()=> modal.classList.add('open');
+  const close = ()=> modal.classList.remove('open');
+
+  btnOpen.addEventListener('click', open);
+  if(btnClose) btnClose.addEventListener('click', close);
+  modal.addEventListener('click', e=>{ if(e.target === modal) close(); });
+  document.addEventListener('keydown', e=>{
+    if(e.key === 'Escape' && modal.classList.contains('open')) close();
+  });
+})();
+
+/* ---------- 重置按钮 ---------- */
+const fmtMap = {
+  L1: v=>v.toFixed(1)+' m',  L2: v=>v.toFixed(1)+' m',  L3: v=>v.toFixed(1)+' m',
+  h1: v=>v.toFixed(1)+' m',  h2: v=>v.toFixed(1)+' m',  h3: v=>v.toFixed(1)+' m',
+  Lc: v=>v.toFixed(1)+' m',
+  bc: v=>v.toFixed(0)+' mm', hc: v=>v.toFixed(0)+' mm',
+  bb: v=>v.toFixed(0)+' mm', hb: v=>v.toFixed(0)+' mm',
+  q1: v=>v.toFixed(1)+' kN/m', q2: v=>v.toFixed(1)+' kN/m', q3: v=>v.toFixed(1)+' kN/m',
+  qc1: v=>v.toFixed(1)+' kN/m', qc2: v=>v.toFixed(1)+' kN/m', qc3: v=>v.toFixed(1)+' kN/m',
+  H1: v=>v.toFixed(1)+' kN',   H2: v=>v.toFixed(1)+' kN',   H3: v=>v.toFixed(1)+' kN',
+  r: v=>v.toFixed(2),
+  betaF: v=>v.toFixed(2),
+  betaJ: v=>v.toFixed(2),
+  mScale: v=>v.toFixed(2), dScale: v=>v.toFixed(0)
+};
+document.getElementById('btn-reset').addEventListener('click', ()=>{
+  document.querySelectorAll('input[type=range]').forEach(el=>{
+    el.value = el.defaultValue;
+    const v = parseFloat(el.value);
+    S[el.id] = v;
+    const out = document.getElementById('v-'+el.id);
+    if(out && fmtMap[el.id]) out.textContent = fmtMap[el.id](v);
+    updateRangeProgress(el);
+  });
+  S.nBay = 2;
+  S.nLev = 2;
+  S.hasCant = true;
+  S.Hmode = 'left';
+  S.forceType = 'M';
+  S.elFilter = 'all';
+  S.showVals = false;
+  S.showPDelta = false;
+  S.displayMode = 'all';
+  BASE = null;
+  /* 拓扑按钮复位 */
+  const segBayR = document.getElementById('segBay');
+  if(segBayR) segBayR.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.bay === '2'));
+  const segLevR = document.getElementById('segLev');
+  if(segLevR) segLevR.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.lev === '2'));
+  const segCantR = document.getElementById('segCant');
+  if(segCantR) segCantR.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.cant === '1'));
+  const btnV = document.getElementById('btnVals');
+  if(btnV) btnV.classList.remove('on');
+  const btnFz = document.getElementById('btnFreeze');
+  if(btnFz) btnFz.classList.remove('on');
+  const btnPD = document.getElementById('btnPDelta');
+  if(btnPD) btnPD.classList.remove('on');
+  const stageEl = document.getElementById('stage');
+  if(stageEl) stageEl.classList.remove('mode-force','mode-deform');
+  const segD = document.getElementById('segDisp');
+  if(segD) segD.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.disp === 'all'));
+  const segH = document.getElementById('segHmode');
+  if(segH) segH.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.mode === 'left'));
+  const segF = document.getElementById('segForce');
+  if(segF) segF.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.force === 'M'));
+  const segE = document.getElementById('segElem');
+  if(segE) segE.querySelectorAll('button[data-filter]').forEach(b=>b.classList.toggle('on', b.dataset.filter === 'all'));
+  applyTopoState();
+  run();
+});
+
+/* ---------- 自适应重绘 ---------- */
+let rafId = null;
+function scheduleRender(){
+  if(rafId) cancelAnimationFrame(rafId);
+  rafId = requestAnimationFrame(()=>{ rafId=null; run(); });
+}
+window.addEventListener('resize', scheduleRender);
+
+if(window.ResizeObserver){
+  const ro = new ResizeObserver(scheduleRender);
+  ro.observe(document.getElementById('stage'));
+  ro.observe(document.getElementById('leftCol'));
+  for(const id of ['chartForce','chartDeform','chartLoad','readout']){
+    const el = document.getElementById(id);
+    if(el) ro.observe(el);
+  }
+}
+
+/* ---------- 启动 ---------- */
+applyTopoState();
+run();
+requestAnimationFrame(()=>{
+  updateTabInd();
+  window.addEventListener('resize', updateTabInd);
+});
+</script>
+</body>
+</html>
