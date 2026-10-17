@@ -179,7 +179,7 @@ function drawInternal(canvas, model, dprOverride){
     for(const n of model.nodes){
       if(n.y === 0) continue;
       const [sx,sy]=toS(n.x,n.y);
-      ctx.beginPath(); ctx.arc(sx,sy,2.0,0,Math.PI*2); ctx.fill();
+      ctx.fillRect(sx-1.5, sy-1.5, 3, 3);
     }
     if(model.p.showIds) drawIds(ctx, model, toS);
     return; 
@@ -195,6 +195,8 @@ function drawInternal(canvas, model, dprOverride){
       const el = res.el;
       if(filter === 'col'  && el.kind !== 'col')  continue;
       if(filter === 'beam' && el.kind !== 'beam') continue;
+      if(filter === 'brace' && el.kind !== 'brace') continue;
+      if(el.kind === 'brace' && type !== 'N') continue;
       const ni = BASE.nodes[el.i], nj = BASE.nodes[el.j];
       const nx = -el.sn, ny = -el.cs;
       const base = [], curve = [];
@@ -223,10 +225,14 @@ function drawInternal(canvas, model, dprOverride){
     const el  = res.el;
     if(filter === 'col'  && el.kind !== 'col')  continue;
     if(filter === 'beam' && el.kind !== 'beam') continue;
+    if(filter === 'brace' && el.kind !== 'brace') continue;
+    if(el.kind === 'brace' && type !== 'N') continue; // 支撑不画 M/V
     const st  = forceStyleOf(type, el.kind);
     const ni  = model.nodes[el.i], nj = model.nodes[el.j];
     const nx = -el.sn, ny = -el.cs;
     const base  = [], curve = [];
+    // 如果是斜撑，强制放大其显示比例，避免被柱子的巨大轴力压得看不见
+    const refDiv = (el.kind === 'brace') ? (FSTYLE.ref / 5) : FSTYLE.ref;
     for(let k=0;k<=NP;k++){
       const x = el.L*k/NP;
       const val = internalAt(res, x, type);
@@ -234,7 +240,7 @@ function drawInternal(canvas, model, dprOverride){
       const bx = ni.x + (nj.x-ni.x)*xi, by = ni.y + (nj.y-ni.y)*xi;
       const [sx,sy] = toS(bx,by);
       base.push([sx,sy]);
-      const off = -(val/FSTYLE.ref)*targetPx*model.p.mScale;
+      const off = -(val/refDiv)*targetPx*model.p.mScale;
       curve.push([sx + nx*off, sy + ny*off]);
     }
     ctx.beginPath();
@@ -244,9 +250,9 @@ function drawInternal(canvas, model, dprOverride){
     ctx.closePath();
     const grad = ctx.createLinearGradient(curve[0][0], curve[0][1], curve[curve.length-1][0], curve[curve.length-1][1]);
     const baseRGB = st.color;
-    grad.addColorStop(0,   baseRGB + '99');
-    grad.addColorStop(0.5, baseRGB + '44');
-    grad.addColorStop(1,   baseRGB + '99');
+    grad.addColorStop(0,   baseRGB + '44');
+    grad.addColorStop(0.5, baseRGB + '11');
+    grad.addColorStop(1,   baseRGB + '44');
     ctx.fillStyle = grad; ctx.fill();
     ctx.beginPath();
     ctx.moveTo(curve[0][0], curve[0][1]);
@@ -265,6 +271,7 @@ function drawInternal(canvas, model, dprOverride){
       const el = res.el;
       if(filter === 'col'  && el.kind !== 'col')  continue;
       if(filter === 'beam' && el.kind !== 'beam') continue;
+      if(filter === 'brace' && el.kind !== 'brace') continue;
       ctx.fillStyle = forceStyleOf(type, el.kind).color;
       const v0 = internalAt(res, 0, type), vL = internalAt(res, el.L, type);
       const ni = model.nodes[el.i], nj = model.nodes[el.j];
@@ -319,6 +326,20 @@ function drawInternal(canvas, model, dprOverride){
     ctx.textAlign = 'start'; ctx.textBaseline = 'alphabetic';
   }
 
+  /* 支撑专属线色（去除了文字标注，避免重叠） */
+  for(const res of model.results) {
+    const el = res.el;
+    if(el.kind !== 'brace') continue;
+    if(filter !== 'all' && filter !== 'brace') continue;
+    const ni = model.nodes[el.i], nj = model.nodes[el.j];
+    const [ax, ay] = toS(ni.x, ni.y);
+    const [bx, by] = toS(nj.x, nj.y);
+    
+    // 画一根青色的线，压住原本灰色的轮廓
+    ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by);
+    ctx.strokeStyle = '#22d3ee'; ctx.lineWidth = 1.5; ctx.setLineDash([]); ctx.stroke();
+  }
+
   /* 反弯点标注（仅弯矩图） */
   if(type === 'M'){
     ctx.strokeStyle = T.antiCurve;
@@ -327,6 +348,7 @@ function drawInternal(canvas, model, dprOverride){
       const el = res.el;
       if(filter === 'col'  && el.kind !== 'col')  continue;
       if(filter === 'beam' && el.kind !== 'beam') continue;
+      if(filter === 'brace' && el.kind !== 'brace') continue;
       const N = NP;
       let Mscale = 0;
       for(let k=0;k<=N;k++) Mscale = Math.max(Mscale, Math.abs(internalAt(res, el.L*k/N, 'M')));
@@ -371,30 +393,25 @@ function drawInternal(canvas, model, dprOverride){
   for(const n of model.nodes){
     if(n.y === 0) continue;
     const [sx,sy]=toS(n.x,n.y);
-    ctx.beginPath(); ctx.arc(sx,sy,2.0,0,Math.PI*2); ctx.fill();
+    ctx.fillRect(sx-1.5, sy-1.5, 3, 3);
   }
 
-  if(model.p.betaJ < BETA_FIXED){
-    const t   = 1 - model.p.betaJ;
-    const R   = 3 + t*2, lw  = 1.0 + t*0.8;
-    for(const el of model.els){
-      if(el.kind !== 'beam' || el.isCant) continue;
-      const a = model.nodes[el.i], b = model.nodes[el.j];
-      const [ax, ay] = toS(a.x, a.y);
-      const [bx, by] = toS(b.x, b.y);
-      const len = Math.hypot(bx - ax, by - ay) || 1;
-      const nx = (bx - ax) / len, ny = (by - ay) / len;
-      const off = R + 3; // 缩短偏移距离，让铰符号更贴近节点
-
-      // 左端铰
-      ctx.beginPath(); ctx.arc(ax + nx*off, ay + ny*off, R, 0, Math.PI*2);
-      ctx.fillStyle   = T.bg; ctx.fill();
-      ctx.strokeStyle = T.hArrow; ctx.lineWidth = lw; ctx.stroke();
-
-      // 右端铰
-      ctx.beginPath(); ctx.arc(bx - nx*off, by - ny*off, R, 0, Math.PI*2);
-      ctx.fillStyle   = T.bg; ctx.fill();
-      ctx.strokeStyle = T.hArrow; ctx.lineWidth = lw; ctx.stroke();
+  for(const el of model.els){
+    const isBrace = (el.kind === 'brace');
+    const a = model.nodes[el.i], b = model.nodes[el.j];
+    const [ax, ay] = toS(a.x, a.y);
+    const [bx, by] = toS(b.x, b.y);
+    if(isBrace){
+      /* 支撑：两端强制铰接 */
+      drawBeamEndConn(ctx, ax, ay, bx, by, 'hinge', T);
+      drawBeamEndConn(ctx, bx, by, ax, ay, 'hinge', T);
+      continue;
+    }
+    if(el.kind === 'beam' && !el.isCant && model.p.betaJ < BETA_FIXED){
+      /* 纯铰（βj ≤ 0.01）画空心圆；半刚接（0.01 < βj < 0.99）画弹簧折线 */
+      const sym = (model.p.betaJ <= BETA_HINGE) ? 'hinge' : 'spring';
+      drawBeamEndConn(ctx, ax, ay, bx, by, sym, T);
+      drawBeamEndConn(ctx, bx, by, ax, ay, sym, T);
     }
   }
   if(model.p.showIds) drawIds(ctx, model, toS);

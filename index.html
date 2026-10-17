@@ -43,7 +43,7 @@ var _hmt = _hmt || [];
       <div class="brandText">
         <div class="brandRow">
           <span class="brandName">Structura<span class="brandTest">测试版</span></span>
-          <span class="brandVer" id="ui-ver-brand">v0.1.3</span>
+          <span class="brandVer" id="ui-ver-brand">v0.1.4</span>
         </div>
         <div class="brandRule"></div>
         <div class="brandSub">基于矩阵位移法的平面刚架线弹性静力分析</div>
@@ -91,7 +91,7 @@ var _hmt = _hmt || [];
           </div>
           <div class="selfTestCard" data-selftest="strong-beam">
             <div class="stcTitle">③ 强梁弱柱效应</div>
-            <div class="stcDesc">单层单跨 · 水平力。扫掠梁高 h_b (300→900)，看梁刚度变大如何使柱反弯点下移。</div>
+            <div class="stcDesc">单层单跨 · 水平力。扫掠梁高 h_b (50→900)，看梁刚度变大如何使柱反弯点下移。</div>
             <span class="stcAction">▶ 播放</span>
           </div>
           <div class="selfTestCard" data-selftest="load-moment">
@@ -131,18 +131,35 @@ var _hmt = _hmt || [];
 
           <div class="selfTestCategory">D. 水平力与二阶</div>
           <div class="selfTestCard" data-selftest="dstiff-alloc">
-            <div class="stcTitle">⑩ D值法内柱分配</div>
-            <div class="stcDesc">两层三跨 · 水平力，D值法。扫掠内柱刚度比 r (0.25→4)，看内柱与边柱分担的剪力与变形的变化。</div>
+            <div class="stcTitle">⑩ 刚性楼板内柱分配</div>
+            <div class="stcDesc">两层三跨 · 水平力，刚性楼板。扫掠内柱刚度比 r (0.25→4)，看内柱刚度变大时，如何通过楼板自动分走更多剪力。</div>
             <span class="stcAction">▶ 播放</span>
           </div>
           <div class="selfTestCard" data-selftest="dstiff-beam">
-            <div class="stcTitle">⑪ D值法梁约束影响</div>
-            <div class="stcDesc">单层两跨 · 水平力，D值法。扫掠梁端转动 β_j (0→1)，看中柱如何从铰接时的“几乎不分担水平剪力”，逐渐分担更多剪力，以及整体侧移的减小。</div>
+            <div class="stcTitle">⑪ 刚性楼板梁约束影响</div>
+            <div class="stcDesc">单层两跨 · 水平力，刚性楼板。扫掠梁端转动 β_j (0→1)，看梁的转动约束如何减小整体侧移，并使柱反弯点向跨中移动。</div>
             <span class="stcAction">▶ 播放</span>
           </div>
           <div class="selfTestCard" data-selftest="pdelta">
             <div class="stcTitle">⑫ P-Δ 二阶效应</div>
             <div class="stcDesc">两层单跨 · 柔性框架（层高6m、梁铰接），开启P-Δ。扫掠均布 q_1 (0→100)，看竖向荷载如何使 B 值急剧放大并逼近失稳。</div>
+            <span class="stcAction">▶ 播放</span>
+          </div>
+
+          <div class="selfTestCategory">E. 支撑系统</div>
+          <div class="selfTestCard" data-selftest="brace-stiffness">
+            <div class="stcTitle">⑬ 支撑截面积与侧向刚度</div>
+            <div class="stcDesc">单层单跨 · X 撑 · 水平力。扫掠支撑截面积 As (100→5000)，看支撑变粗后侧移显著减小、支撑轴力增大、柱端弯矩被分走。</div>
+            <span class="stcAction">▶ 播放</span>
+          </div>
+          <div class="selfTestCard" data-selftest="brace-tension-only">
+            <div class="stcTitle">⑭ 仅受拉支撑的单向工作</div>
+            <div class="stcDesc">单层单跨 · X 撑（该格开启仅受拉）· 水平力。扫掠 H₁ (0→100)，N 图上始终只有受拉那根斜杆有数值，受压杆自动退出。</div>
+            <span class="stcAction">▶ 播放</span>
+          </div>
+          <div class="selfTestCard" data-selftest="brace-angle">
+            <div class="stcTitle">⑮ 支撑角度与轴力分配</div>
+            <div class="stcDesc">单层单跨 · X 撑 · 水平力。扫掠左跨 L₁ (3→12)，看支撑变平后单根斜杆轴力反而减小（水平分量占比增大），但侧向刚度在 θ≈35° 附近最大。</div>
             <span class="stcAction">▶ 播放</span>
           </div>
         </div>
@@ -175,6 +192,36 @@ var _hmt = _hmt || [];
               <button type="button" data-cant="1" class="on">有</button>
             </div>
           </div>
+          <div class="ctrl">
+            <div class="head"><span>支撑形式（画笔）</span></div>
+            <div class="seg" id="segBraceTopo">
+              <button type="button" data-brace="none" class="on">无</button>
+              <button type="button" data-brace="X">X</button>
+              <button type="button" data-brace="L">╱</button>
+              <button type="button" data-brace="R">╲</button>
+            </div>
+          </div>
+          <div class="ctrl">
+            <div class="head"><span>布置网格</span></div>
+            <div id="braceGridWrap" class="braceGridWrap"></div>
+          </div>
+          <div class="ctrl">
+            <div class="head"><span>支撑材质</span></div>
+            <div class="seg" id="segBraceMat">
+              <button type="button" data-mat="steel" class="on">钢材 Q355</button>
+              <button type="button" data-mat="conc">混凝土 C30</button>
+            </div>
+          </div>
+          <div class="ctrl" id="row-As">
+            <div class="head"><span>支撑截面积 A<sub>s</sub></span><b id="v-As">2000 mm²</b></div>
+            <input type="range" id="As" min="100" max="5000" step="100" value="2000">
+          </div>
+          <div class="ctrl">
+            <div class="seg">
+              <button type="button" id="btnBraceTension">全部仅受拉</button>
+            </div>
+          </div>
+          <div class="hint">支撑仅承担轴力。点击网格每格右上角的 <b style="color:#7dd3fc">T</b> 角标可单独开启/关闭该格的“仅受拉”；上方按钮为批量开关。开启后，受压支撑将退出工作。</div>
         </div>
 
         <div class="group">
@@ -210,7 +257,14 @@ var _hmt = _hmt || [];
         </div>
 
         <div class="group">
-          <div class="gtitle">材料与截面（C30）</div>
+          <div class="gtitle">材料与截面</div>
+          <div class="ctrl">
+            <div class="head"><span>梁柱材质</span></div>
+            <div class="seg" id="segFrameMat">
+              <button type="button" data-mat="conc" class="on">混凝土 C30</button>
+              <button type="button" data-mat="steel">钢材 Q355</button>
+            </div>
+          </div>
           <div class="ctrl" id="row-bc">
             <div class="head"><span>边柱宽 b<sub>c</sub>（出平面）</span><b id="v-bc">400 mm</b></div>
             <input type="range" id="bc" min="200" max="800" step="50" value="400">
@@ -221,11 +275,11 @@ var _hmt = _hmt || [];
           </div>
           <div class="ctrl" id="row-bb">
             <div class="head"><span>梁宽 b<sub>b</sub></span><b id="v-bb">250 mm</b></div>
-            <input type="range" id="bb" min="150" max="500" step="50" value="250">
+            <input type="range" id="bb" min="50" max="500" step="50" value="250">
           </div>
           <div class="ctrl" id="row-hb">
             <div class="head"><span>梁高 h<sub>b</sub></span><b id="v-hb">500 mm</b></div>
-            <input type="range" id="hb" min="300" max="900" step="50" value="500">
+            <input type="range" id="hb" min="50" max="900" step="50" value="500">
           </div>
           <div class="ctrl" id="row-r">
             <div class="head"><span>内柱 / 边柱刚度比 r</span><b id="v-r">1.00</b></div>
@@ -286,11 +340,11 @@ var _hmt = _hmt || [];
           <div class="ctrl">
             <div class="head"><span>施加方式</span></div>
             <div class="seg" id="segHmode">
-              <button type="button" data-mode="left" class="on">仅左柱</button>
-              <button type="button" data-mode="dstiff">D 值法</button>
+              <button type="button" data-mode="none" class="on">无楼板</button>
+              <button type="button" data-mode="rigid">刚性楼板</button>
             </div>
           </div>
-          <div class="hint">仅左柱：全部加于左柱顶（模拟风压）；D 值法：按柱侧移刚度分配（模拟地震）</div>
+          <div class="hint">无楼板：同层柱顶自由，靠梁刚度耦合（风压偏心）；刚性楼板：强制同层水平位移相等，按刚度自动分配（现浇楼盖）</div>
         </div>
 
         <div class="group">
@@ -303,7 +357,6 @@ var _hmt = _hmt || [];
           <div class="hint">开启后，变形图显示 B = 1/(1−ΣN/ΣN_cr)。<br><strong style="color:#38bdf8">💡 算法说明：</strong>系统会在后台自动“剥离”所有竖向荷载，临时计算一次纯水平力下的侧向刚度，从而推导出真实的 N_cr。因此，即使存在大悬挑或不对称竖向荷载，B 值也不受重力偏心引起的假侧移干扰。</div>
         </div>
       </div>
-
     </div>
 
     <!-- 参数扫掠条 -->
@@ -325,6 +378,9 @@ var _hmt = _hmt || [];
             <option value="bb">梁宽 bb</option>
             <option value="hb">梁高 hb</option>
             <option value="r">内/边柱刚度比 r</option>
+          </optgroup>
+          <optgroup label="支撑">
+            <option value="As">支撑截面积 As</option>
           </optgroup>
           <optgroup label="跨内梁均布">
             <option value="q1">一层梁 q₁</option>
@@ -381,7 +437,7 @@ var _hmt = _hmt || [];
       <span class="ssbItem"><b>RESIDUAL</b><i id="ssbResid">—</i></span>
       <span class="ssbItem"><b>STATUS</b><i id="ssbStatus" class="ok">OK</i></span>
       <span class="ssbSpacer"></span>
-      <span class="ssbMeta" title="工具持续开发中，请勿盲目相信计算结果">⚠ 持续开发中 · 结果仅供概念参考 · ZHAO STRUCTURAL LAB · <span id="ui-ver-status">v0.1.3</span></span>
+      <span class="ssbMeta" title="工具持续开发中，请勿盲目相信计算结果">⚠ 持续开发中 · 结果仅供概念参考 · ZHAO STRUCTURAL LAB · <span id="ui-ver-status">v0.1.4</span></span>
     </div>
 
     <!-- 求解徽章 -->
@@ -403,6 +459,7 @@ var _hmt = _hmt || [];
         <div class="rGroup">
           <div class="rGroupTitle">模型</div>
           <div class="rRow"><span class="lbl">截面（边柱 / 梁）</span><span class="val" id="r-colsec">—</span></div>
+          <div class="rRow" id="row-bracesec" style="display:none"><span class="lbl">支撑截面积 A<sub>s</sub></span><span class="val" id="r-bracesec">—</span></div>
           <div class="rRow"><span class="lbl">内柱 / 边柱刚度比 r</span><span class="val" id="r-kmid">—</span></div>
           <div class="rRow" style="padding-top:6px">
             <span class="lbl" style="color:#cbd5e1">ρ = (EI<sub>b</sub>/L) / (EI<sub>c</sub>/h)</span>
@@ -442,6 +499,7 @@ var _hmt = _hmt || [];
               <button type="button" data-filter="all" class="on">全部</button>
               <button type="button" data-filter="col">柱</button>
               <button type="button" data-filter="beam">梁</button>
+              <button type="button" data-filter="brace">撑</button>
             </div>
             <div class="segMini" id="segView">
               <button type="button" id="btnVals">数值</button>
@@ -537,8 +595,9 @@ var _hmt = _hmt || [];
       <ul>
         <li><strong>结构模型</strong>：平面刚架，参数化拓扑 —— 1~3 跨 × 1~3 层，可选右侧悬挑。柱列数 = 跨数 + 1；跨内梁数 = 跨数 × 层数；悬挑梁数 = 层数（开启悬挑时）。</li>
         <li><strong>材料</strong>：均质、各向同性、线弹性。混凝土弹性模量 E = 3.0×10⁷ kN/m²（C30 规范值）。</li>
-        <li><strong>变形</strong>：小变形、小应变。不做真正的几何非线性迭代（不迭代 K<sub>g</sub>）；P-Δ 放大系数 B 为基于等效单自由度的粗估（见第十一节）。</li>
+        <li><strong>变形</strong>：小变形、小应变。不做真正的几何非线性迭代（不迭代 K<sub>g</sub>）；P-Δ 放大系数 B 为基于等效单自由度的粗估（见第十二节）。</li>
         <li><strong>单元</strong>：平面梁单元，每节点 3 个自由度（水平、竖向、转角）。</li>
+        <li><strong>支撑单元</strong>：二力杆，<code>kind:'brace'</code>，局部刚度仅保留轴向项 <code>EA/L</code>，所有弯曲刚度项（<code>12EI/L³</code> 等）置 0；两端强制铰接，不参与 β<sub>j</sub> 半刚接修正。按「层 × 跨」网格逐格布置（X / ╱ / ╲），每格可独立选择材质（钢 Q355 / 混凝土 C30）与截面积 A<sub>s</sub>，并可逐格开启「仅受拉」。</li>
         <li><strong>忽略</strong>：剪切变形、扭转变形、材料非线性、节点域变形、施工阶段效应、温度作用、收缩徐变、钢筋与混凝土滑移。</li>
       </ul>
 
@@ -582,20 +641,69 @@ var _hmt = _hmt || [];
         <li><strong>水平力</strong> H₁、H₂、H₃（仅正向，不支持反向）：两种施加方式
           <ul style="margin-top:3px">
             <li><strong>仅左柱</strong>：全部施加于左柱顶节点，模拟风压从左侧来。</li>
-            <li><strong>D 值法</strong>：按各柱侧移刚度分配。同层各柱端部约束相同，柱侧移刚度 ∝ EI<sub>c</sub>；内柱 EI<sub>c</sub> = r·边柱 EI<sub>c</sub>，边柱取 1、内柱取 r，归一化后分配。模拟地震作用按刚度分配。</li>
+            <li><strong>刚性楼板</strong>：强制同层柱顶水平位移相等，通过约束自动分配剪力，更接近真实现浇楼盖。</li>
           </ul>
         </li>
         <li>所有荷载为静力荷载，不考虑动力放大、偶然偏心、荷载组合系数。</li>
       </ul>
 
-      <h3>六、求解方法</h3>
+      <h3>六、支撑系统</h3>
+      <p>支撑是「框架-支撑双轨制」的第二条抗侧力路径。与梁柱不同，支撑按<strong>「层 × 跨」网格逐格布置</strong>，每格独立配置形式、材质、截面与是否仅受拉。</p>
+
+      <p><strong>布置形式</strong></p>
+      <ul>
+        <li>在「模型」Tab 点击画笔（<code>X</code> / <code>╱</code> / <code>╲</code> / <code>无</code>），再点击布置网格的格子即可涂抹；再次点击同一格且画笔相同则取消。</li>
+        <li><code>X</code> 撑 = 同格两条对角线（╱ + ╲）各一根斜杆；<code>╱</code> 或 <code>╲</code> = 单斜撑，只生成一根。</li>
+        <li>支撑两端节点为该格左下 / 右下 / 左上 / 右上四个框架节点，杆长按实际几何 <code>L = √(跨² + 层高²)</code> 计算，倾角自动跟随跨度与层高变化。</li>
+        <li>X 撑同格的两根斜杆<strong>共用该格的材质、A<sub>s</sub> 与「仅受拉」状态</strong>，但失效判定仍按单根各自进行。</li>
+      </ul>
+
+      <p><strong>材质与截面</strong></p>
+      <ul>
+        <li>支撑材质独立于梁柱：钢 Q355（E = 2.06×10⁸ kN/m²）或混凝土 C30（E = 3.0×10⁷ kN/m²）。</li>
+        <li>截面积 A<sub>s</sub> 以 mm² 输入（默认 2000 mm²），内部换算为 m² 后计算轴向刚度 EA<sub>s</sub>。</li>
+        <li>支撑只承担轴力，不区分强轴 / 弱轴，也不考虑屈曲承载力——受压是否退出完全由「仅受拉」开关决定。</li>
+      </ul>
+
+      <p><strong>单元刚度</strong></p>
+      <ul>
+        <li>支撑单元 <code>kind:'brace'</code>，局部刚度矩阵只保留轴向项 <code>EA/L</code>，所有弯曲刚度项（<code>12EI/L³</code>、<code>6EI/L²</code>、<code>4EI/L</code>、<code>2EI/L</code>）置 0。</li>
+        <li>支撑<strong>两端强制铰接</strong>，不受 β<sub>j</sub> 滑块影响；内力图与荷载简图中无论 β<sub>j</sub> 设为多少，支撑两端都绘制铰接圆圈。</li>
+        <li>支撑不参与梁端半刚接修正，也不参与柱脚 β<sub>f</sub> 弹簧。</li>
+      </ul>
+
+      <p><strong>仅受拉（逐格指定）</strong></p>
+      <ul>
+        <li>每格支撑右上角有 <code>T</code> 角标：点击可单独开启 / 关闭该格「仅受拉」；「模型」Tab 的「全部仅受拉 / 全部普通」按钮为批量操作。</li>
+        <li>求解器 <code>analyzeTensionOnly</code> 只对开启了「仅受拉」的支撑做失效判定：一旦检测到轴力受压（<code>N &lt; −1e−4 kN</code>），即把该杆从 K 矩阵中移除、重新求解，最多迭代 10 次，直至不再有新的支撑失效。</li>
+        <li>失效支撑的轴力按 0 输出，N 图上该杆不再显示数值；但杆件轮廓仍以灰色绘制，便于识别「曾经存在但已退出」的支撑。</li>
+        <li>若某格 X 撑两根全部失效导致矩阵奇异，程序提示「仅受拉支撑全部退出（已失效 N 根），结构可能失稳」，而不是笼统的「刚度矩阵奇异」。</li>
+        <li>普通支撑（未开启仅受拉）受压时照常工作，不受失效迭代影响。</li>
+      </ul>
+
+      <p><strong>绘图约定</strong></p>
+      <ul>
+        <li>支撑<strong>仅绘制 N 图</strong>；M / V 图下支撑自动隐身（弯曲刚度为零，M、V 恒为 0，无绘制意义）。</li>
+        <li>支撑轴力线强制使用青色 <code>#22d3ee</code> 绘制在最上层，并把显示比例强制放大 5 倍（<code>refDiv</code> 逻辑），避免被柱子的巨大轴力压得看不见。</li>
+        <li>荷载简图中自动标注斜撑实际倾角（取整，如 <code>34°</code>）；X 撑两条线中点重合，已做去重与背景底色处理，防止文字重叠。</li>
+      </ul>
+
+      <p><strong>已知局限</strong></p>
+      <ul>
+        <li>仅受拉采用「一次性受压失效 + 矩阵重算」的迭代法，<strong>未考虑支撑在反复荷载下的滞回性能</strong>（静力盲测够用，但不适用于动力时程或往复加载）。</li>
+        <li>未考虑支撑初始缺陷、长细比、屈曲承载力；受压退出仅由「仅受拉」开关触发，不是真正的稳定验算。</li>
+        <li>X 撑两根共用一个格子的 A<sub>s</sub>，不支持同一格内两根斜杆取不同截面。</li>
+        <li>支撑与框架节点按理想铰接处理，未考虑节点板、螺栓群、节点域剪切变形。</li>
+      </ul>
+
+      <h3>七、求解方法</h3>
       <ul>
         <li>采用矩阵位移法（直接刚度法）：组装整体刚度矩阵 K，组装等效节点荷载向量 F，施加边界条件后高斯消元求解 K·U = F。</li>
         <li>高斯消元使用部分主元法；对角元 &lt; 1e-14 时判定为奇异并提示。</li>
         <li>反力由 <code>R = K_struct·U − F</code> 计算（K_struct 不含弹簧贡献）。对于弹性柱脚，代码里从 K·U 中扣除弹簧力 k<sub>θ</sub>·θ 后得到弹簧反力矩。</li>
       </ul>
 
-      <h3>七、内力符号约定</h3>
+      <h3>八、内力符号约定</h3>
       <ul>
         <li><strong>轴力 N</strong>：拉为正，压为负。</li>
         <li><strong>剪力 V</strong>：与单元局部坐标一致，V(x) = dM/dx = f₁ + w·x。</li>
@@ -603,27 +711,25 @@ var _hmt = _hmt || [];
         <li>内力图正方向与单元局部坐标的 y 轴一致（柱竖向、梁横向）。</li>
       </ul>
 
-      <h3>八、已知近似与局限</h3>
+      <h3>九、已知近似与局限</h3>
       <div class="note">
         以下几点是模型的简化，使用时需注意。用于教学演示足够，但<strong>不能作为设计依据</strong>。
       </div>
       <ol style="margin-left:22px">
         <li style="margin-bottom:5px"><strong>β<sub>f</sub> 弹簧刚度</strong>为启发式，不是严格推导的弹簧刚度。主要用于演示从铰接到固定的趋势，不能与真实转动弹簧刚度值对应。</li>
         <li style="margin-bottom:5px"><strong>β<sub>j</sub> 修正的梁单元</strong>是标准半刚接模型，但对多层多跨刚架，节点处柱的转动约束没有单独建模（即梁端的半刚接在节点处自动与柱刚接），这会影响含半刚接节点刚架的整体刚度。</li>
-        <li style="margin-bottom:5px"><strong>D 值法分配</strong>采用<strong>规范 D 值法 α<sub>c</sub> 公式</strong>（见 <code>computeHShare</code>）：
+        <li style="margin-bottom:5px"><strong>水平力施加方式与楼板假设</strong>：
           <ul style="margin-top:3px">
-            <li>底层：柱脚固接时 <code>K = Σi<sub>b</sub>/i<sub>c</sub>，α<sub>c</sub> = (0.5+K)/(2+K)</code>；柱脚铰接时 <code>K = Σi<sub>b</sub>/i<sub>c</sub>，α<sub>c</sub> = 0.5K/(1+2K)</code>（注意：规范中铰接的 K 定义与固接相同，仅公式不同）；中间按 β<sub>f</sub> 线性插值。</li>
-            <li>一般层：<code>K = Σi<sub>b</sub>/(2i<sub>c</sub>)，α<sub>c</sub> = K/(2+K)</code>。</li>
-            <li>梁端 β<sub>j</sub>：启发式折减 <code>K ← K·β<sub>j</sub></code>，无严格推导，仅保证 β<sub>j</sub>→0 时侧移刚度下降；α<sub>c</sub> 下限 0.05 用于防止除零。</li>
-            <li>同层各柱的 K 逐柱计算（边柱与内柱的 Σi<sub>b</sub> 和 i<sub>c</sub> 不同），不再取公共约束。</li>
-            <li>最右柱的 Σi<sub>b</sub> 仅计入左侧跨内梁，<strong>未计入右侧悬挑梁的转动约束</strong>；L<sub>c</sub> 较大或 β<sub>j</sub> 较低时，D 值分配会略有偏差。</li>
+            <li><strong>无楼板（Hmode = 'none'）</strong>：同层各柱顶水平位移相互独立，水平力直接作用于左柱顶，依靠梁自身的轴向和弯曲刚度耦合传递。</li>
+            <li><strong>刚性楼板（Hmode = 'rigid'）</strong>：采用自由度缩并技术，强制同层各节点水平位移相等。水平力同样作用于左柱顶，由刚性约束自动按各柱侧移刚度分配。适用于现浇混凝土楼盖。</li>
           </ul>
         </li>
-        <li style="margin-bottom:5px"><strong>二阶效应为粗估</strong>：不做真正的 P-Δ 迭代（不组装几何刚度矩阵 K<sub>g</sub>），仅用等效单自由度反推 <code>B = 1/(1−ΣN/ΣN<sub>cr</sub>)</code>，见第十一节。</li>
+        <li style="margin-bottom:5px"><strong>二阶效应为粗估</strong>：不做真正的 P-Δ 迭代（不组装几何刚度矩阵 K<sub>g</sub>），仅用等效单自由度反推 <code>B = 1/(1−ΣN/ΣN<sub>cr</sub>)</code>，见第十二节。</li>
         <li style="margin-bottom:5px"><strong>多跨对称结构的浮点虚假侧移</strong>：单跨无悬挑纯竖向荷载已在求解前用约束消除奇异；多跨对称结构（等跨、等层高、r=1、荷载对称）理论上水平位移为零，但代码未做此约束，浮点噪声可能产生极小侧移。对侧移刚度大的结构影响可忽略；对全铰接或半刚接的柔性框架，可能出现可见的虚假侧移。</li>
         <li style="margin-bottom:5px"><strong>无节点域</strong>：节点处按纯刚接或纯铰接处理，未考虑节点域剪切变形。</li>
         <li style="margin-bottom:5px"><strong>悬挑梁简化</strong>：悬挑梁按标准刚接单元处理，不参与 β<sub>j</sub> 半刚接修正；悬挑端为自由端，未建模实际边梁的弹性约束。</li>
         <li style="margin-bottom:5px"><strong>两端完全铰接的梁</strong>：当 β<sub>j</sub> 降至 0 时，梁单元弯曲刚度归零，仅保留轴向刚度（类似链杆）。因此多跨连续梁若中间跨两端完全铰接，无法传递剪力，结构侧向柔度会显著增大。这是标准有限元处理方式，并非程序错误。</li>
+        <li style="margin-bottom:5px"><strong>支撑仅受拉的非线性</strong>：采用「一次性受压失效 + 矩阵重算」的迭代法（最多 10 次）。一旦检测到某根仅受拉支撑轴力受压（&lt; −1e−4 kN），即将其标记为失效、从 K 矩阵中移除并重新求解，直至不再有新的支撑失效。若某格 X 撑两根全部失效导致矩阵奇异，程序会提示「仅受拉支撑全部退出，结构可能失稳」。该法<strong>未考虑支撑在反复荷载下的滞回性能</strong>，仅适用于静力单向加载的概念演示，不适用于动力时程或往复荷载分析。逐格指定「仅受拉」仅影响该格支撑，普通支撑受压时仍正常工作。</li>
         <li style="margin-bottom:5px"><strong>每根杆件一个单元</strong>：对于只有均布荷载的情况已足够精确，但对有多个集中力或复杂荷载的杆件精度有限。</li>
         <li style="margin-bottom:5px"><strong>无剪切变形</strong>：按 Euler-Bernoulli 梁理论，忽略 Timoshenko 梁的剪切效应。</li>
         <li style="margin-bottom:5px"><strong>无材料非线性</strong>：不考虑混凝土开裂、钢筋屈服等实际非线性效应。</li>
@@ -631,9 +737,9 @@ var _hmt = _hmt || [];
         <li><strong>规范背景</strong>：默认采用中国现行规范体系（GB 50010、GB 50011 等），但<strong>不做规范校核</strong>，仅作为量级参考。</li>
       </ol>
 
-      <h3>九、力学概念自检建议</h3>
+      <h3>十、力学概念自检建议</h3>
       <div class="note" style="margin-bottom:12px">
-        左侧栏「自检」Tab 内置了 12 个一键播放的力学场景。点击卡片即可自动加载工况、开启扫掠并慢速播放。以下是这 12 个场景的具体考点：
+        左侧栏「自检」Tab 内置了 15 个一键播放的力学场景。点击卡片即可自动加载工况、开启扫掠并慢速播放。以下是这 15 个场景的具体考点：
       </div>
       <div style="margin-left:18px; margin-bottom:12px;">
         <p><strong>A. 弯矩与刚度</strong></p>
@@ -659,20 +765,27 @@ var _hmt = _hmt || [];
 
         <p><strong>D. 水平力与二阶</strong></p>
         <ul style="margin-top:2px; margin-bottom:8px;">
-          <li><strong>⑩ D值法内柱分配</strong>：扫掠内柱刚度比 r (0.25→4)，看内柱与边柱分担的剪力与变形的变化。</li>
-          <li><strong>⑪ D值法梁约束影响</strong>：扫掠梁端转动 β<sub>j</sub> (0→1)，看中柱如何从铰接时的“几乎不分担水平剪力”，逐渐分担更多剪力，以及整体侧移的减小。</li>
+          <li><strong>⑩ 刚性楼板内柱分配</strong>：扫掠内柱刚度比 r (0.25→4)，看内柱刚度变大时，如何通过楼板自动分走更多剪力。</li>
+          <li><strong>⑪ 刚性楼板梁约束影响</strong>：扫掠梁端转动 β<sub>j</sub> (0→1)，看梁的转动约束如何减小整体侧移，并使柱反弯点向跨中移动。</li>
           <li><strong>⑫ P-Δ 二阶效应</strong>：扫掠均布荷载 q<sub>1</sub>，看竖向荷载如何使 B 值急剧放大并逼近失稳。</li>
+        </ul>
+
+        <p><strong>E. 支撑系统</strong></p>
+        <ul style="margin-top:2px; margin-bottom:8px;">
+          <li><strong>⑬ 支撑截面积与侧向刚度</strong>：扫掠 As (100→5000)，看支撑变粗后侧移显著减小、轴力增大、柱端弯矩被分走。</li>
+          <li><strong>⑭ 仅受拉支撑的单向工作</strong>：扫掠 H₁，N 图上始终只有受拉斜杆有数值，受压杆自动退出。</li>
+          <li><strong>⑮ 支撑角度与轴力分配</strong>：扫掠 L₁ (3→12)，看支撑变平后单根斜杆轴力反而减小。</li>
         </ul>
       </div>
 
-      <h3>十、界面速览</h3>
+      <h3>十一、界面速览</h3>
       <ul>
-        <li><strong>左栏摘要卡</strong>：拓扑（跨 × 层 + 悬挑）、各跨跨度、各层层高、总高 H、总宽 B（柱列间净宽，<strong>不含悬挑</strong>）、高宽比 H/B，均实时更新。</li>
-        <li><strong>左栏 Tab</strong>：「自检」内置 12 个预设工况，「模型」放拓扑 / 几何 / 截面，「荷载」放均布 / 悬挑 / 水平力 / 二阶效应。快捷键 <code>1</code> / <code>2</code> / <code>3</code> 切换。</li>
+        <li><strong>左栏 Tab 与读数面板</strong>：「自检」放 15 个预设工况，「模型」放拓扑 / 几何 / 截面 / 支撑，「荷载」放均布 / 悬挑 / 水平力 / 二阶效应；右侧读数面板显示截面尺寸、内柱刚度比 r、逐层逐跨 ρ、水平力分配。原「左栏摘要卡」已合并进读数面板（避免与左栏重复）。</li>
+        <li><strong>左栏 Tab</strong>：「自检」内置 15 个预设工况（A 弯矩与刚度 / B 轴力与框架 / C 变形与侧移 / D 水平力与二阶 / E 支撑系统），「模型」放拓扑 / 几何 / 截面 / 支撑，「荷载」放均布 / 悬挑 / 水平力 / 二阶效应。快捷键 <code>1</code> / <code>2</code> / <code>3</code> 切换。</li>
         <li><strong>内力图卡（右上角工具条）</strong>：
           <ul style="margin-top:3px">
             <li><code>M</code> / <code>N</code> / <code>V</code> / <code>R</code>：切换内力类型或支座反力图；</li>
-            <li><code>全部</code> / <code>柱</code> / <code>梁</code>：筛选单元；</li>
+            <li><code>全部</code> / <code>柱</code> / <code>梁</code> / <code>撑</code>：筛选单元；</li>
             <li><code>数值</code>：标注杆端内力；</li>
             <li><code>冻结</code>：把当前结果存为浅灰虚线基准，后续改动与它对比；</li>
             <li><code>N#</code>：显示节点 / 单元编号；</li>
@@ -683,13 +796,13 @@ var _hmt = _hmt || [];
         <li><strong>荷载简图卡</strong>：均布荷载箭头按屏幕像素自适应，两端封口；标签纯数字（位置已说明含义）；<strong>顶层标签贴箭头上方，中间层标签落在本层梁与上层梁之间的空格</strong>；柱脚符号随 β<sub>f</sub> 切换（固定 / 铰接 / 弹簧）；右上角标注柱梁截面尺寸。</li>
         <li><strong>变形图卡</strong>：挠度曲线由 <code>EI·v'' = M(x)</code> 双重积分得到（对半刚接与悬挑同样成立）。叠加层显示最大位移、最大层间位移角、侧移刚度 K、P-Δ 放大系数 B。底栏「缩放」滑块控制变形放大倍数（10~300）。</li>
         <li><strong>显示模式</strong>（右上角浮层）：<code>全部</code> / <code>仅受力图</code> / <code>仅变形图</code>。</li>
-        <li><strong>参数扫掠</strong>（底栏「▶ 扫掠」）：单参数默认 3s 循环播放（自检卡片为 6s 慢速播放），可暂停 / 重置 / 录制；参数按当前拓扑自动过滤（如无悬挑则不显示 q<sub>c</sub> 系列）。</li>
+        <li><strong>参数扫掠</strong>（底栏「▶ 扫掠」）：单参数默认 3s 循环播放（自检卡片为 12s 慢速播放），可暂停 / 重置 / 录制；参数按当前拓扑自动过滤（如无悬挑则不显示 q<sub>c</sub> 系列）。</li>
         <li><strong>录制</strong>：录制范围为内力图或变形图单张 canvas。录制期间自动切白底、关扫描线、限制分辨率 ≤ 1920×1080，优先 mp4，回退 webm。</li>
         <li><strong>URL 分享</strong>（底栏 🔗）：把当前工况编码进 <code>#st=...</code> 一键复制。支持 <code>file://</code> / <code>https://</code> / <code>localhost</code>。重置全部时自动清除 hash。</li>
-        <li><strong>底部状态栏</strong>：<code>NODES</code> 节点数 · <code>ELEMENTS</code> 单元数 · <code>DOF</code> 自由度数 · <code>SOLVE</code> 本次求解耗时（ms）· <code>RESIDUAL</code> 平衡残差（柱脚反力之和与外部荷载之和的差值，越小越准）· <code>STATUS</code> 状态（残差 &lt; 1e-8 显示绿色 OK，否则 CHECK）。</li>
+        <li><strong>底部状态栏</strong>：<code>NODES</code> 节点数 · <code>ELEMENTS</code> 单元数 · <code>DOF</code> 自由度数 · <code>SOLVE</code> 本次求解耗时（ms）· <code>RESIDUAL</code> <strong>相对</strong>平衡残差（柱脚反力之和与外部荷载之和的差值，除以柱脚反力量级，越小越准）· <code>STATUS</code> 状态（<strong>相对残差</strong> &lt; 1e-8 显示绿色 OK，否则 CHECK；仅受拉迭代 10 次未收敛时显示 NC·未收敛）。</li>
       </ul>
 
-      <h3>十一、P-Δ 放大系数与侧移刚度的说明</h3>
+      <h3>十二、P-Δ 放大系数与侧移刚度的说明</h3>
       <p><strong>P-Δ 放大系数 B</strong>（仅在「荷载」Tab 开启 P-Δ 开关后显示）：</p>
       <ul>
         <li>物理含义：二阶效应会把当前的内力和位移<strong>放大</strong>约 B 倍。B = 1 表示无二阶效应；B = 1.1 表示放大 10%。</li>
@@ -706,7 +819,7 @@ var _hmt = _hmt || [];
         <li>自检场景下，K 的<strong>变化趋势</strong>（拖动 β<sub>f</sub>、r 时 K 怎么变）比绝对值更有意义。</li>
       </ul>
 
-      <h3>十二、支持作者</h3>
+      <h3>十三、支持作者</h3>
       <p>如果这个工具帮你理清过某个力学概念，可以请作者喝杯咖啡。</p>
       <div class="tipInline">
         <img src="m.jpg" alt="打赏码">
@@ -800,6 +913,7 @@ var _hmt = _hmt || [];
 <script src="js/07-run.js"></script>
 <script src="js/08-sweep-record.js"></script>
 <script src="js/09-ui-share.js"></script>
+<script src="js/11-construct.js"></script>
 <script src="js/10-boot.js"></script>
 </body>
 </html>

@@ -65,6 +65,41 @@ function drawHUD(ctx, W, H, label, showSolver, topOffset){
   ctx.restore();
 }
 
+/* 梁端连接符号：纯铰画空心圆，半刚接画弹簧折线，刚接不画。
+   供荷载简图 / 内力图 / 变形图三处共用，保证视觉一致。 */
+function drawBeamEndConn(ctx, ax, ay, bx, by, kind, T){
+  const len = Math.hypot(bx - ax, by - ay) || 1;
+  const nx = (bx - ax) / len, ny = (by - ay) / len;
+
+  if(kind === 'hinge'){
+    const R = 4.5;
+    const off = R + 3;
+    ctx.beginPath();
+    ctx.arc(ax + nx*off, ay + ny*off, R, 0, Math.PI*2);
+    ctx.fillStyle   = T.bg; ctx.fill();
+    ctx.strokeStyle = T.hArrow; ctx.lineWidth = 1.6; ctx.stroke();
+    return;
+  }
+
+  /* 半刚接：沿杆轴方向画一段锯齿弹簧，表示有限转动刚度 */
+  const startOff = 3;
+  const coilLen  = 12;
+  const nCoils   = 3;
+  const amp      = 3;
+  const px = -ny, py = nx; // 杆轴垂直方向
+  const sx = ax + nx*startOff, sy = ay + ny*startOff;
+  ctx.beginPath();
+  ctx.moveTo(sx, sy);
+  for(let k=0; k<nCoils; k++){
+    const t1 = (k + 0.25) / nCoils;
+    const t2 = (k + 0.75) / nCoils;
+    ctx.lineTo(sx + nx*coilLen*t1 + px*amp, sy + ny*coilLen*t1 + py*amp);
+    ctx.lineTo(sx + nx*coilLen*t2 - px*amp, sy + ny*coilLen*t2 - py*amp);
+  }
+  ctx.lineTo(sx + nx*coilLen, sy + ny*coilLen);
+  ctx.strokeStyle = T.hArrow; ctx.lineWidth = 1.4; ctx.stroke();
+}
+
 function drawIds(ctx, model, toS){
   ctx.save();
   ctx.font = 'bold 10.5px "JetBrains Mono", ui-monospace, monospace';
@@ -216,30 +251,24 @@ function drawLoadDiagram(canvas, model, dprOverride){
   for(const n of model.nodes){
     if(Math.abs(n.y) < 1e-9) continue;
     const [sx,sy]=toS(n.x,n.y);
-    ctx.beginPath(); ctx.arc(sx,sy,2.6,0,Math.PI*2); ctx.fill();
+    ctx.fillRect(sx-1.5, sy-1.5, 3, 3);
   }
-  if(model.p.betaJ < BETA_FIXED){
-    const t   = 1 - model.p.betaJ;
-    const R   = 3 + t*1.5;
-    const lw  = 1.0 + t*0.8;
-    for(const el of model.els){
-      if(el.kind !== 'beam' || el.isCant) continue;
-      const a = model.nodes[el.i], b = model.nodes[el.j];
-      const [ax, ay] = toS(a.x, a.y);
-      const [bx, by] = toS(b.x, b.y);
-      const len = Math.hypot(bx - ax, by - ay) || 1;
-      const nx = (bx - ax) / len, ny = (by - ay) / len;
-      const off = R + 3; // 缩短偏移距离，让铰符号更贴近节点
-
-      // 左端铰
-      ctx.beginPath(); ctx.arc(ax + nx*off, ay + ny*off, R, 0, Math.PI*2);
-      ctx.fillStyle   = T.bg; ctx.fill();
-      ctx.strokeStyle = T.hArrow; ctx.lineWidth = lw; ctx.stroke();
-
-      // 右端铰
-      ctx.beginPath(); ctx.arc(bx - nx*off, by - ny*off, R, 0, Math.PI*2);
-      ctx.fillStyle   = T.bg; ctx.fill();
-      ctx.strokeStyle = T.hArrow; ctx.lineWidth = lw; ctx.stroke();
+  for(const el of model.els){
+    const isBrace = (el.kind === 'brace');
+    const a = model.nodes[el.i], b = model.nodes[el.j];
+    const [ax, ay] = toS(a.x, a.y);
+    const [bx, by] = toS(b.x, b.y);
+    if(isBrace){
+      /* 支撑：两端强制铰接 */
+      drawBeamEndConn(ctx, ax, ay, bx, by, 'hinge', T);
+      drawBeamEndConn(ctx, bx, by, ax, ay, 'hinge', T);
+      continue;
+    }
+    if(el.kind === 'beam' && !el.isCant && model.p.betaJ < BETA_FIXED){
+      /* 纯铰（βj ≤ 0.01）画空心圆；半刚接（0.01 < βj < 0.99）画弹簧折线 */
+      const sym = (model.p.betaJ <= BETA_HINGE) ? 'hinge' : 'spring';
+      drawBeamEndConn(ctx, ax, ay, bx, by, sym, T);
+      drawBeamEndConn(ctx, bx, by, ax, ay, sym, T);
     }
   }
   const p = model.p;
@@ -264,20 +293,41 @@ function drawLoadDiagram(canvas, model, dprOverride){
   }
   function drawFloorH(level, H){
     if(H <= 0) return;
-    const nCol = model.nCol, nid = model.nid;
-    const w = computeHShare(p, nCol, level);
-    let sum = 0;
-    for(const v of w) sum += v;
-    for(let c=0;c<nCol;c++){
-      const Hc = H * w[c] / sum;
-      if(Hc <= 0) continue;
-      const lbl = (p.Hmode === 'left')
-        ? (c === 0 ? H.toFixed(1) : '')
-        : Hc.toFixed(1);
-      drawHF(ctx, toS, model.nodes[nid(c, level)], Hc, lbl);
-    }
+    /* 力统一加在左柱顶，刚性楼板分配不改变力的作用点 */
+    drawHF(ctx, toS, model.nodes[model.nid(0, level)], H, H.toFixed(1));
   }
   for(let lv=1; lv<=model.nLev; lv++) drawFloorH(lv, p['H'+lv]);
+  /* 绘制支撑角度 */
+  ctx.font = 'bold 10.5px "JetBrains Mono", ui-monospace, monospace';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const drawnLabels = new Set();
+  
+  for(const el of model.els) {
+    if(el.kind !== 'brace') continue;
+    const ni = model.nodes[el.i], nj = model.nodes[el.j];
+    const [ax, ay] = toS(ni.x, ni.y);
+    const [bx, by] = toS(nj.x, nj.y);
+    const midX = (ax + bx) / 2, midY = (ay + by) / 2;
+    
+    // X 撑去重：两根杆的中点坐标通常完全重合，只需绘制一次
+    const key = Math.round(midX) + '_' + Math.round(midY);
+    if(drawnLabels.has(key)) continue;
+    drawnLabels.add(key);
+
+    const angle = Math.abs(Math.atan2(by - ay, bx - ax) * 180 / Math.PI);
+    const dispAngle = angle > 90 ? 180 - angle : angle;
+    const txt = `${Math.round(dispAngle)}°`;
+    
+    // Halo 描边效果，代替死板的黑框
+    ctx.strokeStyle = T.bg;
+    ctx.lineWidth = 3.5;
+    ctx.lineJoin = 'round';
+    ctx.strokeText(txt, midX, midY);
+    
+    ctx.fillStyle = T.nodeBlue;
+    ctx.fillText(txt, midX, midY);
+  }
+
   if(showDim){
     drawDims(ctx, model, toS, T);
     drawSectionInfo(ctx, model, W, T);
@@ -292,8 +342,8 @@ function drawDimLine(ctx, x1, y1, x2, y2, label, color, dir){
   if(dir === 'h'){
     ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
     ctx.beginPath();
-    ctx.moveTo(x1, y1 - 4); ctx.lineTo(x1, y1 + 4);
-    ctx.moveTo(x2, y2 - 4); ctx.lineTo(x2, y2 + 4);
+    ctx.moveTo(x1 - 4, y1 + 4); ctx.lineTo(x1 + 4, y1 - 4);
+    ctx.moveTo(x2 - 4, y2 + 4); ctx.lineTo(x2 + 4, y2 - 4);
     ctx.stroke();
     ctx.font = '10.5px ui-sans-serif,system-ui,sans-serif';
     ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
@@ -301,8 +351,8 @@ function drawDimLine(ctx, x1, y1, x2, y2, label, color, dir){
   } else {
     ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
     ctx.beginPath();
-    ctx.moveTo(x1 - 4, y1); ctx.lineTo(x1 + 4, y1);
-    ctx.moveTo(x2 - 4, y2); ctx.lineTo(x2 + 4, y2);
+    ctx.moveTo(x1 - 4, y1 + 4); ctx.lineTo(x1 + 4, y1 - 4);
+    ctx.moveTo(x2 - 4, y2 + 4); ctx.lineTo(x2 + 4, y2 - 4);
     ctx.stroke();
     ctx.save();
     ctx.translate(x1 - 8, (y1 + y2) / 2);
@@ -348,6 +398,12 @@ function drawSectionInfo(ctx, model, W, T){
   ctx.fillStyle = T.frameThin;
   ctx.fillText(`柱 ${Math.round(p.bc)}×${Math.round(p.hc)}`, W - 14, 14);
   ctx.fillText(`梁 ${Math.round(p.bb)}×${Math.round(p.hb)}`, W - 14, 30);
+  
+  /* 有支撑时，第三行显示支撑截面积 */
+  const hasBrace = Object.keys(p.braceMap || {}).some(k => p.braceMap[k] && p.braceMap[k] !== 'none');
+  if(hasBrace){
+    ctx.fillText(`撑 Aₛ ${Math.round(p.As)} mm²`, W - 14, 46);
+  }
   ctx.restore();
 }
 

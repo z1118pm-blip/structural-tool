@@ -54,6 +54,9 @@ function localK(el){
       d = (4*EI/L) * (1 + 3*al) / D;
       e = (2*EI/L) / D;
     }
+  } else if(el.kind === 'brace'){
+    /* 斜撑：仅轴向刚度，无弯曲刚度 */
+    b = 0; c = 0; d = 0; e = 0;
   }
 
   return [
@@ -104,72 +107,14 @@ function globalEqLoad(el){
 /* =====================================================================
    4. 建模 + 求解
    ===================================================================== */
-/* 已删除：colKeff 端点转动弹簧模型已废弃。
-   水平力分配现统一采用规范 D 值法 α_c 公式（见 computeHShare），
-   以与帮助文档第七节、D 值法规范一致。 */
+/* 已删除：colKeff 端点转动弹簧模型已废弃。 */
 
-/* 水平力按柱分配的权重（未归一化）。
-   返回长度为 nCol 的数组。三处调用方（求解 / 荷载图 / 读数面板）
-   共用这一份逻辑，改分配规则时只需改这里。
+/* 已删除：computeHShare（D 值法分配）。
+   现已由刚性楼板约束（Hmode='rigid'）或真实自由度（Hmode='none'）接管，
+   FEM 内部自动分配。 */
 
-   - Hmode='left'：全部给左柱 → [1, 0, 0, ...]
-   - Hmode='dstiff'：权重 = 规范 D 值法 α_c 计算出的柱侧移刚度 D。
-     底层严格区分柱脚固接/铰接两套 K 值并按 β_f 插值；
-     一般层使用 K/(2+K)。边柱与内柱的 Σi_b、i_c 均逐柱计算。 */
-function computeHShare(p, nCol, level){
-  if(p.Hmode === 'left'){
-    const w = new Array(nCol).fill(0);
-    w[0] = 1;
-    return w;
-  }
-  const bcM = p.bc/1000, hcM = p.hc/1000;
-  const bbM = p.bb/1000, hbM = p.hb/1000;
-  const Ic = bcM * Math.pow(hcM, 3) / 12;
-  const Ib = bbM * Math.pow(hbM, 3) / 12;
-  const EIc = E_CONC * Ic;
-  const EIb = E_CONC * Ib;
-
-  const h = p['h' + level];
-  const w = [];
-
-  /* β_j 启发式折减：β_j < 1 时 K ← K·β_j。
-     ⚠ 这不是标准半刚接 D 值修正，仅保证 β_j→0 时侧移刚度下降；
-     无严格推导，文档"已知近似"已注明。 */
-  const bjRed = (p.betaJ < BETA_FIXED) ? p.betaJ : 1.0;
-
-  for (let c = 0; c < nCol; c++) {
-    const kc = (c > 0 && c < nCol - 1) ? p.r : 1.0;
-    const ic = (EIc * kc) / h;
-
-    let sum_ib = 0;
-    if (c > 0) sum_ib += EIb / p['L' + c];
-    if (c < nCol - 1) sum_ib += EIb / p['L' + (c + 1)];
-
-    let alpha = 0;
-    if (level === 1) {
-      /* 底层：柱脚固接 / 铰接两套 K 与 α_c，按 β_f 线性插值。
-         旧实现底层 K 始终用固接公式 sum_ib/ic，却代入铰接 α_c，
-         β_f=0 时 D 高估约 38%，内柱份额偏差约 2.5 个百分点。 */
-      const Kfix = Math.max((sum_ib / ic)     * bjRed, 1e-4);
-      const aFix = (0.5 + Kfix) / (2 + Kfix);
-      const aHin = (0.5 * Kfix) / (1 + 2 * Kfix);
-      alpha = aHin + (aFix - aHin) * p.betaF;
-    } else {
-      /* 一般层：K = Σi_b/(2i_c)，α_c = K/(2+K) */
-      const K = Math.max((sum_ib / (2 * ic)) * bjRed, 1e-4);
-      alpha = K / (2 + K);
-    }
-    /* α_c 下限 0.05：防止 K→0 时 D→0 导致除零，
-       ⚠ 无严格依据，文档"已知近似"已注明。 */
-    alpha = Math.max(alpha, 0.05);
-
-    const D = alpha * (12 * EIc * kc) / (h * h * h);
-    w.push(D);
-  }
-  return w;
-}
-
-function analyze(p){
+function analyze(p, opts = {}){
+  const inactiveBraces = opts.inactiveBraces || new Set();
   const nBay = p.nBay;
   const nLev = p.nLev;
   const nCol = nBay + 1;                    // 柱列数 = 跨数 + 1
@@ -195,18 +140,24 @@ function analyze(p){
   const cantNid = (lv) => nCol*(nLev+1) + (lv-1);
 
   /* ---- 截面特性 ---- */
+  const E_frame = (p.frameMat === 'steel') ? E_STEEL : E_CONC;
+  const E_brace = (p.braceMat === 'steel') ? E_STEEL : E_CONC;
+  
   const bcM=p.bc/1000, hcM=p.hc/1000;
   const bbM=p.bb/1000, hbM=p.hb/1000;
   const Ic = bcM*Math.pow(hcM,3)/12;
   const Ib = bbM*Math.pow(hbM,3)/12;
   const Ac = bcM*hcM;
   const Ab = bbM*hbM;
-  const EIc = E_CONC*Ic;
-  const EIb = E_CONC*Ib;
-  const EAc = E_CONC*Ac;
-  const EAb = E_CONC*Ab;
+  
+  const EIc = E_frame*Ic;
+  const EIb = E_frame*Ib;
+  const EAc = E_frame*Ac;
+  const EAb = E_frame*Ab;
+  
+  const EAs = E_brace * ((p.As || 2000) / 1000000); // mm² 转 m²
 
-  const els=[];
+  let els=[];
   const isMidCol = (c) => (c>0 && c<nBay);   // 内柱判定：0 < c < nBay
 
   /* ---- 柱：nCol 列 × nLev 根 ---- */
@@ -250,6 +201,39 @@ function analyze(p){
     }
   }
 
+  /* ---- 斜撑：按 p.braceMap 生成 ---- */
+  /* 每格可独立开启「仅受拉」（p.braceTensionMap[lv-bay] = true）。
+     X 撑同格两根统一跟随该格的仅受拉状态；失效判定仍按单根斜杆各自进行。 */
+  if(p.braceMap){
+    const tensionMap = (p.braceTensionMap && typeof p.braceTensionMap === 'object') ? p.braceTensionMap : {};
+    for(let lv=1; lv<=nLev; lv++){
+      for(let c=0; c<nBay; c++){
+        const gridKey = lv + '-' + (c+1);
+        const type = p.braceMap[gridKey];
+        if(!type || type === 'none') continue;
+        const tensionOnly = !!tensionMap[gridKey];
+        const lb = nid(c, lv-1), rb = nid(c+1, lv-1);
+        const lt = nid(c, lv),   rt = nid(c+1, lv);
+        const addBrace = (i, j, dir) => {
+          const dx=nodes[j].x-nodes[i].x, dy=nodes[j].y-nodes[i].y;
+          const L=Math.hypot(dx,dy);
+          els.push({i,j,L,cs:dx/L,sn:dy/L,EA:EAs,EI:0,w:0,q:0,
+                    kind:'brace',lev:lv,bay:c+1,
+                    braceUid: gridKey + '-' + dir,
+                    tensionOnly});
+        };
+        if(type === 'X'){
+          addBrace(lb, rt, 'd1');
+          addBrace(rb, lt, 'd2');
+        } else if(type === '/'){
+          addBrace(lb, rt, 'd1');
+        } else if(type === '\\'){
+          addBrace(rb, lt, 'd2');
+        }
+      }
+    }
+  }
+
   /* ---- 悬挑梁：仅右侧，nLev 根 ---- */
   if(p.hasCant){
     for(let lv=1;lv<=nLev;lv++){
@@ -268,6 +252,8 @@ function analyze(p){
   const F = new Float64Array(ndof);
 
   for(const el of els){
+    /* 仅受拉迭代中已判定失效的支撑：不组装刚度、不贡献等效荷载 */
+    if(el.kind === 'brace' && inactiveBraces.has(el.braceUid)) continue;
     const kg = globalK(el);
     const d=[el.i*3, el.i*3+1, el.i*3+2, el.j*3, el.j*3+1, el.j*3+2];
     for(let a=0;a<6;a++)
@@ -278,16 +264,13 @@ function analyze(p){
     for(let a=0;a<6;a++) F[d[a]] += pg[a];
   }
 
-  /* ---- 水平力施加（nCol 柱通用） ---- */
+  /* ---- 水平力施加 ---- */
+  /* rigidDiaphragm=false：按 D 值法分配（原逻辑，保留）；
+     rigidDiaphragm=true ：力加左柱顶，由刚性楼板约束自动分配到各柱。 */
   function applyFloorH(level, H){
     if(H <= 0) return;
-    /* computeHShare 保证 sum > 0：
-       left 模式 sum = 1；dstiff 模式 sum ≥ cE 或均分时 = nCol。
-       不再需要 sum 兜底分支。 */
-    const w = computeHShare(p, nCol, level);
-    let sum = 0;
-    for(const v of w) sum += v;
-    for(let c=0;c<nCol;c++) F[nid(c, level)*3] += H * w[c] / sum;
+    /* 无论有无楼板，力都加在左柱顶。刚性楼板会通过约束自动分配。 */
+    F[nid(0, level)*3] += H;
   }
   for(let lv=1;lv<=nLev;lv++) applyFloorH(lv, p['H'+lv]);
 
@@ -328,8 +311,45 @@ if (Math.abs(sumH) < 1e-12 && nBay === 1 && !p.hasCant) {
   }
 }
 
+/* =====================================================================
+   刚性楼板自由度缩并：同层各节点 ux 绑定到主节点（col=0 的 ux）
+   - reduce[i] = i   表示 i 是独立/主 DOF
+   - reduce[i] != i  表示 i 是从属 DOF，其位移等于主 DOF
+   非 rigid 模式下 reduce 恒等，下游行为完全不变。
+   ===================================================================== */
+const reduce = new Int32Array(ndof);
+for(let i=0;i<ndof;i++) reduce[i] = i;
+
+if(p.Hmode === 'rigid'){
+  const masterUx = new Int32Array(nLev+1).fill(-1);
+  for(let lv=1; lv<=nLev; lv++) masterUx[lv] = nid(0, lv)*3;
+  for(let idx=0; idx<nodes.length; idx++){
+    const nd = nodes[idx];
+    if(nd.lev < 1) continue;
+    reduce[idx*3] = masterUx[nd.lev];
+  }
+  /* 缩并 K、F：所有贡献累加到主 DOF */
+  const K_r = zeros(ndof, ndof);
+  const F_r = new Float64Array(ndof);
+  for(let i=0;i<ndof;i++){
+    const ri = reduce[i];
+    F_r[ri] += F[i];
+    for(let j=0;j<ndof;j++){
+      K_r[ri][reduce[j]] += K[i][j];
+    }
+  }
+  for(let i=0;i<ndof;i++){
+    for(let j=0;j<ndof;j++) K[i][j] = K_r[i][j];
+    F[i] = F_r[i];
+  }
+}
+
+/* fixed 集合转换到缩并后 DOF，自由 DOF 只保留主/独立 DOF */
+const fixedR = new Set();
+for(const i of fixed) fixedR.add(reduce[i]);
+
 const free=[];
-for(let i=0;i<ndof;i++) if(!fixed.has(i)) free.push(i);
+for(let i=0;i<ndof;i++) if(!fixedR.has(i) && reduce[i] === i) free.push(i);
 
   /* ---- 高斯消元（引入 Jacobi 矩阵对称缩放，消除截面刚度悬殊带来的数值病态） ---- */
   const nf=free.length;
@@ -385,13 +405,21 @@ for(let i=0;i<ndof;i++) if(!fixed.has(i)) free.push(i);
   for(let a=0;a<nf;a++){
     U[free[a]] = Ys[a] * scaleD[a];
   }
-
   // 过滤纯竖向荷载在多跨对称结构下产生的极微小浮点侧移噪声（阈值 1e-7 米，即 0.0001 毫米）
+  // 先清理，再同步从属 DOF，保证刚性楼板约束一致性
   let hasLateralForce = false;
   for(let lv=1; lv<=nLev; lv++) { if(p['H'+lv] > 0) hasLateralForce = true; }
   if (!hasLateralForce) {
     for(let i=0; i<ndof; i+=3) {
       if (Math.abs(U[i]) < 1e-7) U[i] = 0;
+    }
+  }
+
+  /* 刚性楼板：从属 DOF 继承主 DOF 位移，U 长度和索引语义保持不变。
+     放在浮点清理之后，避免清理主 DOF 后从属 DOF 残留微小值。 */
+  if(p.Hmode === 'rigid'){
+    for(let i=0;i<ndof;i++){
+      if(reduce[i] !== i) U[i] = U[reduce[i]];
     }
   }
 
@@ -406,6 +434,10 @@ for(let i=0;i<ndof;i++) if(!fixed.has(i)) free.push(i);
     const d=[el.i*3, el.i*3+1, el.i*3+2, el.j*3, el.j*3+1, el.j*3+2];
     const ug=new Float64Array(6);
     for(let a=0;a<6;a++) ug[a]=U[d[a]];
+    /* 失效支撑：轴力按 0 输出，避免下一轮迭代反复抖动 */
+    if(el.kind === 'brace' && inactiveBraces.has(el.braceUid)){
+      return {el, f:new Float64Array(6), ug};
+    }
     const ul = matVec(Tmat(el), ug);
     const ku = matVec(localK(el), ul);
     const pl = localEqLoad(el);
@@ -453,4 +485,34 @@ for(let i=0;i<ndof;i++) if(!fixed.has(i)) free.push(i);
   }
   return {nodes, els, U, results, p, R, residX, residY,
           nBay, nLev, nCol, nid, rho, nFree: nf};
+}
+
+function analyzeTensionOnly(p) {
+  let inactiveBraces = new Set();
+  let m = null;
+  let converged = false;
+  for(let iter=0; iter<10; iter++) {
+    try {
+      m = analyze(p, { inactiveBraces });
+    } catch(err) {
+      if(inactiveBraces.size > 0) {
+        throw new Error('仅受拉支撑全部退出（已失效 ' + inactiveBraces.size + ' 根），结构可能失稳：' + err.message);
+      }
+      throw err;
+    }
+    let changed = false;
+    for(const res of m.results) {
+      if(res.el.kind === 'brace' && res.el.tensionOnly) {
+        const key = res.el.braceUid;
+        const axialN = -res.f[0]; // 提取轴力 N（拉为正，压为负）
+        if(!inactiveBraces.has(key) && axialN < -1e-4) { // 若受压，标记失效
+          inactiveBraces.add(key);
+          changed = true;
+        }
+      }
+    }
+    if(!changed){ converged = true; break; }
+  }
+  if(m) m.tensionConverged = converged;
+  return m;
 }

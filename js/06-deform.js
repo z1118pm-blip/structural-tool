@@ -98,8 +98,26 @@ function drawDeform(canvas, model, dprOverride){
       ctx.closePath(); ctx.fill();
     }
     ctx.fillStyle = T.nodeBlue;
-    ctx.beginPath(); ctx.arc(sx,sy,2.8,0,Math.PI*2); ctx.fill();
+    ctx.fillRect(sx-2, sy-2, 4, 4);
   }
+  /* 与荷载简图 / 内力图保持一致：支撑画铰，半刚接梁画弹簧 */
+  for(const el of model.els){
+    const isBrace = (el.kind === 'brace');
+    const a = model.nodes[el.i], b = model.nodes[el.j];
+    const [ax, ay] = toS(a.x, a.y);
+    const [bx, by] = toS(b.x, b.y);
+    if(isBrace){
+      drawBeamEndConn(ctx, ax, ay, bx, by, 'hinge', T);
+      drawBeamEndConn(ctx, bx, by, ax, ay, 'hinge', T);
+      continue;
+    }
+    if(el.kind === 'beam' && !el.isCant && model.p.betaJ < BETA_FIXED){
+      const sym = (model.p.betaJ <= BETA_HINGE) ? 'hinge' : 'spring';
+      drawBeamEndConn(ctx, ax, ay, bx, by, sym, T);
+      drawBeamEndConn(ctx, bx, by, ax, ay, sym, T);
+    }
+  }
+
   if(model.p.showIds) drawIds(ctx, model, toS);
   drawSupports(ctx, model, toS, model.p.betaF);
 }

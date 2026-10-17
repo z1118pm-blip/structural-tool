@@ -206,7 +206,8 @@ const SHARE_KEYS = [
   'L1','L2','L3','h1','h2','h3','Lc',
   'bc','hc','bb','hb','r',
   'q1','q2','q3','qc1','qc2','qc3','H1','H2','H3',
-  'Hmode','betaF','betaJ',
+  'Hmode','braceMap','braceTensionMap','brushBrace','betaF','betaJ',
+  'frameMat','braceMat','As','braceOnlyTension',
   'mScale','dScale','forceType','elFilter','displayMode',
   'showVals','showIds','showPDelta'
 ];
@@ -214,10 +215,22 @@ const SHARE_KEYS = [
 function encodeState(){
   const obj = {};
   for(const k of SHARE_KEYS) obj[k] = S[k];
-  return btoa(JSON.stringify(obj))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
+  /* 拓扑无效的滑块值置为默认值，避免分享链接携带冗余参数、
+     打开者看到禁用滑块却显示旧值的困惑 */
+  if(S.nLev < 2){ obj.h2 = 4; obj.q2 = 0; obj.qc2 = 0; obj.H2 = 0; }
+  if(S.nLev < 3){ obj.h3 = 4; obj.q3 = 0; obj.qc3 = 0; obj.H3 = 0; }
+  if(S.nBay < 2){ obj.L2 = 6; }
+  if(S.nBay < 3){ obj.L3 = 6; }
+  if(!S.hasCant){ obj.Lc = 1.5; obj.qc1 = 0; obj.qc2 = 0; obj.qc3 = 0; }
+  try{
+    return btoa(JSON.stringify(obj))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+  }catch(e){
+    console.warn('[share] 状态编码失败：', e);
+    return '';
+  }
 }
 
 function decodeState(str){
@@ -244,15 +257,42 @@ function applyStateFromObj(obj){
     if(!(k in obj)) continue;
     const v = obj[k];
     if(k === 'Hmode'){
-      if(v === 'left' || v === 'dstiff') S[k] = v;
+      if(v === 'none' || v === 'rigid') S[k] = v;
+      else if(v === 'left') S[k] = 'none';  // 兼容老链接
+      else if(v === 'dstiff') S[k] = 'rigid'; // 兼容老链接
     } else if(k === 'forceType'){
       if(v === 'M' || v === 'N' || v === 'V' || v === 'R') S[k] = v;
     } else if(k === 'elFilter'){
-      if(v === 'all' || v === 'col' || v === 'beam') S[k] = v;
+      if(v === 'all' || v === 'col' || v === 'beam' || v === 'brace') S[k] = v;
     } else if(k === 'displayMode'){
       if(v === 'all' || v === 'force' || v === 'deform') S[k] = v;
-    } else if(k === 'showVals' || k === 'showIds' || k === 'showPDelta'){
+    } else if(k === 'frameMat' || k === 'braceMat'){
+      if(v === 'conc' || v === 'steel') S[k] = v;
+    } else if(k === 'showVals' || k === 'showIds' || k === 'showPDelta' || k === 'braceOnlyTension'){
       if(typeof v === 'boolean') S[k] = v;
+    } else if(k === 'braceMap'){
+      /* 白名单过滤：只接受 "层-跨" 键 + X / ╱ / ╲ 值，防止 __proto__ 原型污染 */
+      if(v && typeof v === 'object' && !Array.isArray(v)){
+        const clean = {};
+        for(const kk of Object.keys(v)){
+          if(/^\d+-\d+$/.test(kk) && (v[kk] === 'X' || v[kk] === '/' || v[kk] === '\\')){
+            clean[kk] = v[kk];
+          }
+        }
+        S[k] = clean;
+      }
+    } else if(k === 'braceTensionMap'){
+      if(v && typeof v === 'object' && !Array.isArray(v)){
+        const clean = {};
+        for(const kk of Object.keys(v)){
+          if(/^\d+-\d+$/.test(kk) && v[kk] === true){
+            clean[kk] = true;
+          }
+        }
+        S[k] = clean;
+      }
+    } else if(k === 'brushBrace'){
+      if(v === 'none' || v === 'X' || v === '/' || v === '\\') S[k] = v;
     } else {
       const n = parseFloat(v);
       if(!isFinite(n)) continue;
@@ -263,6 +303,15 @@ function applyStateFromObj(obj){
       } else {
         S[k] = n;
       }
+    }
+  }
+
+  /* 老链接兼容：以前只有全局 braceOnlyTension 开关，没有逐格 braceTensionMap。
+     若老链接是 true 且未携带 braceTensionMap，把所有已有支撑格映射为仅受拉。 */
+  if(!obj.braceTensionMap && obj.braceOnlyTension === true){
+    S.braceTensionMap = {};
+    for(const k in S.braceMap){
+      if(S.braceMap[k] && S.braceMap[k] !== 'none') S.braceTensionMap[k] = true;
     }
   }
 
@@ -295,12 +344,23 @@ function applyStateFromObj(obj){
 
   document.querySelectorAll('#segHmode button').forEach(b =>
     b.classList.toggle('on', b.dataset.mode === S.Hmode));
+  document.querySelectorAll('#segBraceTopo button').forEach(b => {
+    const val = b.dataset.brace === 'none' ? 'none' : (b.dataset.brace === 'X' ? 'X' : (b.dataset.brace === 'L' ? '/' : '\\'));
+    b.classList.toggle('on', val === S.brushBrace);
+  });
   document.querySelectorAll('#segForce button').forEach(b =>
     b.classList.toggle('on', b.dataset.force === S.forceType));
   document.querySelectorAll('#segElem button').forEach(b =>
     b.classList.toggle('on', b.dataset.filter === S.elFilter));
   document.querySelectorAll('#segDisp button').forEach(b =>
     b.classList.toggle('on', b.dataset.disp === S.displayMode));
+
+  document.querySelectorAll('#segFrameMat button').forEach(b =>
+    b.classList.toggle('on', b.dataset.mat === S.frameMat));
+  document.querySelectorAll('#segBraceMat button').forEach(b =>
+    b.classList.toggle('on', b.dataset.mat === S.braceMat));
+  const btnBT = document.getElementById('btnBraceTension');
+  if(btnBT) btnBT.classList.toggle('on', S.braceOnlyTension);
 
   {
     const btnV = document.getElementById('btnVals');
@@ -539,6 +599,7 @@ document.getElementById('btn-reset').addEventListener('click', ()=>{
   S.highlight = null;
   S._uPureCache = null;
   S.sweep.param = 'bc';
+  S.sweep.durMul = 1;
   const _bar = document.getElementById('sweepBar');
   if(_bar) _bar.classList.remove('on');
   const _btnS = document.getElementById('btn-sweep');
@@ -557,7 +618,24 @@ document.getElementById('btn-reset').addEventListener('click', ()=>{
   S.nBay = 2;
   S.nLev = 2;
   S.hasCant = true;
-  S.Hmode = 'left';
+  S.Hmode = 'none';
+  S.frameMat = 'conc';
+  S.braceMat = 'steel';
+  S.As = 2000;
+  S.braceOnlyTension = false;
+  S.braceTensionMap = {};
+  S.braceMap = {};
+  S.brushBrace = 'none';
+  const segFMR = document.getElementById('segFrameMat');
+  if(segFMR) segFMR.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.mat === 'conc'));
+  const segBMR = document.getElementById('segBraceMat');
+  if(segBMR) segBMR.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.mat === 'steel'));
+  const btnBTR = document.getElementById('btnBraceTension');
+  if(btnBTR) btnBTR.classList.remove('on');
+  const segBraceTopo = document.getElementById('segBraceTopo');
+  if(segBraceTopo) segBraceTopo.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.brace === 'none'));
+  if(typeof renderBraceGrid === 'function') renderBraceGrid();
+  try{ window.dispatchEvent(new CustomEvent('structura-topo-change')); }catch(e){}
   S.forceType = 'M';
   S.elFilter = 'all';
   S.showVals = false;
@@ -586,7 +664,7 @@ document.getElementById('btn-reset').addEventListener('click', ()=>{
   const segD = document.getElementById('segDisp');
   if(segD) segD.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.disp === 'all'));
   const segH = document.getElementById('segHmode');
-  if(segH) segH.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.mode === 'left'));
+  if(segH) segH.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.mode === 'none'));
   const segF = document.getElementById('segForce');
   if(segF) segF.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.force === 'M'));
   const segE = document.getElementById('segElem');

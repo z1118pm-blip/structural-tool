@@ -4,9 +4,10 @@
    1. 状态
    ===================================================================== */
 const E_CONC = 3.0e7;
+const E_STEEL = 2.06e8;
 
 // 全局版本号：以后升级版本只需修改这里，全站自动联动
-const APP_VERSION = 'v0.1.3';
+const APP_VERSION = 'v0.1.4';
 
 // ⚠️ 重要：线上部署地址。本地 file:// 打开时，分享二维码指向这里。
 // 如果你更换了 GitHub 仓库名或部署到自定义域名，请务必同步修改此处的 URL，否则本地生成的分享二维码会失效。
@@ -32,7 +33,14 @@ const S = {
   q1:0, q2:0, q3:0,
   qc1:0, qc2:0, qc3:0,
   H1:0, H2:0, H3:0,
-  Hmode:'left',
+  Hmode:'none',
+  frameMat:'conc',
+  braceMat:'steel',
+  As:2000,
+  braceOnlyTension:false,
+  braceTensionMap:{},
+  braceMap:{},
+  brushBrace:'none',
   forceType:'M',
   r:1.0,
   betaF:1.0,

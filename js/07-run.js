@@ -8,7 +8,9 @@ function getMaxInternal(model, type, filter){
     let maxR = 0;
     for(let c=0; c<model.nCol; c++){
       const nd = model.nid(c, 0);
-      maxR = Math.max(maxR, Math.abs(model.R[nd*3]), Math.abs(model.R[nd*3+1]), Math.abs(model.R[nd*3+2]));
+      /* 仅统计水平/竖向反力（kN）；弯矩反力为 kN·m，量纲不同，
+         不参与 |R|max 计算，否则标签单位会与实际最大箭头长度不匹配。 */
+      maxR = Math.max(maxR, Math.abs(model.R[nd*3]), Math.abs(model.R[nd*3+1]));
     }
     return maxR;
   }
@@ -17,6 +19,7 @@ function getMaxInternal(model, type, filter){
     const el = res.el;
     if(filter === 'col'  && el.kind !== 'col')  continue;
     if(filter === 'beam' && el.kind !== 'beam') continue;
+    if(filter === 'brace' && el.kind !== 'brace') continue;
     const NP = 61;
     for(let k=0;k<=NP;k++){
       const v = Math.abs(internalAt(res, el.L*k/NP, type));
@@ -37,6 +40,14 @@ function updateReadout(model){
 
   setTxt('r-colsec', `柱 ${Math.round(p.bc)}×${Math.round(p.hc)} · 梁 ${Math.round(p.bb)}×${Math.round(p.hb)}`);
   setTxt('r-kmid', p.r.toFixed(2));
+  
+  /* 支撑截面积显示（有支撑时才显示） */
+  const hasBrace = Object.keys(p.braceMap || {}).some(k => p.braceMap[k] && p.braceMap[k] !== 'none');
+  const rowBraceSec = document.getElementById('row-bracesec');
+  if(rowBraceSec) {
+    rowBraceSec.style.display = hasBrace ? '' : 'none';
+    if(hasBrace) setTxt('r-bracesec', Math.round(p.As) + ' mm²');
+  }
 
   {
     const box = document.getElementById('r-rhoBox');
@@ -97,21 +108,25 @@ function updateReadout(model){
     : '—（无水平力）');
 
   const rowPD = document.getElementById('rowPD');
-  if(p.showPDelta){
+  if(p.showPDelta && rowPD){
     rowPD.style.display = '';
     let sumRy = 0;
     for(let c=0;c<model.nCol;c++) sumRy += model.R[model.nid(c,0)*3 + 1];
     let hTot = 0;
     for(let lv=1; lv<=model.nLev; lv++) hTot += p['h'+lv];
     if(totalH > 0 && Math.abs(uTopAvg) > 1e-10 && Math.abs(sumRy) > 1e-6){
-      // 借用当前模型，临时去掉所有竖向荷载，只施加水平力，求“纯侧移”
+/* 借用当前模型，临时去掉所有竖向荷载，只施加水平力，求“纯侧移” */
+  /* (注：Hmode 现已统一为 none/rigid，不再受 D 值法影响) */
       // 性能优化：纯水平力工况的 uPure 仅与几何/刚度有关，与竖向荷载无关。
       // 缓存于 MODEL 上，避免扫掠或录制时每帧重复求解。
       const pPureKey = [
         p.nBay, p.nLev, p.hasCant,
         p.L1, p.L2, p.L3, p.h1, p.h2, p.h3, p.Lc,
         p.bc, p.hc, p.bb, p.hb, p.r, p.betaF, p.betaJ,
-        p.H1, p.H2, p.H3, p.Hmode
+        p.H1, p.H2, p.H3, p.Hmode,
+        p.frameMat, p.braceMat, p.As,
+        JSON.stringify(p.braceMap || {}),
+        JSON.stringify(p.braceTensionMap || {})
       ].join('|');
       let uPure;
       if (S._uPureCache && S._uPureCache.key === pPureKey) {
@@ -158,16 +173,23 @@ function updateReadout(model){
     } else {
       setTxt('r-pd', '—（无水平力或无轴力）');
     }
-  } else {
+  } else if(rowPD) {
     rowPD.style.display = 'none';
   }
 
   function allocStr(level){
     const nCol = model.nCol;
-    const w = computeHShare(p, nCol, level);
+    const vals = new Array(nCol).fill(0);
+    for(const res of model.results){
+      const el = res.el;
+      if(el.kind === 'col' && el.lev === level){
+        vals[el.col] = Math.abs(res.f[1]);
+      }
+    }
     let sum = 0;
-    for(const v of w) sum += v;
-    return w.map(v => (v/sum*100).toFixed(0) + '%').join(' / ');
+    for(const v of vals) sum += v;
+    if(sum < 1e-8) return vals.map(() => '0%').join(' / ');
+    return vals.map(v => (v/sum*100).toFixed(0) + '%').join(' / ');
   }
   setTxt('r-alloc1', allocStr(1));
   if (model.nLev >= 2) setTxt('r-alloc2', allocStr(2));
@@ -209,7 +231,20 @@ function run(){
   if(_badge) _badge.classList.add('on');
   try{
     const _solveT0 = performance.now();
-    MODEL = analyze(S);
+    /* 只要有任意一格支撑开启了「仅受拉」，就走非线性迭代；
+       solver 内部只对 tensionOnly 的支撑做失效判定，普通支撑照常受压工作。 */
+    let anyTension = false;
+    for(const k in S.braceMap){
+      if(S.braceMap[k] && S.braceMap[k] !== 'none' && S.braceTensionMap[k]){
+        anyTension = true;
+        break;
+      }
+    }
+    if (anyTension) {
+      MODEL = analyzeTensionOnly(S);
+    } else {
+      MODEL = analyze(S);
+    }
     MODEL.solveTime = performance.now() - _solveT0;
   }catch(err){
     console.error(err);
@@ -293,8 +328,15 @@ function updateStatusBar(m){
     // 如果完全无荷载，直接判 OK；否则用相对残差判断
     const isZeroLoad = rawRefMag < 1e-3 && resid < 1e-6;
     const ok = isZeroLoad || (resid / refMag) < 1e-8;
-    statusEl.textContent = ok ? 'OK' : 'CHECK';
-    statusEl.classList.toggle('ok', ok);
+    if(m.tensionConverged === false){
+      statusEl.textContent = 'NC·未收敛';
+      statusEl.classList.remove('ok');
+      statusEl.title = '仅受拉支撑迭代 10 次仍未收敛，当前结果可能不是稳定平衡解';
+    } else {
+      statusEl.textContent = ok ? 'OK' : 'CHECK';
+      statusEl.classList.toggle('ok', ok);
+      statusEl.title = '';
+    }
   }
 }
 
@@ -325,6 +367,8 @@ function applyTopoState(){
   hide('row-R3', S.nBay < 3);
 
   updateSweepOptions();
+  
+  try{ window.dispatchEvent(new CustomEvent('structura-topo-change')); } catch(e){}
 }
 
 function updateSweepOptions(){
@@ -343,7 +387,8 @@ function updateSweepOptions(){
     qc2:()=>S.hasCant && S.nLev >= 2,
     qc3:()=>S.hasCant && S.nLev >= 3,
     H2: ()=>S.nLev  >= 2,
-    H3: ()=>S.nLev  >= 3
+    H3: ()=>S.nLev  >= 3,
+    As: ()=>Object.keys(S.braceMap || {}).some(k => S.braceMap[k] && S.braceMap[k] !== 'none')
   };
 
   let firstVisible = null;
@@ -479,7 +524,8 @@ const fmtMap = {
   betaJ: v=>v.toFixed(2),
   betaF_d: v=>v.toFixed(2),
   betaJ_d: v=>v.toFixed(2),
-  mScale: v=>v.toFixed(2), dScale: v=>v.toFixed(0)
+  mScale: v=>v.toFixed(2), dScale: v=>v.toFixed(0),
+  As: v=>v.toFixed(0)+' mm²'
 };
 
 let hlTimer = null;
@@ -567,3 +613,71 @@ bindRange('mScale','mScale', v=>v.toFixed(2));
 bindRange('dScale','dScale', v=>v.toFixed(0));
 bindRange('betaF_d','betaF', v=>v.toFixed(2));
 bindRange('betaJ_d','betaJ', v=>v.toFixed(2));
+bindRange('As','As', v=>v.toFixed(0)+' mm²');
+
+(function bindFrameMat() {
+  const seg = document.getElementById('segFrameMat');
+  if(!seg) return;
+  seg.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      seg.querySelectorAll('button').forEach(b => b.classList.remove('on'));
+      btn.classList.add('on');
+      S.frameMat = btn.dataset.mat;
+      run();
+    });
+  });
+})();
+
+(function bindBraceMat() {
+  const seg = document.getElementById('segBraceMat');
+  if(!seg) return;
+  seg.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      seg.querySelectorAll('button').forEach(b => b.classList.remove('on'));
+      btn.classList.add('on');
+      S.braceMat = btn.dataset.mat;
+      run();
+    });
+  });
+})();
+
+(function bindBraceTension() {
+  const btn = document.getElementById('btnBraceTension');
+  if(!btn) return;
+  /* 全局按钮改为批量操作：
+     - 若当前已有支撑中「不是全部仅受拉」，点一下全部设为仅受拉；
+     - 若已经全部仅受拉，再点一下全部取消。
+     逐格微调仍通过网格上的 T 角标完成。 */
+  const refreshBtn = () => {
+    const keys = Object.keys(S.braceMap).filter(k => S.braceMap[k] && S.braceMap[k] !== 'none');
+    if(keys.length === 0){
+      btn.classList.remove('on');
+      btn.textContent = '无支撑';
+      btn.disabled = true;
+      btn.title = '请先在下方网格中布置支撑';
+      return;
+    }
+    const allTension = keys.every(k => S.braceTensionMap[k]);
+    btn.classList.toggle('on', allTension);
+    btn.textContent = allTension ? '全部普通' : '全部仅受拉';
+    btn.disabled = false;
+    btn.title = '';
+  };
+  window.refreshBraceTensionBtn = refreshBtn;
+
+  btn.addEventListener('click', () => {
+    const keys = Object.keys(S.braceMap).filter(k => S.braceMap[k] && S.braceMap[k] !== 'none');
+    const allTension = keys.length > 0 && keys.every(k => S.braceTensionMap[k]);
+    if(allTension){
+      S.braceTensionMap = {};
+    } else {
+      S.braceTensionMap = {};
+      for(const k of keys) S.braceTensionMap[k] = true;
+    }
+    if(typeof renderBraceGrid === 'function') renderBraceGrid();
+    refreshBtn();
+    run();
+  });
+
+  refreshBtn();
+})();

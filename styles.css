@@ -203,9 +203,9 @@
   .chartBar{
     flex:0 0 auto;
     display:flex;align-items:center;gap:8px;
-    padding:6px 14px 10px;
-    border-top:1px solid #eef1f6;
-    background:#fafbfc;
+    padding:10px 14px;
+    border-top:1px solid rgba(255,255,255,0.04);
+    background:transparent;
   }
   /* 内力图卡的 chartBar：单行三组（k_F / β_f / β_j） */
   #chartForce .chartBar, #chartDeform .chartBar{
@@ -439,18 +439,13 @@
 
   body{
     background:
-      repeating-linear-gradient(0deg,
-        rgba(56,189,248,.026) 0, rgba(56,189,248,.026) 1px,
-        transparent 1px, transparent 24px),
-      repeating-linear-gradient(90deg,
-        rgba(56,189,248,.026) 0, rgba(56,189,248,.026) 1px,
-        transparent 1px, transparent 24px),
-      radial-gradient(1200px 800px at 12% -10%, rgba(56,189,248,.10), transparent 62%),
-      radial-gradient(900px 600px at 100% 110%, rgba(14,165,233,.07), transparent 60%),
-      var(--bg);
+      radial-gradient(1000px 800px at 10% 0%, rgba(56,189,248,.05), transparent 70%),
+      radial-gradient(800px 600px at 100% 100%, rgba(14,165,233,.03), transparent 60%),
+      #0b1120; /* 极简深邃纯色底，去网格 */
     background-attachment:fixed;
     color:var(--tx);
     font-family:'Inter','PingFang SC','Microsoft YaHei',-apple-system,BlinkMacSystemFont,sans-serif;
+    -webkit-font-smoothing:antialiased;
   }
 
   /* 左侧栏深色化 */
@@ -458,10 +453,10 @@
 
   /* 开发中警示横幅 */
   .devWarning{
-    background:rgba(251,191,36,0.08);
-    color:#fbbf24;
-    border-bottom:1px solid rgba(251,191,36,0.2);
-    padding:8px 12px;
+    background:rgba(239,68,68,0.06);
+    color:#f87171;
+    border-bottom:1px solid rgba(239,68,68,0.15);
+    padding:6px 12px;
     font-size:10.5px;
     line-height:1.5;
     text-align:center;
@@ -673,16 +668,16 @@
   }
   #readout{position:relative}
 
-  /* 主图（弯矩 / 变形）：浮起 */
+  /* 主图（弯矩 / 变形）：极简浮起 */
   #chartForce, #chartDeform{
-    background:#0b1220;
-    border:1px solid rgba(56,189,248,.22);
-    border-radius:16px;
+    background:#0f172a;
+    border:1px solid rgba(255,255,255,0.04);
+    border-radius:12px;
     box-shadow:
-      0 1px 0 rgba(255,255,255,.05) inset,
-      0 12px 40px rgba(0,0,0,.60),
-      0 0 30px rgba(56,189,248,.08);
+      0 4px 24px rgba(0,0,0,0.4),
+      0 1px 2px rgba(0,0,0,0.2);
   }
+  @keyframes cardPulse { /* 保留空keyframes防止代码报错 */ }
 
   /* 顶部显示模式栏（深色） */
   #stageModeBar .segMini button{
@@ -723,8 +718,13 @@
   }
   .segMini button:hover{background:rgba(17,28,47,.92)}
   .segMini button.on{
-    background:linear-gradient(180deg,#0ea5e9,#0284c7);
-    border-color:#38bdf8;color:#fff;font-weight:600;
+    background:rgba(56,189,248,0.15);
+    border-color:rgba(56,189,248,0.6);color:#7dd3fc;font-weight:600;
+  }
+  .seg button.on{
+    background:rgba(56,189,248,0.15);
+    border-color:rgba(56,189,248,0.6);color:#7dd3fc;
+    box-shadow:none;
   }
 
   /* 数值按钮：靛蓝 —— 与 M/N/V 的蓝、冻结的绿区分 */
@@ -825,6 +825,8 @@
     pointer-events:none;
     white-space:nowrap;
   }
+
+  /* 施工阶段样式已删除 */
 
   /* 已删除：.btnSelfTestJump（自检跳转按钮已废弃） */
 
@@ -1280,18 +1282,7 @@
     background:rgba(56,189,248,.05);
   }
 
-  /* ============ 卡片光晕呼吸 ============ */
-  @keyframes cardPulse{
-    0%,100%{ box-shadow:0 1px 0 rgba(255,255,255,.05) inset,
-                        0 12px 40px rgba(0,0,0,.60),
-                        0 0 30px rgba(56,189,248,.06); }
-    50%    { box-shadow:0 1px 0 rgba(255,255,255,.05) inset,
-                        0 12px 40px rgba(0,0,0,.60),
-                        0 0 44px rgba(56,189,248,.18); }
-  }
-  #chartForce, #chartDeform{
-    animation:cardPulse 4.5s ease-in-out infinite;
-  }
+  /* ============ 卡片光晕呼吸（已清空：主图卡改用静态阴影，不再播放动画） ============ */
 
   /* ============ 品牌图标 + 水印脉冲 ============ */
   @keyframes brandPulse{
@@ -1403,4 +1394,82 @@
     background:linear-gradient(180deg,#0ea5e9,#0284c7);
     border-color:#38bdf8;color:#fff;
     box-shadow:0 0 8px rgba(56,189,248,.40);
+  }
+
+  /* 支撑布置网格 */
+  .braceGridWrap {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 6px;
+    margin-bottom: 12px;
+  }
+  .braceGridRow {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .braceGridLabel {
+    width: 32px;
+    font-size: 10.5px;
+    color: var(--tx3);
+    text-align: right;
+    flex: 0 0 auto;
+  }
+  .braceGridCell {
+    position: relative;
+    flex: 1;
+    padding: 6px 0;
+    font-size: 11px;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    text-align: center;
+    background: #0b1220;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    color: var(--tx3);
+    cursor: pointer;
+    transition: all .15s;
+    user-select: none;
+  }
+  .braceGridCell:hover { background: #111c2f; border-color: var(--line2); }
+  .braceGridCell.on {
+    border-color: #38bdf8;
+    color: #7dd3fc;
+    background: rgba(56,189,248,.08);
+    box-shadow: 0 0 8px rgba(56,189,248,.15) inset;
+  }
+  /* 格子右上角的「仅受拉」T 角标 */
+  .braceGridCell .braceGridT {
+    position: absolute;
+    top: 2px;
+    right: 3px;
+    width: 13px;
+    height: 13px;
+    line-height: 13px;
+    font-size: 9px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    text-align: center;
+    border-radius: 3px;
+    color: var(--tx3);
+    background: rgba(11,18,32,.85);
+    border: 1px solid var(--line);
+    opacity: .55;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .braceGridCell .braceGridT:hover {
+    opacity: 1;
+    border-color: rgba(56,189,248,.55);
+    color: #7dd3fc;
+  }
+  .braceGridCell .braceGridT.on {
+    opacity: 1;
+    color: #0a0f1a;
+    background: #38bdf8;
+    border-color: #38bdf8;
+    box-shadow: 0 0 6px rgba(56,189,248,.55);
+  }
+  .braceGridCell .braceGridT.is-hidden {
+    display: none;
   }

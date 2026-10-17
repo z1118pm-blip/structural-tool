@@ -33,6 +33,12 @@ function elemDisp(res, x){
   const ulx = (1-xi)*ul[0] + xi*ul[3];
   const vi  = ul[1], vj = ul[4];
 
+  /* 二力杆（支撑）EI=0：位移沿杆轴线性插值，无弯曲挠度 */
+  if(!(EI > 0)){
+    const vly = (1-xi)*vi + xi*vj;
+    return [cs*ulx - sn*vly, sn*ulx + cs*vly];
+  }
+
   /* 双重积分结果：
        v(x) = vi + (vj-vi)·ξ + c·[ f[2]/2 − f[1]L(1+ξ)/6 − wL²(1+ξ+ξ²)/24 ]
      其中 c = L²ξ(1-ξ)/EI。固端梁退化时等于标准解 w·x²(L-x)²/(24EI)。 */
