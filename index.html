@@ -60,8 +60,8 @@ var _hmt = _hmt || [];
       </div>
       <div class="msRight">
         <div class="msMetric"><span>H</span><b id="msTotalH">8.0</b><i>m</i></div>
-        <div class="msMetric"><span>B</span><b id="msTotalW">13.5</b><i>m</i></div>
-        <div class="msMetric"><span>H/B</span><b id="msAspect">0.59</b></div>
+        <div class="msMetric"><span>B</span><b id="msTotalW">12.0</b><i>m</i></div>
+        <div class="msMetric"><span>H/B</span><b id="msAspect">0.67</b></div>
       </div>
     </div>
 
@@ -507,9 +507,9 @@ var _hmt = _hmt || [];
 
       <h3>五、荷载</h3>
       <ul>
-        <li><strong>梁均布荷载</strong> q₁、q₂、q₃：分别作用于一层、二层、三层跨内梁。代码内部以局部坐标 <code>w = −q</code> 输入。</li>
+        <li><strong>梁均布荷载</strong> q₁、q₂、q₃：分别作用于一层、二层、三层跨内梁，<strong>同层所有跨取相同值</strong>（不支持逐跨独立调载）。代码内部以局部坐标 <code>w = −q</code> 输入。</li>
         <li><strong>悬挑均布荷载</strong> q<sub>c1</sub>、q<sub>c2</sub>、q<sub>c3</sub>：作用于右侧各层悬挑梁，长度 L<sub>c</sub>。悬挑梁为右柱节点伸出的标准刚接单元，<strong>不参与 β<sub>j</sub> 半刚接修正</strong>。</li>
-        <li><strong>水平力</strong> H₁、H₂、H₃：两种施加方式
+        <li><strong>水平力</strong> H₁、H₂、H₃（仅正向，不支持反向）：两种施加方式
           <ul style="margin-top:3px">
             <li><strong>仅左柱</strong>：全部施加于左柱顶节点，模拟风压从左侧来。</li>
             <li><strong>D 值法</strong>：按各柱侧移刚度分配。同层各柱端部约束相同，柱侧移刚度 ∝ EI<sub>c</sub>；内柱 EI<sub>c</sub> = r·边柱 EI<sub>c</sub>，边柱取 1、内柱取 r，归一化后分配。模拟地震作用按刚度分配。</li>
@@ -546,6 +546,7 @@ var _hmt = _hmt || [];
             <li>一般层：<code>K = Σi<sub>b</sub>/(2i<sub>c</sub>)，α<sub>c</sub> = K/(2+K)</code>。</li>
             <li>梁端 β<sub>j</sub>：启发式折减 <code>K ← K·β<sub>j</sub></code>，无严格推导，仅保证 β<sub>j</sub>→0 时侧移刚度下降；α<sub>c</sub> 下限 0.05 用于防止除零。</li>
             <li>同层各柱的 K 逐柱计算（边柱与内柱的 Σi<sub>b</sub> 和 i<sub>c</sub> 不同），不再取公共约束。</li>
+            <li>最右柱的 Σi<sub>b</sub> 仅计入左侧跨内梁，<strong>未计入右侧悬挑梁的转动约束</strong>；L<sub>c</sub> 较大或 β<sub>j</sub> 较低时，D 值分配会略有偏差。</li>
           </ul>
         </li>
         <li style="margin-bottom:5px"><strong>二阶效应为粗估</strong>：不做真正的 P-Δ 迭代（不组装几何刚度矩阵 K<sub>g</sub>），仅用等效单自由度反推 <code>B = 1/(1−ΣN/ΣN<sub>cr</sub>)</code>，见第十一节。</li>

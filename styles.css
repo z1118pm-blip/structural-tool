@@ -424,6 +424,7 @@
     }
     /* #stageWatermark 已在 HTML 中删除，此处规则一并移除 */
     #chartForce .tagBar{top:9px}
+    #chartDeform .tagBar{top:9px}
     #readout{grid-column:1;grid-row:auto;max-height:320px}
     #chartForce{grid-column:1;grid-row:auto;min-height:340px}
     #chartLoad{grid-column:1;grid-row:auto;min-height:340px}

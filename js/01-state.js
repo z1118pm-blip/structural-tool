@@ -8,6 +8,9 @@ const E_CONC = 3.0e7;
 // 全局版本号：以后升级版本只需修改这里，全站自动联动
 const APP_VERSION = 'v0.1.2';
 
+// 线上部署地址：本地 file:// 打开时，分享二维码指向这里
+const PROD_URL = 'https://z1118pm-blip.github.io/structural-tool/';
+
 /* 转动约束的统一判定阈值：
    >= BETA_FIXED 视为固定/刚接，<= BETA_HINGE 视为铰接，中间为弹性/半刚接。
    原先 colKeff、支座绘制、analyze 三处各写各的阈值（0.999/0.001、0.99/0.01），

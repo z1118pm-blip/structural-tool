@@ -187,6 +187,15 @@ function setSweepLocked(locked){
       el.disabled = locked;
     });
   }
+  // 底栏按钮（保留 btnSweepRec 可点，它是取消录制入口）
+  for(const id of ['btn-reset','btn-help','btn-share','btn-tip']){
+    const el = document.getElementById(id);
+    if(el) el.disabled = locked;
+  }
+  // 右侧 chartBar 内所有 slider（拖动会触发 sweepStop 中断录制）
+  document.querySelectorAll('#stage input[type=range]').forEach(el => {
+    el.disabled = locked;
+  });
 }
 
 function startRecording(){

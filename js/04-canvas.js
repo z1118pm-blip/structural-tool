@@ -21,7 +21,7 @@ function setupCanvas(canvas, overrideDPR){
 function drawGrid(ctx, W, H){
   ctx.save();
   const step = 24;
-  ctx.strokeStyle = 'rgba(56,189,248,0.045)';
+  ctx.strokeStyle = S.lightBg ? 'rgba(100,116,139,0.10)' : 'rgba(56,189,248,0.045)';
   ctx.lineWidth = 0.5;
   for(let x=0; x<=W; x+=step){
     ctx.beginPath(); ctx.moveTo(x+0.5, 0); ctx.lineTo(x+0.5, H); ctx.stroke();
@@ -29,7 +29,7 @@ function drawGrid(ctx, W, H){
   for(let y=0; y<=H; y+=step){
     ctx.beginPath(); ctx.moveTo(0, y+0.5); ctx.lineTo(W, y+0.5); ctx.stroke();
   }
-  ctx.strokeStyle = 'rgba(56,189,248,0.09)';
+  ctx.strokeStyle = S.lightBg ? 'rgba(100,116,139,0.18)' : 'rgba(56,189,248,0.09)';
   for(let x=0; x<=W; x+=step*5){
     ctx.beginPath(); ctx.moveTo(x+0.5, 0); ctx.lineTo(x+0.5, H); ctx.stroke();
   }
@@ -41,7 +41,7 @@ function drawGrid(ctx, W, H){
 
 function drawHUD(ctx, W, H, label, showSolver, topOffset){
   ctx.save();
-  ctx.strokeStyle = 'rgba(56,189,248,0.55)';
+  ctx.strokeStyle = S.lightBg ? 'rgba(71,85,105,0.55)' : 'rgba(56,189,248,0.55)';
   ctx.lineWidth = 1.2;
   const L = 14, M = 10;
   const corners = [
@@ -55,7 +55,7 @@ function drawHUD(ctx, W, H, label, showSolver, topOffset){
   }
   const ty = M + 4 + (topOffset || 0);
   ctx.font = '9.5px "JetBrains Mono", ui-monospace, monospace';
-  ctx.fillStyle = 'rgba(125,211,252,0.70)';
+  ctx.fillStyle = S.lightBg ? 'rgba(51,65,85,0.85)' : 'rgba(125,211,252,0.70)';
   ctx.textAlign = 'left'; ctx.textBaseline = 'top';
   ctx.fillText('◆ ' + (label||'STATIC / LINEAR-ELASTIC'), M+4, ty);
   if(showSolver !== false){
@@ -265,7 +265,8 @@ function drawLoadDiagram(canvas, model, dprOverride){
     for(let c=0;c<nCol;c++){
       const Hc = H * w[c] / sum;
       if(Hc <= 0) continue;
-      drawHF(ctx, toS, model.nodes[nid(c, level)], Hc, c===0 ? H.toFixed(1) : '');
+      const lbl = (c === 0) ? (p.Hmode === 'left' ? H.toFixed(1) : Hc.toFixed(1)) : '';
+      drawHF(ctx, toS, model.nodes[nid(c, level)], Hc, lbl);
     }
   }
   for(let lv=1; lv<=model.nLev; lv++) drawFloorH(lv, p['H'+lv]);

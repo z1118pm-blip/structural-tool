@@ -9,7 +9,7 @@ function drawDeform(canvas, model, dprOverride){
   const pad = (model.p.displayMode === 'deform')
     ? {padL: 56, padT: 100, padR: 80, padB: 42}
     : {padL: 170, padT: 100, padR: 60, padB: 36};
-  const {toS, sc} = makeTransform(model, W, H, pad);
+  const {toS} = makeTransform(model, W, H, pad);
 
   ctx.fillStyle=T.bg; ctx.fillRect(0,0,W,H);
   drawGrid(ctx, W, H);
@@ -86,8 +86,8 @@ function drawDeform(canvas, model, dprOverride){
     const ddx = sx - px, ddy = sy - py;
     const dlen = Math.hypot(ddx, ddy);
     if(dlen > 3){
-      ctx.strokeStyle = 'rgba(56,189,248,0.62)';
-      ctx.fillStyle   = 'rgba(56,189,248,0.62)';
+      ctx.strokeStyle = T.deformCurve;
+      ctx.fillStyle   = T.deformCurve;
       ctx.lineWidth   = 1.1;
       ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(sx, sy); ctx.stroke();
       const ang = Math.atan2(ddy, ddx);

@@ -99,9 +99,9 @@ function exportCanvasPNG(canvasId, baseName){
 
   const tmp = document.createElement('canvas');
   tmp.style.cssText =
-    `position:absolute;left:-99999px;top:0;` +
+    `position:fixed;left:0;top:0;opacity:0;` +
     `width:${rect.width}px;height:${rect.height}px;` +
-    `display:block;pointer-events:none;`;
+    `display:block;pointer-events:none;z-index:-1;`;
   document.body.appendChild(tmp);
 
   try{
@@ -225,7 +225,7 @@ function decodeState(str){
     let b64 = str.replace(/-/g, '+').replace(/_/g, '/');
     while(b64.length % 4) b64 += '=';
     const obj = JSON.parse(atob(b64));
-    if(!obj || typeof obj !== 'object') return null;
+    if(!obj || typeof obj !== 'object' || Array.isArray(obj)) return null;
     return obj;
   }catch(e){ return null; }
 }
@@ -324,7 +324,7 @@ function applyStateFromObj(obj){
   return true;
 }
 
-const PROD_URL = 'https://z1118pm-blip.github.io/structural-tool/';
+/* PROD_URL 已移至 01-state.js，便于统一维护部署地址 */
 
 function isLocalHost(){
   const host = location.hostname;
@@ -531,6 +531,15 @@ function shareURL(){
 
 document.getElementById('btn-reset').addEventListener('click', ()=>{
   if(S.sweep.playing) sweepStop();
+  S.highlight = null;
+  S._uPureCache = null;
+  S.sweep.param = 'bc';
+  const _bar = document.getElementById('sweepBar');
+  if(_bar) _bar.classList.remove('on');
+  const _btnS = document.getElementById('btn-sweep');
+  if(_btnS) _btnS.classList.remove('on');
+  const _sel = document.getElementById('sweepParam');
+  if(_sel) _sel.value = 'bc';
   document.querySelectorAll('input[type=range]').forEach(el=>{
     el.value = el.defaultValue;
     const v = parseFloat(el.value);

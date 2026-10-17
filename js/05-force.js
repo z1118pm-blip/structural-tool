@@ -204,7 +204,7 @@ function drawInternal(canvas, model, dprOverride){
       const el = res.el;
       if(filter === 'col'  && el.kind !== 'col')  continue;
       if(filter === 'beam' && el.kind !== 'beam') continue;
-      const N = 60;
+      const N = NP;
       let Mscale = 0;
       for(let k=0;k<=N;k++) Mscale = Math.max(Mscale, Math.abs(internalAt(res, el.L*k/N, 'M')));
       if(Mscale < 1e-9) continue;

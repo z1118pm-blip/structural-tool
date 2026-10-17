@@ -95,21 +95,29 @@ function updateReadout(model){
       // 借用当前模型，临时去掉所有竖向荷载，只施加水平力，求“纯侧移”
       // 性能优化：纯水平力工况的 uPure 仅与几何/刚度有关，与竖向荷载无关。
       // 缓存于 MODEL 上，避免扫掠或录制时每帧重复求解。
-      if (model._uPure === undefined) {
+      const pPureKey = [
+        p.nBay, p.nLev, p.hasCant,
+        p.L1, p.L2, p.L3, p.h1, p.h2, p.h3, p.Lc,
+        p.bc, p.hc, p.bb, p.hb, p.r, p.betaF, p.betaJ
+      ].join('|');
+      let uPure;
+      if (S._uPureCache && S._uPureCache.key === pPureKey) {
+        uPure = S._uPureCache.value;
+      } else {
         const pPure = { ...p, q1:0, q2:0, q3:0, qc1:0, qc2:0, qc3:0 };
         try {
-            const mPure = analyze(pPure);
-            let uMax = 0;
-            for(let c=0; c<model.nCol; c++){
-              const u = Math.abs(mPure.U[model.nid(c, model.nLev)*3]);
-              if(u > uMax) uMax = u;
-            }
-            model._uPure = uMax || Math.abs(uTopAvg);
+          const mPure = analyze(pPure);
+          let uMax = 0;
+          for(let c=0; c<model.nCol; c++){
+            const u = Math.abs(mPure.U[model.nid(c, model.nLev)*3]);
+            if(u > uMax) uMax = u;
+          }
+          uPure = uMax || Math.abs(uTopAvg);
         } catch(e) {
-            model._uPure = Math.abs(uTopAvg);
+          uPure = Math.abs(uTopAvg);
         }
+        S._uPureCache = { key: pPureKey, value: uPure };
       }
-      const uPure = model._uPure;
       
       const Ncr = totalH * hTot / Math.abs(uPure || uTopAvg);
       const ratio = Math.abs(sumRy) / Ncr;
@@ -181,9 +189,9 @@ function updateReadout(model){
   }
 
   let sumV = 0, sumH = 0;
+  let baySum = 0;
+  for(let c=0;c<model.nBay;c++) baySum += p['L'+(c+1)];
   for(let lv=1; lv<=model.nLev; lv++){
-    let baySum = 0;
-    for(let c=0;c<model.nBay;c++) baySum += p['L'+(c+1)];
     sumV += p['q'+lv] * baySum;
     if(p.hasCant) sumV += p['qc'+lv] * p.Lc;
     sumH += p['H'+lv];
@@ -257,11 +265,13 @@ function run(){
   {
     const style = FORCE_STYLE[S.forceType];
     const tagEl = document.getElementById('tagForce');
-    if(MODEL.maxF > 1e-6){
-      tagEl.textContent =
-        `${style.tag} · ${style.lbl} = ${MODEL.maxF.toFixed(1)} ${style.unit}`;
-    } else {
-      tagEl.textContent = style.tag;
+    if(tagEl){
+      if(MODEL.maxF > 1e-6){
+        tagEl.textContent =
+          `${style.tag} · ${style.lbl} = ${MODEL.maxF.toFixed(1)} ${style.unit}`;
+      } else {
+        tagEl.textContent = style.tag;
+      }
     }
   }
 
@@ -291,9 +301,10 @@ function updateStatusBar(m){
       const nd = m.nid(c,0);
       refMag += Math.abs(m.R[nd*3]) + Math.abs(m.R[nd*3+1]);
     }
+    const rawRefMag = refMag;
     refMag = Math.max(refMag, 1e-3); // 提升下限，避免极微小噪声被放大
     // 如果完全无荷载，直接判 OK；否则用相对残差判断
-    const isZeroLoad = refMag < 1e-3 && resid < 1e-6;
+    const isZeroLoad = rawRefMag < 1e-3 && resid < 1e-6;
     const ok = isZeroLoad || (resid / refMag) < 1e-8;
     statusEl.textContent = ok ? 'OK' : 'CHECK';
     statusEl.classList.toggle('ok', ok);
