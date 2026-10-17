@@ -1,0 +1,585 @@
+"use strict";
+
+(function bindElem(){
+  const seg = document.getElementById('segElem');
+  if(!seg) return;
+  seg.querySelectorAll('button[data-filter]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      seg.querySelectorAll('button[data-filter]').forEach(b=>b.classList.remove('on'));
+      btn.classList.add('on');
+      S.elFilter = btn.dataset.filter;
+      run();
+    });
+  });
+})();
+
+(function bindVals(){
+  const btn = document.getElementById('btnVals');
+  if(!btn) return;
+  btn.addEventListener('click', ()=>{
+    S.showVals = !S.showVals;
+    btn.classList.toggle('on', S.showVals);
+    run();
+  });
+})();
+
+(function bindIds(){
+  const btn = document.getElementById('btnIds');
+  if(!btn) return;
+  btn.addEventListener('click', ()=>{
+    S.showIds = !S.showIds;
+    btn.classList.toggle('on', S.showIds);
+    run();
+  });
+})();
+
+(function bindDisplayMode(){
+  const seg = document.getElementById('segDisp');
+  const stageEl = document.getElementById('stage');
+  if(!seg || !stageEl) return;
+  seg.querySelectorAll('button').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      seg.querySelectorAll('button').forEach(b=>b.classList.remove('on'));
+      btn.classList.add('on');
+      const mode = btn.dataset.disp;
+      S.displayMode = mode;
+      stageEl.classList.remove('mode-all','mode-force','mode-deform');
+      stageEl.classList.add('mode-' + mode);
+      scheduleRender();
+    });
+  });
+})();
+
+(function bindPDelta(){
+  const btn = document.getElementById('btnPDelta');
+  if(!btn) return;
+  btn.addEventListener('click', ()=>{
+    S.showPDelta = !S.showPDelta;
+    btn.classList.toggle('on', S.showPDelta);
+    run();
+  });
+})();
+
+(function bindFreeze(){
+  const btn = document.getElementById('btnFreeze');
+  const btnD = document.getElementById('btnFreezeDeform');
+  if(!btn && !btnD) return;
+
+  const toggleFreeze = ()=>{
+    if(BASE){
+      BASE = null;
+      if(btn) btn.classList.remove('on');
+      if(btnD) btnD.classList.remove('on');
+    } else {
+      if(!MODEL) return;
+      BASE = {
+        nodes: MODEL.nodes, els: MODEL.els,
+        results: MODEL.results, U: MODEL.U, p: {...MODEL.p}
+      };
+      if(btn) btn.classList.add('on');
+      if(btnD) btnD.classList.add('on');
+    }
+    run();
+  };
+
+  if(btn) btn.addEventListener('click', toggleFreeze);
+  if(btnD) btnD.addEventListener('click', toggleFreeze);
+})();
+
+function exportCanvasPNG(canvasId, baseName){
+  if(!MODEL) return;
+  const srcCanvas = document.getElementById(canvasId);
+  if(!srcCanvas || !srcCanvas.width) return;
+
+  const rect = srcCanvas.getBoundingClientRect();
+  if(rect.width < 1 || rect.height < 1){
+    console.warn('[shot] 目标 canvas 当前不可见，已跳过导出。');
+    return;
+  }
+
+  const tmp = document.createElement('canvas');
+  tmp.style.cssText =
+    `position:absolute;left:-99999px;top:0;` +
+    `width:${rect.width}px;height:${rect.height}px;` +
+    `display:block;pointer-events:none;`;
+  document.body.appendChild(tmp);
+
+  try{
+    if(canvasId === 'cvForce')      drawInternal(tmp, MODEL, 2);
+    else if(canvasId === 'cvD')     drawDeform(tmp, MODEL, 2);
+    else if(canvasId === 'cvLoad')  drawLoadDiagram(tmp, MODEL, 2);
+  }catch(e){
+    console.error('[shot] 绘制失败：', e);
+    document.body.removeChild(tmp);
+    return;
+  }
+
+  tmp.toBlob(blob => {
+    if(!blob){
+      console.warn('[shot] toBlob 返回空，导出失败。');
+      document.body.removeChild(tmp);
+      return;
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const ts = new Date().toISOString()
+                 .replace(/[:T]/g,'-').replace(/\..+$/,'');
+    a.href = url;
+    a.download = `${baseName}_${ts}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url), 2000);
+    document.body.removeChild(tmp);
+  }, 'image/png');
+}
+
+(function bindShot(){
+  const b1 = document.getElementById('btnShotForce');
+  const b2 = document.getElementById('btnShotDeform');
+  if(b1) b1.addEventListener('click', ()=> exportCanvasPNG('cvForce', 'internal_diagram'));
+  if(b2) b2.addEventListener('click', ()=> exportCanvasPNG('cvD',     'deformation'));
+})();
+
+(function bindHmode(){
+  const seg = document.getElementById('segHmode');
+  if(!seg) return;
+  seg.querySelectorAll('button').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      seg.querySelectorAll('button').forEach(b=>b.classList.remove('on'));
+      btn.classList.add('on');
+      S.Hmode = btn.dataset.mode;
+      run();
+    });
+  });
+})();
+
+(function bindForce(){
+  const seg = document.getElementById('segForce');
+  if(!seg) return;
+  seg.querySelectorAll('button').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      seg.querySelectorAll('button').forEach(b=>b.classList.remove('on'));
+      btn.classList.add('on');
+      S.forceType = btn.dataset.force;
+      run();
+    });
+  });
+})();
+
+(function bindHelp(){
+  const modal = document.getElementById('modalHelp');
+  const btnOpen = document.getElementById('btn-help');
+  const btnClose = document.getElementById('btnHelpClose');
+  if(!modal || !btnOpen) return;
+
+  const open  = ()=> modal.classList.add('open');
+  const close = ()=> modal.classList.remove('open');
+
+  btnOpen.addEventListener('click', open);
+  if(btnClose) btnClose.addEventListener('click', close);
+  modal.addEventListener('click', e=>{ if(e.target === modal) close(); });
+  document.addEventListener('keydown', e=>{
+    if(e.key === 'Escape' && modal.classList.contains('open')) close();
+  });
+})();
+
+(function bindTip(){
+  const modal = document.getElementById('modalTip');
+  const btnOpen = document.getElementById('btn-tip');
+  const btnClose = document.getElementById('btnTipClose');
+  if(!modal || !btnOpen) return;
+
+  const open  = ()=> modal.classList.add('open');
+  const close = ()=> modal.classList.remove('open');
+
+  btnOpen.addEventListener('click', open);
+  if(btnClose) btnClose.addEventListener('click', close);
+  modal.addEventListener('click', e=>{ if(e.target === modal) close(); });
+  document.addEventListener('keydown', e=>{
+    if(e.key === 'Escape' && modal.classList.contains('open')) close();
+  });
+})();
+
+const SHARE_KEYS = [
+  'nBay','nLev','hasCant',
+  'L1','L2','L3','h1','h2','h3','Lc',
+  'bc','hc','bb','hb','r',
+  'q1','q2','q3','qc1','qc2','qc3','H1','H2','H3',
+  'Hmode','betaF','betaJ',
+  'mScale','dScale','forceType','elFilter','displayMode',
+  'showVals','showIds','showPDelta'
+];
+
+function encodeState(){
+  const obj = {};
+  for(const k of SHARE_KEYS) obj[k] = S[k];
+  return btoa(JSON.stringify(obj))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+
+function decodeState(str){
+  try{
+    let b64 = str.replace(/-/g, '+').replace(/_/g, '/');
+    while(b64.length % 4) b64 += '=';
+    const obj = JSON.parse(atob(b64));
+    if(!obj || typeof obj !== 'object') return null;
+    return obj;
+  }catch(e){ return null; }
+}
+
+function applyStateFromObj(obj){
+  if(!obj) return false;
+
+  const nb = parseInt(obj.nBay);
+  const nl = parseInt(obj.nLev);
+  if(nb >= 1 && nb <= 3) S.nBay = nb;
+  if(nl >= 1 && nl <= 3) S.nLev = nl;
+  if(typeof obj.hasCant === 'boolean') S.hasCant = obj.hasCant;
+
+  for(const k of SHARE_KEYS){
+    if(k === 'nBay' || k === 'nLev' || k === 'hasCant') continue;
+    if(!(k in obj)) continue;
+    const v = obj[k];
+    if(k === 'Hmode'){
+      if(v === 'left' || v === 'dstiff') S[k] = v;
+    } else if(k === 'forceType'){
+      if(v === 'M' || v === 'N' || v === 'V') S[k] = v;
+    } else if(k === 'elFilter'){
+      if(v === 'all' || v === 'col' || v === 'beam') S[k] = v;
+    } else if(k === 'displayMode'){
+      if(v === 'all' || v === 'force' || v === 'deform') S[k] = v;
+    } else if(k === 'showVals' || k === 'showIds' || k === 'showPDelta'){
+      if(typeof v === 'boolean') S[k] = v;
+    } else {
+      const n = parseFloat(v);
+      if(!isFinite(n)) continue;
+      const el = document.getElementById(k);
+      if(el && el.type === 'range'){
+        const lo = parseFloat(el.min), hi = parseFloat(el.max);
+        S[k] = Math.max(lo, Math.min(hi, n));
+      } else {
+        S[k] = n;
+      }
+    }
+  }
+
+  document.querySelectorAll('#segBay button').forEach(b =>
+    b.classList.toggle('on', parseInt(b.dataset.bay) === S.nBay));
+  document.querySelectorAll('#segLev button').forEach(b =>
+    b.classList.toggle('on', parseInt(b.dataset.lev) === S.nLev));
+  document.querySelectorAll('#segCant button').forEach(b =>
+    b.classList.toggle('on', (b.dataset.cant === '1') === S.hasCant));
+
+  for(const k of SHARE_KEYS){
+    const el = document.getElementById(k);
+    if(el && el.type === 'range'){
+      el.value = S[k];
+      const out = document.getElementById('v-'+k);
+      if(out && fmtMap[k]) out.textContent = fmtMap[k](parseFloat(S[k]));
+      updateRangeProgress(el);
+    }
+    // 同步变形图的镜像滑块
+    if (k === 'betaF' || k === 'betaJ') {
+      const elD = document.getElementById(k + '_d');
+      if (elD) {
+        elD.value = S[k];
+        const outD = document.getElementById('v-' + k + '_d');
+        if (outD) outD.textContent = parseFloat(S[k]).toFixed(2);
+        updateRangeProgress(elD);
+      }
+    }
+  }
+
+  document.querySelectorAll('#segHmode button').forEach(b =>
+    b.classList.toggle('on', b.dataset.mode === S.Hmode));
+  document.querySelectorAll('#segForce button').forEach(b =>
+    b.classList.toggle('on', b.dataset.force === S.forceType));
+  document.querySelectorAll('#segElem button').forEach(b =>
+    b.classList.toggle('on', b.dataset.filter === S.elFilter));
+  document.querySelectorAll('#segDisp button').forEach(b =>
+    b.classList.toggle('on', b.dataset.disp === S.displayMode));
+
+  {
+    const btnV = document.getElementById('btnVals');
+    if(btnV) btnV.classList.toggle('on', S.showVals);
+    const btnIds = document.getElementById('btnIds');
+    if(btnIds) btnIds.classList.toggle('on', S.showIds);
+    const btnPD = document.getElementById('btnPDelta');
+    if(btnPD) btnPD.classList.toggle('on', S.showPDelta);
+  }
+
+  {
+    const stageEl = document.getElementById('stage');
+    if(stageEl){
+      stageEl.classList.remove('mode-all','mode-force','mode-deform');
+      stageEl.classList.add('mode-' + S.displayMode);
+    }
+  }
+
+  applyTopoState();
+  run();
+  return true;
+}
+
+const PROD_URL = 'https://z1118pm-blip.github.io/structural-tool/';
+
+function isLocalHost(){
+  const host = location.hostname;
+  return location.protocol === 'file:' ||
+         host === 'localhost' ||
+         host === '127.0.0.1' ||
+         host === '';
+}
+
+function buildShareURL(){
+  const hash = '#st=' + encodeState();
+  const base = isLocalHost() ? PROD_URL : location.href.split('#')[0];
+  return base + hash;
+}
+
+let currentShareURL = '';
+
+function renderQRCode(container, url){
+  if(!container) return;
+
+  container.querySelectorAll('canvas, .shareQRLoading').forEach(el => el.remove());
+
+  if(typeof qrcode !== 'function'){
+    const tip = document.createElement('div');
+    tip.className = 'shareQRLoading';
+    tip.textContent = '二维码库未加载，请复制下方链接';
+    container.appendChild(tip);
+    return;
+  }
+
+  try{
+    const qr = qrcode(0, 'M');
+    qr.addData(url);
+    qr.make();
+
+    const n   = qr.getModuleCount();
+    const box = 236 - 28;
+    const cell = Math.max(2, Math.floor(box / n));
+    const side = cell * n;
+
+    const canvas = document.createElement('canvas');
+    canvas.width  = side;
+    canvas.height = side;
+    canvas.style.width  = side + 'px';
+    canvas.style.height = side + 'px';
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, side, side);
+    ctx.fillStyle = '#0f172a';
+    for(let r = 0; r < n; r++){
+      for(let c = 0; c < n; c++){
+        if(qr.isDark(r, c)){
+          ctx.fillRect(c * cell, r * cell, cell, cell);
+        }
+      }
+    }
+    container.appendChild(canvas);
+  }catch(e){
+    console.error('[share] 二维码生成失败：', e);
+    const tip = document.createElement('div');
+    tip.className = 'shareQRLoading';
+    tip.textContent = '生成二维码失败，请复制下方链接';
+    container.appendChild(tip);
+  }
+}
+
+function downloadQRCode(){
+  if(!currentShareURL) return;
+  if(typeof qrcode !== 'function'){
+    alert('二维码库未加载，无法下载。请检查网络，或直接复制下方的分享链接。');
+    return;
+  }
+  try{
+    const qr = qrcode(0, 'M');
+    qr.addData(currentShareURL);
+    qr.make();
+    const n      = qr.getModuleCount();
+    const cell   = 8;
+    const margin = 4 * cell;
+    const side   = cell * n + margin * 2;
+
+    const canvas = document.createElement('canvas');
+    canvas.width  = side;
+    canvas.height = side;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, side, side);
+    ctx.fillStyle = '#0f172a';
+    for(let r = 0; r < n; r++){
+      for(let c = 0; c < n; c++){
+        if(qr.isDark(r, c)){
+          ctx.fillRect(margin + c * cell, margin + r * cell, cell, cell);
+        }
+      }
+    }
+    canvas.toBlob(blob => {
+      if(!blob) return;
+      const u = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const ts = new Date().toISOString()
+                   .replace(/[:T]/g,'-').replace(/\..+$/,'');
+      a.href = u;
+      a.download = `structura_qr_${ts}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(()=>URL.revokeObjectURL(u), 2000);
+    }, 'image/png');
+  }catch(e){
+    console.error('[share] 二维码下载失败：', e);
+  }
+}
+
+function shareURL(){
+  const url = buildShareURL();
+  currentShareURL = url;
+
+  const isLocal = isLocalHost();
+
+  const modal     = document.getElementById('modalShare');
+  const qrBox     = document.getElementById('shareQRBox');
+  const urlField  = document.getElementById('shareURLField');
+  const warnEl    = document.getElementById('shareLocalWarn');
+
+  if(modal){
+    renderQRCode(qrBox, url);
+    if(urlField){
+      urlField.value = url;
+      requestAnimationFrame(()=>{
+        try{ urlField.select(); }catch(e){}
+      });
+    }
+    if(warnEl){
+      if(isLocal) warnEl.removeAttribute('hidden');
+      else        warnEl.setAttribute('hidden', '');
+    }
+    modal.classList.add('open');
+  }
+
+  const btn = document.getElementById('btn-share');
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(url).then(()=>{
+      if(!btn) return;
+      btn.classList.add('copied');
+      const orig = btn.textContent;
+      btn.textContent = '✓';
+      setTimeout(()=>{
+        btn.classList.remove('copied');
+        btn.textContent = orig;
+      }, 1200);
+    }).catch(()=>{ /* 静默失败：模态框里有 URL 字段 */ });
+  }
+}
+
+(function bindShare(){
+  const btn      = document.getElementById('btn-share');
+  const modal    = document.getElementById('modalShare');
+  const btnClose = document.getElementById('btnShareClose');
+  const btnCopy  = document.getElementById('btnShareCopy');
+  const btnDl    = document.getElementById('btnShareDownload');
+  const urlField = document.getElementById('shareURLField');
+
+  if(btn) btn.addEventListener('click', shareURL);
+  if(btnDl) btnDl.addEventListener('click', downloadQRCode);
+
+  const close = ()=> modal && modal.classList.remove('open');
+  if(btnClose) btnClose.addEventListener('click', close);
+  if(modal){
+    modal.addEventListener('click', e=>{
+      if(e.target === modal) close();
+    });
+  }
+  document.addEventListener('keydown', e=>{
+    if(e.key === 'Escape' && modal && modal.classList.contains('open')) close();
+  });
+
+  if(btnCopy){
+    btnCopy.addEventListener('click', ()=>{
+      const url = urlField && urlField.value ? urlField.value : buildShareURL();
+      const iconEl = btnCopy.querySelector('.btnShareCopyIcon');
+      const txtEl  = btnCopy.querySelector('.btnShareCopyTxt');
+      const done = ()=>{
+        btnCopy.classList.add('copied');
+        if(iconEl) iconEl.textContent = '✓';
+        if(txtEl)  txtEl.textContent  = '';
+        setTimeout(()=>{
+          btnCopy.classList.remove('copied');
+          if(iconEl) iconEl.textContent = '📋';
+          if(txtEl)  txtEl.textContent  = '复制';
+        }, 1200);
+      };
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(url).then(done).catch(()=>{
+          if(urlField){
+            try{ urlField.select(); }catch(e){}
+          }
+        });
+      } else if(urlField){
+        try{ urlField.select(); }catch(e){}
+      }
+    });
+  }
+})();
+
+document.getElementById('btn-reset').addEventListener('click', ()=>{
+  if(S.sweep.playing) sweepStop();
+  document.querySelectorAll('input[type=range]').forEach(el=>{
+    el.value = el.defaultValue;
+    const v = parseFloat(el.value);
+    // 过滤掉 _d 后缀的镜像滑块，防止污染 S 状态对象
+    if(!el.id.endsWith('_d')) S[el.id] = v;
+    const out = document.getElementById('v-'+el.id);
+    if(out && fmtMap[el.id]) out.textContent = fmtMap[el.id](v);
+    updateRangeProgress(el);
+  });
+  S.nBay = 2;
+  S.nLev = 2;
+  S.hasCant = true;
+  S.Hmode = 'left';
+  S.forceType = 'M';
+  S.elFilter = 'all';
+  S.showVals = false;
+  S.showIds = false;
+  S.showPDelta = false;
+  S.displayMode = 'all';
+  BASE = null;
+  const segBayR = document.getElementById('segBay');
+  if(segBayR) segBayR.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.bay === '2'));
+  const segLevR = document.getElementById('segLev');
+  if(segLevR) segLevR.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.lev === '2'));
+  const segCantR = document.getElementById('segCant');
+  if(segCantR) segCantR.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.cant === '1'));
+  const btnV = document.getElementById('btnVals');
+  if(btnV) btnV.classList.remove('on');
+  const btnIds = document.getElementById('btnIds');
+  if(btnIds) btnIds.classList.remove('on');
+  const btnFz = document.getElementById('btnFreeze');
+  if(btnFz) btnFz.classList.remove('on');
+  const btnFzD = document.getElementById('btnFreezeDeform');
+  if(btnFzD) btnFzD.classList.remove('on');
+  const btnPD = document.getElementById('btnPDelta');
+  if(btnPD) btnPD.classList.remove('on');
+  const stageEl = document.getElementById('stage');
+  if(stageEl) stageEl.classList.remove('mode-force','mode-deform');
+  const segD = document.getElementById('segDisp');
+  if(segD) segD.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.disp === 'all'));
+  const segH = document.getElementById('segHmode');
+  if(segH) segH.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.mode === 'left'));
+  const segF = document.getElementById('segForce');
+  if(segF) segF.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.force === 'M'));
+  const segE = document.getElementById('segElem');
+  if(segE) segE.querySelectorAll('button[data-filter]').forEach(b=>b.classList.toggle('on', b.dataset.filter === 'all'));
+  applyTopoState();
+  if(location.hash){
+    history.replaceState(null, '', location.pathname + location.search);
+  }
+  run();
+});
