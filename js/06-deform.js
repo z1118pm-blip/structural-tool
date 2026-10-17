@@ -7,13 +7,13 @@ function drawDeform(canvas, model, dprOverride){
   const T = theme();
   const {ctx,W,H} = setupCanvas(canvas, dprOverride);
   const pad = (model.p.displayMode === 'deform')
-    ? {padL: 56, padT: 100, padR: 80, padB: 42}
-    : {padL: 170, padT: 100, padR: 60, padB: 36};
+    ? {padL: 60, padT: 150, padR: 80, padB: 42}
+    : {padL: 170, padT: 150, padR: 60, padB: 36}; // 进一步将 padT 提升至 150，彻底避开 HUD
   const {toS} = makeTransform(model, W, H, pad);
 
   ctx.fillStyle=T.bg; ctx.fillRect(0,0,W,H);
   drawGrid(ctx, W, H);
-  drawHUD(ctx, W, H, 'DEFORMED SHAPE');
+  drawHUD(ctx, W, H, 'DEFORMED SHAPE', false);
 
   const NP = 26;
   const curves = [];

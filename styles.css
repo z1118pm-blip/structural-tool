@@ -13,54 +13,6 @@
     overflow:hidden;
   }
 
-  /* 模型摘要卡 */
-  .modelSummary{
-    flex:0 0 auto;
-    padding:10px 16px 12px;
-    border-bottom:1px solid #eef1f6;
-    background:linear-gradient(180deg, rgba(56,189,248,0.03), transparent);
-  }
-  .modelSummary .msTop{
-    font-size:13px;font-weight:600;color:#0f172a;
-    letter-spacing:.2px;line-height:1.3;
-  }
-  .modelSummary .msTop .msTag{
-    display:inline-block;
-    font-size:10.5px;font-weight:600;
-    padding:1px 7px;border-radius:5px;
-    background:rgba(56,189,248,0.12);
-    color:#0284c7;margin-left:6px;
-    vertical-align:1px;letter-spacing:.2px;
-  }
-  .modelSummary .msLine{
-    font-size:11px;color:#64748b;line-height:1.6;
-    font-variant-numeric:tabular-nums;
-    font-family:'JetBrains Mono',ui-monospace,monospace;
-    letter-spacing:.1px;
-  }
-  /* 摘要卡左侧 / 右侧两栏 */
-  .modelSummary{display:flex;justify-content:space-between;align-items:stretch;gap:12px}
-  .msLeft{flex:1 1 auto;min-width:0}
-  .msRight{
-    flex:0 0 auto;
-    display:flex;flex-direction:column;
-    justify-content:space-around;align-items:flex-end;
-    gap:4px;text-align:right;
-  }
-  .msMetric{
-    display:flex;align-items:baseline;gap:4px;justify-content:flex-end;
-    font-size:11px;line-height:1.35;
-    font-variant-numeric:tabular-nums;
-    font-family:'JetBrains Mono',ui-monospace,monospace;
-  }
-  .msMetric span{
-    color:#94a3b8;font-size:9.5px;letter-spacing:.4px;
-    min-width:22px;text-align:right;
-  }
-  .msMetric b{font-weight:600;color:#0f172a;font-size:12px}
-  .msMetric i{font-style:normal;color:#94a3b8;font-size:9.5px}
-
-
   /* Tab 栏 */
   .tabBar{
     flex:0 0 auto;display:flex;position:relative;
@@ -323,26 +275,31 @@
   /* 变形图左上角叠加读数 */
   .deformOverlay{
     position:absolute;top:12px;left:12px;
-    background:rgba(255,255,255,0.72);
-    border:1px solid rgba(226,232,240,0.6);
+    background:rgba(255,255,255,0.96);
+    border:1px solid rgba(226,232,240,0.9);
     border-radius:8px;
-    padding:9px 12px 8px;
-    font-size:11px;color:#64748b;line-height:1.6;
+    padding:8px 12px;
+    font-size:11px;color:#64748b;
     font-variant-numeric:tabular-nums;
-    min-width:150px;
+    min-width:180px; /* 降低最小宽度 */
     pointer-events:none;z-index:3;
+    box-shadow:0 4px 16px rgba(15,23,42,0.06);
   }
   .deformOverlay .dTitle{
     font-size:10.5px;font-weight:700;color:#94a3b8;
-    letter-spacing:.8px;margin-bottom:5px;
+    letter-spacing:.8px;margin-bottom:4px;
     padding-bottom:4px;border-bottom:1px solid #f1f5f9;
   }
   .deformOverlay .dRow{
-    display:flex;flex-direction:column;
-    padding:3px 0;
+    display:flex;
+    flex-direction:row;
+    justify-content:space-between;
+    align-items:baseline;
+    padding:2px 0;
+    gap:12px;
   }
   .deformOverlay .dRow span{color:#94a3b8;white-space:nowrap;font-size:10.5px}
-  .deformOverlay .dRow b{color:#0f172a;font-weight:600;font-size:12px;padding-left:2px}
+  .deformOverlay .dRow b{color:#0f172a;font-weight:600;font-size:12px;white-space:nowrap;}
 
   /* ---------- 使用说明模态框 ---------- */
   .modal{
@@ -403,6 +360,38 @@
     vertical-align:top;
   }
   .modalBody th{background:#f8fafc;font-weight:600;color:#0f172a}
+
+  /* ---------- 力学自检（左栏 Tab） ---------- */
+  .selfTestHint{
+    font-size:10.5px;
+    color:var(--tx3);
+    line-height:1.6;
+    margin:-2px 0 10px;
+    padding:8px 10px;
+    background:rgba(56,189,248,.05);
+    border-left:2px solid rgba(56,189,248,.45);
+    border-radius:0 6px 6px 0;
+  }
+  .selfTestList{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .selfTestCategory{
+    font-size:11px;
+    font-weight:700;
+    color:#7dd3fc;
+    margin:14px 0 8px;
+    padding-left:6px;
+    border-left:2px solid #38bdf8;
+    letter-spacing:.5px;
+  }
+  .selfTestCategory:first-of-type{
+    margin-top:4px;
+  }
+  .selfTestCard{
+    margin-bottom:8px;
+  }
 
   /* ---------- 窄屏 ---------- */
   @media(max-width:1020px){
@@ -483,20 +472,6 @@
   .devWarnIcon{color:#f87171;margin-right:4px}
 
   .gtitle{color:#7dd3fc;border-left-color:var(--accent)}
-
-  .modelSummary{
-    border-bottom-color:var(--line);
-    background:linear-gradient(180deg, rgba(56,189,248,0.05), transparent);
-  }
-  .modelSummary .msTop{color:#f1f5f9}
-  .modelSummary .msTop .msTag{
-    background:rgba(56,189,248,0.15);color:#7dd3fc;
-  }
-  .modelSummary .msLine{color:var(--tx3)}
-  .msMetric span{color:var(--tx3)}
-  .msMetric b{color:#f1f5f9}
-  .msMetric i{color:var(--tx3)}
-
 
   .tabBar{border-bottom-color:var(--line)}
   .tabBar button{color:var(--tx3)}
@@ -781,11 +756,11 @@
 
   /* 变形图左上角叠加层 */
   .deformOverlay{
-    background:rgba(15,23,42,.78);
-    border:1px solid rgba(56,189,248,.22);
-    box-shadow:0 4px 20px rgba(0,0,0,.45);
+    background:rgba(15,23,42,.96);
+    border:1px solid rgba(56,189,248,.30);
+    box-shadow:0 4px 20px rgba(0,0,0,.55);
   }
-  .deformOverlay .dTitle{color:var(--tx3);border-bottom-color:var(--line)}
+  .deformOverlay .dTitle{color:var(--tx3);border-bottom-color:var(--line);margin-bottom:4px;padding-bottom:4px}
   .deformOverlay .dRow span{color:var(--tx3)}
   .deformOverlay .dRow b{color:#7dd3fc}
 
@@ -804,6 +779,55 @@
   .modalBody th, .modalBody td{border-color:var(--line)}
   .modalBody th{background:#0b1220;color:#f1f5f9}
 
+  /* 力学自检卡片（左栏 Tab 内，深色） */
+  .selfTestCard{
+    display:flex;
+    flex-direction:column;
+    gap:5px;
+    padding:11px 12px;
+    background:rgba(56,189,248,.04);
+    border:1px solid var(--line);
+    border-radius:9px;
+    cursor:pointer;
+    transition:border-color .15s, background .15s, transform .1s, box-shadow .15s;
+    user-select:none;
+  }
+  .selfTestCard:hover{
+    background:rgba(56,189,248,.09);
+    border-color:rgba(56,189,248,.55);
+    box-shadow:0 4px 14px rgba(56,189,248,.10);
+  }
+  .selfTestCard:active{transform:scale(.99)}
+  .selfTestCard .stcTitle{
+    font-size:12px;
+    font-weight:700;
+    color:#7dd3fc;
+    letter-spacing:.2px;
+  }
+  .selfTestCard .stcDesc{
+    font-size:10.5px;
+    color:var(--tx2);
+    line-height:1.55;
+  }
+  .selfTestCard .stcAction{
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    align-self:flex-start;
+    margin-top:3px;
+    padding:2px 9px;
+    font-size:10px;
+    font-weight:600;
+    color:#7dd3fc;
+    background:rgba(56,189,248,.10);
+    border:1px solid rgba(56,189,248,.35);
+    border-radius:5px;
+    pointer-events:none;
+    white-space:nowrap;
+  }
+
+  /* 已删除：.btnSelfTestJump（自检跳转按钮已废弃） */
+
   /* ============ 显示模式：仅受力 / 仅变形 ============ */
   /* 力/变形图跨右侧两行占满全高；荷载图保持左下格 —— 位置大小与「全部」完全一致 */
   #stage.mode-force #chartDeform{display:none}
@@ -813,26 +837,31 @@
     #stage.mode-deform #chartDeform{grid-row:1 / 3}
   }
 
-  /* 仅变形图：叠加层横排通栏，高度大幅压缩，腾出纵向空间给图形 */
+  /* 仅变形图：叠加层改为 2排2列 的自适应网格，确保文字绝不溢出 */
   #stage.mode-deform .deformOverlay{
-    right:12px;
+    right:auto; /* 解除绝对居右，从左上角自然排布 */
     min-width:0;
-    display:flex;align-items:center;gap:22px;
+    width: max-content; /* 强制框的宽度自动包裹住所有文字内容 */
+    display:grid;
+    grid-template-columns: auto auto;
+    gap: 8px 40px; /* 加大列间距，视觉更舒展 */
+    align-items: baseline;
+    padding: 10px 16px; /* 略微增加内边距 */
   }
   #stage.mode-deform .deformOverlay .dTitle{
-    margin-bottom:0;padding-bottom:0;border-bottom:none;white-space:nowrap;
-  }
-  #stage.mode-deform .deformOverlay .dRow{
-    flex-direction:row;align-items:baseline;gap:8px;padding:0;
+    grid-column: 1 / -1; /* 标题独占第一行 */
+    margin-bottom: 2px;
+    padding-bottom: 0;
+    border-bottom: none;
     white-space:nowrap;
   }
-  /* 宽屏：叠加层限制最大宽度，避开右上角模式按钮；超宽自动换行 */
-  @media(min-width:1021px){
-    #stage.mode-deform .deformOverlay{
-      right: 12px;
-      max-width: calc(100% - 300px);
-      flex-wrap: wrap;
-    }
+  #stage.mode-deform .deformOverlay .dRow{
+    flex-direction:row;
+    justify-content:flex-start;
+    align-items:baseline;
+    gap:8px;
+    padding:0;
+    white-space:nowrap;
   }
 
   /* 滚动条深色化 */
@@ -1353,7 +1382,7 @@
   /* ============ 求解徽章 ============ */
   #solveBadge{
     position:absolute;
-    right:20px; top:60px;
+    right:20px; bottom:36px;
     padding:4px 12px;
     font-family:'JetBrains Mono', ui-monospace, monospace;
     font-size:10px;letter-spacing:1.6px;

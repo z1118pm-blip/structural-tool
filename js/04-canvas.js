@@ -222,18 +222,24 @@ function drawLoadDiagram(canvas, model, dprOverride){
     const t   = 1 - model.p.betaJ;
     const R   = 3 + t*1.5;
     const lw  = 1.0 + t*0.8;
-    const seen = new Set();
     for(const el of model.els){
       if(el.kind !== 'beam' || el.isCant) continue;
-      for(const nidx of [el.i, el.j]){
-        if(seen.has(nidx)) continue;
-        seen.add(nidx);
-        const node = model.nodes[nidx];
-        const [hx, hy] = toS(node.x, node.y);
-        ctx.beginPath(); ctx.arc(hx, hy, R, 0, Math.PI*2);
-        ctx.fillStyle   = T.bg; ctx.fill();
-        ctx.strokeStyle = T.hArrow; ctx.lineWidth = lw; ctx.stroke();
-      }
+      const a = model.nodes[el.i], b = model.nodes[el.j];
+      const [ax, ay] = toS(a.x, a.y);
+      const [bx, by] = toS(b.x, b.y);
+      const len = Math.hypot(bx - ax, by - ay) || 1;
+      const nx = (bx - ax) / len, ny = (by - ay) / len;
+      const off = R + 3; // 缩短偏移距离，让铰符号更贴近节点
+
+      // 左端铰
+      ctx.beginPath(); ctx.arc(ax + nx*off, ay + ny*off, R, 0, Math.PI*2);
+      ctx.fillStyle   = T.bg; ctx.fill();
+      ctx.strokeStyle = T.hArrow; ctx.lineWidth = lw; ctx.stroke();
+
+      // 右端铰
+      ctx.beginPath(); ctx.arc(bx - nx*off, by - ny*off, R, 0, Math.PI*2);
+      ctx.fillStyle   = T.bg; ctx.fill();
+      ctx.strokeStyle = T.hArrow; ctx.lineWidth = lw; ctx.stroke();
     }
   }
   const p = model.p;
@@ -265,7 +271,9 @@ function drawLoadDiagram(canvas, model, dprOverride){
     for(let c=0;c<nCol;c++){
       const Hc = H * w[c] / sum;
       if(Hc <= 0) continue;
-      const lbl = (c === 0) ? (p.Hmode === 'left' ? H.toFixed(1) : Hc.toFixed(1)) : '';
+      const lbl = (p.Hmode === 'left')
+        ? (c === 0 ? H.toFixed(1) : '')
+        : Hc.toFixed(1);
       drawHF(ctx, toS, model.nodes[nid(c, level)], Hc, lbl);
     }
   }
@@ -338,8 +346,8 @@ function drawSectionInfo(ctx, model, W, T){
   ctx.font = '11px ui-sans-serif,system-ui,sans-serif';
   ctx.textAlign = 'right'; ctx.textBaseline = 'top';
   ctx.fillStyle = T.frameThin;
-  ctx.fillText(`柱 ${p.bc}×${p.hc}`, W - 14, 14);
-  ctx.fillText(`梁 ${p.bb}×${p.hb}`, W - 14, 30);
+  ctx.fillText(`柱 ${Math.round(p.bc)}×${Math.round(p.hc)}`, W - 14, 14);
+  ctx.fillText(`梁 ${Math.round(p.bb)}×${Math.round(p.hb)}`, W - 14, 30);
   ctx.restore();
 }
 

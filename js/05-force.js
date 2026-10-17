@@ -30,7 +30,10 @@ const FORCE_STYLE = {
        beam: { color:'#fbcfe8', fill:'rgba(251,207,232,0.28)' } },
   V: { ref: 200, unit: 'kN', tag: '剪力图 V', lbl: '|V|max',
        col:  { color:'#22d3ee', fill:'rgba(34,211,238,0.28)' },
-       beam: { color:'#4ade80', fill:'rgba(74,222,128,0.28)' } }
+       beam: { color:'#4ade80', fill:'rgba(74,222,128,0.28)' } },
+  R: { ref: 200, unit: 'kN', tag: '支座反力图 R', lbl: '|R|max',
+       col:  { color:'#10b981', fill:'rgba(16,185,129,0.32)' },
+       beam: { color:'#10b981', fill:'rgba(16,185,129,0.30)' } }
 };
 const FORCE_STYLE_LIGHT = {
   M: { ref: 200, unit: 'kN·m', tag: '弯矩图 M', lbl: '|M|max',
@@ -41,7 +44,10 @@ const FORCE_STYLE_LIGHT = {
        beam: { color:'#be185d', fill:'rgba(190,24,93,0.22)' } },
   V: { ref: 200, unit: 'kN', tag: '剪力图 V', lbl: '|V|max',
        col:  { color:'#0891b2', fill:'rgba(8,145,178,0.24)' },
-       beam: { color:'#15803d', fill:'rgba(21,128,61,0.24)' } }
+       beam: { color:'#15803d', fill:'rgba(21,128,61,0.24)' } },
+  R: { ref: 200, unit: 'kN', tag: '支座反力图 R', lbl: '|R|max',
+       col:  { color:'#059669', fill:'rgba(5,150,105,0.26)' },
+       beam: { color:'#059669', fill:'rgba(5,150,105,0.24)' } }
 };
 function forceStyleOf(type, kind){
   const s = S.lightBg ? FORCE_STYLE_LIGHT[type] : FORCE_STYLE[type];
@@ -54,7 +60,8 @@ function drawInternal(canvas, model, dprOverride){
   const T = theme();
   const filter = model.p.elFilter;
   const {ctx,W,H} = setupCanvas(canvas, dprOverride);
-  const {toS} = makeTransform(model, W, H, { padL: 120, padT: 100, padR: 60, padB: 36 });
+  const padB = type === 'R' ? 80 : 36; // R 图底部留出更大空间画弯矩
+  const {toS} = makeTransform(model, W, H, { padL: 120, padT: 100, padR: 60, padB });
 
   ctx.fillStyle=T.bg; ctx.fillRect(0,0,W,H);
   drawGrid(ctx, W, H);
@@ -62,6 +69,122 @@ function drawInternal(canvas, model, dprOverride){
 
   const NP = 61;
   const targetPx = Math.min(W,H)*0.055;
+
+  /* ======== 反力图专属渲染 ======== */
+  if(type === 'R'){
+    ctx.font = 'bold 11px ui-sans-serif,system-ui,sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    
+    let maxRx = 0, maxRy = 0;
+    for(let c=0; c<model.nCol; c++){
+      const nd = model.nid(c, 0);
+      maxRx = Math.max(maxRx, Math.abs(model.R[nd*3]));
+      maxRy = Math.max(maxRy, Math.abs(model.R[nd*3+1]));
+    }
+    const maxVal = Math.max(maxRx, maxRy, 1e-6); 
+    const Lbase = Math.min(W,H) * 0.12;
+
+    for(let c=0; c<model.nCol; c++){
+      const nd = model.nid(c, 0);
+      const node = model.nodes[nd];
+      const [sx, sy] = toS(node.x, node.y);
+      const rx = model.R[nd*3], ry = model.R[nd*3+1], m = model.R[nd*3+2];
+
+      // 画轴力/剪力反力箭头
+      const drawArrow = (val, isX) => {
+        if (Math.abs(val) < 0.05) return;
+        const len = Math.max(4, (Math.abs(val)/maxVal)*Lbase);
+        const dir = Math.sign(val);
+        ctx.beginPath();
+        if (isX) {
+          ctx.moveTo(sx, sy); ctx.lineTo(sx + dir*len, sy);
+          ctx.lineTo(sx + dir*(len-8), sy - 4); ctx.moveTo(sx + dir*len, sy); ctx.lineTo(sx + dir*(len-8), sy + 4);
+        } else {
+          ctx.moveTo(sx, sy); ctx.lineTo(sx, sy - dir*len);
+          ctx.lineTo(sx - 4, sy - dir*(len-8)); ctx.moveTo(sx, sy - dir*len); ctx.lineTo(sx + 4, sy - dir*(len-8));
+        }
+        ctx.strokeStyle = '#10b981'; ctx.lineWidth = 2; ctx.stroke();
+        
+        // 标签
+        const txt = val.toFixed(1);
+        const tw = ctx.measureText(txt).width;
+        const tx = isX ? sx + dir*(len+14) : sx + 18;
+        const ty = isX ? sy - 14 : sy - dir*(len+14);
+        ctx.fillStyle = T.bg; ctx.fillRect(tx - tw/2 - 3, ty - 7, tw + 6, 14);
+        ctx.fillStyle = '#10b981'; ctx.fillText(txt, tx, ty);
+      };
+      drawArrow(rx, true);
+      drawArrow(ry, false);
+
+      // 画弯矩反力（支座下方的 270° 大圆弧箭头）
+      if (Math.abs(m) > 1e-4) {
+        const r = 13;
+        const cx = sx, cy = sy + 22; // 圆心下移
+        
+        const startA = -Math.PI/2; // 12点钟起点
+        const anticlockwise = (m > 0); // 正值逆时针，负值顺时针
+        const endA = anticlockwise ? (startA - Math.PI * 1.5) : (startA + Math.PI * 1.5);
+        
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, startA, endA, anticlockwise);
+        ctx.strokeStyle = '#10b981'; ctx.lineWidth = 2; ctx.stroke();
+        
+        // 画箭头
+        const tipX = cx + r * Math.cos(endA);
+        const tipY = cy + r * Math.sin(endA);
+        const angle = anticlockwise ? (endA - Math.PI/2) : (endA + Math.PI/2);
+        
+        ctx.beginPath();
+        ctx.moveTo(tipX, tipY);
+        ctx.lineTo(tipX - 7 * Math.cos(angle - 0.5), tipY - 7 * Math.sin(angle - 0.5));
+        ctx.lineTo(tipX - 7 * Math.cos(angle + 0.5), tipY - 7 * Math.sin(angle + 0.5));
+        ctx.fillStyle = '#10b981'; ctx.fill();
+        
+        // 弯矩数值放到圆弧正下方
+        const txt = m.toFixed(1);
+        const tw = ctx.measureText(txt).width;
+        ctx.fillStyle = T.bg; ctx.fillRect(cx - tw/2 - 3, cy + r + 4, tw + 6, 14);
+        ctx.fillStyle = '#10b981'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(txt, cx, cy + r + 11);
+      }
+    }
+
+    // 左上角汇总数据（精准放置在标题正下方，避开重叠）
+    let sumRx = 0, sumRy = 0;
+    for(let c=0; c<model.nCol; c++){
+      const nd = model.nid(c, 0);
+      sumRx += model.R[nd*3]; sumRy += model.R[nd*3+1];
+    }
+    const sumTxt = `ΣRx = ${sumRx.toFixed(1)} kN    ΣRy = ${sumRy.toFixed(1)} kN`;
+    ctx.font = '11px "JetBrains Mono", ui-monospace, monospace';
+    const stw = ctx.measureText(sumTxt).width;
+    
+    // 定位在 x=14, y=76（正好是 DOM 标题下方的留白区）
+    const sumBg  = S.lightBg ? 'rgba(255,255,255,0.92)' : 'rgba(15,23,42,0.85)';
+    const sumBd  = S.lightBg ? 'rgba(5,150,105,0.55)'   : 'rgba(16,185,129,0.4)';
+    const sumTxtColor = S.lightBg ? '#059669'           : '#10b981';
+
+    ctx.fillStyle = sumBg;
+    ctx.fillRect(14, 76, stw + 20, 22);
+    ctx.strokeStyle = sumBd; ctx.lineWidth = 1;
+    ctx.strokeRect(14, 76, stw + 20, 22);
+    
+    ctx.fillStyle = sumTxtColor; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText(sumTxt, 24, 87);
+
+    drawFrameLines(ctx, model, toS, T.frameThin, 1.5, false, false);
+    drawSupports(ctx, model, toS, model.p.betaF);
+    
+    ctx.fillStyle=T.node;
+    for(const n of model.nodes){
+      if(n.y === 0) continue;
+      const [sx,sy]=toS(n.x,n.y);
+      ctx.beginPath(); ctx.arc(sx,sy,2.0,0,Math.PI*2); ctx.fill();
+    }
+    if(model.p.showIds) drawIds(ctx, model, toS);
+    return; 
+  }
+  /* ======== 反力图结束 ======== */
 
   if(BASE){
     ctx.save();
@@ -151,12 +274,12 @@ function drawInternal(canvas, model, dprOverride){
       const ux = dxu/Lu, uy = dyu/Lu;
       if(el.kind === 'col'){
         let side;
-        if(ni.col === 0) side = 1;
-        else if(ni.col === model.nCol - 1) side = -1;
-        else side = (ni.col % 2 === 1) ? 1 : -1;
-        const off = 22;
-        if(Math.abs(v0) > NZ) ctx.fillText(v0.toFixed(1), ix + side*off, iy);
-        if(Math.abs(vL) > NZ) ctx.fillText(vL.toFixed(1), jx + side*off, jy + 8);
+        if(ni.col === 0) side = -1; // 最左柱：文字移到外侧(左)
+        else if(ni.col === model.nCol - 1) side = 1; // 最右柱：文字移到外侧(右)
+        else side = (ni.col % 2 === 1) ? -1 : 1; // 中间柱：交替左右
+        const off = 28; // 加大横向偏移，避开梁端文字
+        if(Math.abs(v0) > NZ) ctx.fillText(v0.toFixed(1), ix + side*off, iy + 12); // 底端向下错
+        if(Math.abs(vL) > NZ) ctx.fillText(vL.toFixed(1), jx + side*off, jy - 12); // 顶端向上错，避开梁
       } else {
         const nx = -el.sn, ny = -el.cs;
         const paintTag = (v, xScreen, yScreen, inwardX) => {
@@ -254,17 +377,24 @@ function drawInternal(canvas, model, dprOverride){
   if(model.p.betaJ < BETA_FIXED){
     const t   = 1 - model.p.betaJ;
     const R   = 3 + t*2, lw  = 1.0 + t*0.8;
-    const seen = new Set();
     for(const el of model.els){
       if(el.kind !== 'beam' || el.isCant) continue;
-      for(const nidx of [el.i, el.j]){
-        if(seen.has(nidx)) continue; seen.add(nidx);
-        const node = model.nodes[nidx];
-        const [hx, hy] = toS(node.x, node.y);
-        ctx.beginPath(); ctx.arc(hx, hy, R, 0, Math.PI*2);
-        ctx.fillStyle   = T.bg; ctx.fill();
-        ctx.strokeStyle = T.hArrow; ctx.lineWidth = lw; ctx.stroke();
-      }
+      const a = model.nodes[el.i], b = model.nodes[el.j];
+      const [ax, ay] = toS(a.x, a.y);
+      const [bx, by] = toS(b.x, b.y);
+      const len = Math.hypot(bx - ax, by - ay) || 1;
+      const nx = (bx - ax) / len, ny = (by - ay) / len;
+      const off = R + 3; // 缩短偏移距离，让铰符号更贴近节点
+
+      // 左端铰
+      ctx.beginPath(); ctx.arc(ax + nx*off, ay + ny*off, R, 0, Math.PI*2);
+      ctx.fillStyle   = T.bg; ctx.fill();
+      ctx.strokeStyle = T.hArrow; ctx.lineWidth = lw; ctx.stroke();
+
+      // 右端铰
+      ctx.beginPath(); ctx.arc(bx - nx*off, by - ny*off, R, 0, Math.PI*2);
+      ctx.fillStyle   = T.bg; ctx.fill();
+      ctx.strokeStyle = T.hArrow; ctx.lineWidth = lw; ctx.stroke();
     }
   }
   if(model.p.showIds) drawIds(ctx, model, toS);

@@ -6,9 +6,10 @@
 const E_CONC = 3.0e7;
 
 // 全局版本号：以后升级版本只需修改这里，全站自动联动
-const APP_VERSION = 'v0.1.2';
+const APP_VERSION = 'v0.1.3';
 
-// 线上部署地址：本地 file:// 打开时，分享二维码指向这里
+// ⚠️ 重要：线上部署地址。本地 file:// 打开时，分享二维码指向这里。
+// 如果你更换了 GitHub 仓库名或部署到自定义域名，请务必同步修改此处的 URL，否则本地生成的分享二维码会失效。
 const PROD_URL = 'https://z1118pm-blip.github.io/structural-tool/';
 
 /* 转动约束的统一判定阈值：
@@ -53,7 +54,8 @@ const S = {
     rafId:null,
     t0:0,
     startVal:0,
-    span:0
+    span:0,
+    durMul:1
   },
   rec:{
     active:false,

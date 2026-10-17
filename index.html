@@ -43,7 +43,7 @@ var _hmt = _hmt || [];
       <div class="brandText">
         <div class="brandRow">
           <span class="brandName">Structura<span class="brandTest">测试版</span></span>
-          <span class="brandVer" id="ui-ver-brand">v0.1.2</span>
+          <span class="brandVer" id="ui-ver-brand">v0.1.3</span>
         </div>
         <div class="brandRule"></div>
         <div class="brandSub">基于矩阵位移法的平面刚架线弹性静力分析</div>
@@ -51,29 +51,17 @@ var _hmt = _hmt || [];
       </div>
     </div>
 
-    <!-- 模型摘要卡 -->
-    <div class="modelSummary" id="modelSummary">
-      <div class="msLeft">
-        <div class="msTop" id="msTop">2 跨 × 2 层<span class="msTag">右悬挑</span></div>
-        <div class="msLine" id="msSpans">6.0 / 6.0 m</div>
-        <div class="msLine" id="msHeights">4.0 / 4.0 m</div>
-      </div>
-      <div class="msRight">
-        <div class="msMetric"><span>H</span><b id="msTotalH">8.0</b><i>m</i></div>
-        <div class="msMetric"><span>B</span><b id="msTotalW">12.0</b><i>m</i></div>
-        <div class="msMetric"><span>H/B</span><b id="msAspect">0.67</b></div>
-      </div>
-    </div>
+    <!-- 模型摘要卡已移至右侧读数面板 -->
 
     <!-- 开发中警示横幅 -->
     <div class="devWarning">
-      <span class="devWarnIcon">⚠</span> <b>持续更新中</b>：本工具仅用于力学概念自检，请勿盲目相信结果，严禁直接用于工程设计或施工图审查。<br>
-      <span style="font-size:10.5px;opacity:0.85;display:inline-block;margin-top:4px;">📬 反馈建议：<a href="mailto:zhao_struct_e@163.com" style="color:inherit;text-decoration:underline;">Zhao_Struct_E@163.com</a></span>
+      ⚠ <b>测试版</b> · 严禁用于工程 · <a href="mailto:zhao_struct_e@163.com" style="color:inherit;text-decoration:underline;">Zhao_Struct_E@163.com</a>
     </div>
 
     <!-- Tab 栏 -->
     <div class="tabBar" id="tabBar">
-      <button type="button" data-tab="model" class="on">模型</button>
+      <button type="button" data-tab="selftest" class="on">自检</button>
+      <button type="button" data-tab="model">模型</button>
       <button type="button" data-tab="load">荷载</button>
       <div class="tabInd" id="tabInd"></div>
     </div>
@@ -81,8 +69,87 @@ var _hmt = _hmt || [];
     <!-- Tab 内容 -->
     <div class="tabContent" id="tabContent">
 
-      <!-- ============ Tab 1: 模型 ============ -->
-      <div class="tabPanel on" data-tab="model">
+      <!-- ============ Tab 1: 自检 ============ -->
+      <div class="tabPanel on" data-tab="selftest">
+        <div class="group">
+          <div class="gtitle">一键力学自检</div>
+          <div class="selfTestHint">
+            点击卡片：自动加载预设工况 → 打开扫掠条 → 慢速循环播放。<br>
+            边播放边观察连续变化，验证力学直觉。
+          </div>
+
+          <div class="selfTestCategory">A. 弯矩与刚度</div>
+          <div class="selfTestCard" data-selftest="moment-redist">
+            <div class="stcTitle">① 梁端弯矩释放</div>
+            <div class="stcDesc">两层两跨 · 满跨均布。扫掠梁端 β_j (0→1)，看梁端弯矩逐渐产生、跨中正弯矩随之减小。</div>
+            <span class="stcAction">▶ 播放</span>
+          </div>
+          <div class="selfTestCard" data-selftest="colbase-hinge">
+            <div class="stcTitle">② 柱脚弯矩释放</div>
+            <div class="stcDesc">两层两跨 · 一层水平力。扫掠柱脚 β_f (0→1)，看柱脚弯矩逐渐产生、底层侧移随之减小。</div>
+            <span class="stcAction">▶ 播放</span>
+          </div>
+          <div class="selfTestCard" data-selftest="strong-beam">
+            <div class="stcTitle">③ 强梁弱柱效应</div>
+            <div class="stcDesc">单层单跨 · 水平力。扫掠梁高 h_b (300→900)，看梁刚度变大如何使柱反弯点下移。</div>
+            <span class="stcAction">▶ 播放</span>
+          </div>
+          <div class="selfTestCard" data-selftest="load-moment">
+            <div class="stcTitle">④ 跨中与支座弯矩</div>
+            <div class="stcDesc">单层单跨 · 满跨均布。扫掠荷载 q_1 (0→100)，观察跨中正弯矩与支座负弯矩线性增长。</div>
+            <span class="stcAction">▶ 播放</span>
+          </div>
+
+          <div class="selfTestCategory">B. 轴力与框架</div>
+          <div class="selfTestCard" data-selftest="frame-action">
+            <div class="stcTitle">⑤ 框架作用传递</div>
+            <div class="stcDesc">两层两跨 · 满跨均布。扫掠梁端 β_j (0→1)，看中柱轴力如何随梁约束的增强而增大。</div>
+            <span class="stcAction">▶ 播放</span>
+          </div>
+          <div class="selfTestCard" data-selftest="cant-tension">
+            <div class="stcTitle">⑥ 悬挑偏心拉力</div>
+            <div class="stcDesc">单层单跨+悬挑 · 无水平力。扫掠悬挑荷载 q_c1 (0→100)，看悬挑倾覆力矩导致的柱拉力。</div>
+            <span class="stcAction">▶ 播放</span>
+          </div>
+
+          <div class="selfTestCategory">C. 变形与侧移</div>
+          <div class="selfTestCard" data-selftest="weak-story">
+            <div class="stcTitle">⑦ 薄弱层转移</div>
+            <div class="stcDesc">两层两跨 · 水平力。扫掠二层层高 h_2 (2.5→7)，看层间位移角如何从一层转移到二层。</div>
+            <span class="stcAction">▶ 播放</span>
+          </div>
+          <div class="selfTestCard" data-selftest="asym-sway">
+            <div class="stcTitle">⑧ 不对称侧移</div>
+            <div class="stcDesc">单层两跨 · 竖向均布。扫掠左跨长 L_1 (3→12)，看单侧竖向荷载偏心引起的框架侧移。</div>
+            <span class="stcAction">▶ 播放</span>
+          </div>
+          <div class="selfTestCard" data-selftest="cant-sway">
+            <div class="stcTitle">⑨ 悬挑重力侧移</div>
+            <div class="stcDesc">两层两跨+悬挑 · 无水平力。扫掠悬挑荷载 q_c1 (0→100)，看纯重力偏心侧移（放大显示）。</div>
+            <span class="stcAction">▶ 播放</span>
+          </div>
+
+          <div class="selfTestCategory">D. 水平力与二阶</div>
+          <div class="selfTestCard" data-selftest="dstiff-alloc">
+            <div class="stcTitle">⑩ D值法内柱分配</div>
+            <div class="stcDesc">两层三跨 · 水平力，D值法。扫掠内柱刚度比 r (0.25→4)，看内柱与边柱分担的剪力与变形的变化。</div>
+            <span class="stcAction">▶ 播放</span>
+          </div>
+          <div class="selfTestCard" data-selftest="dstiff-beam">
+            <div class="stcTitle">⑪ D值法梁约束影响</div>
+            <div class="stcDesc">单层两跨 · 水平力，D值法。扫掠梁端转动 β_j (0→1)，看中柱如何从铰接时的“几乎不分担水平剪力”，逐渐分担更多剪力，以及整体侧移的减小。</div>
+            <span class="stcAction">▶ 播放</span>
+          </div>
+          <div class="selfTestCard" data-selftest="pdelta">
+            <div class="stcTitle">⑫ P-Δ 二阶效应</div>
+            <div class="stcDesc">两层单跨 · 柔性框架（层高6m、梁铰接），开启P-Δ。扫掠均布 q_1 (0→100)，看竖向荷载如何使 B 值急剧放大并逼近失稳。</div>
+            <span class="stcAction">▶ 播放</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ Tab 2: 模型 ============ -->
+      <div class="tabPanel" data-tab="model">
         <div class="group">
           <div class="gtitle">结构拓扑</div>
           <div class="ctrl">
@@ -243,6 +310,15 @@ var _hmt = _hmt || [];
     <div id="sweepBar">
       <div class="sweepRow">
         <select id="sweepParam" class="sweepSel" title="选择要扫掠的参数">
+          <optgroup label="几何">
+            <option value="L1">左跨 L₁</option>
+            <option value="L2">第二跨 L₂</option>
+            <option value="L3">第三跨 L₃</option>
+            <option value="h1">一层层高 h₁</option>
+            <option value="h2">二层层高 h₂</option>
+            <option value="h3">三层层高 h₃</option>
+            <option value="Lc">悬挑长度 Lc</option>
+          </optgroup>
           <optgroup label="截面">
             <option value="bc">边柱宽 bc</option>
             <option value="hc">边柱高 hc</option>
@@ -305,7 +381,7 @@ var _hmt = _hmt || [];
       <span class="ssbItem"><b>RESIDUAL</b><i id="ssbResid">—</i></span>
       <span class="ssbItem"><b>STATUS</b><i id="ssbStatus" class="ok">OK</i></span>
       <span class="ssbSpacer"></span>
-      <span class="ssbMeta" title="工具持续开发中，请勿盲目相信计算结果">⚠ 持续开发中 · 结果仅供概念参考 · ZHAO STRUCTURAL LAB · <span id="ui-ver-status">v0.1.2</span></span>
+      <span class="ssbMeta" title="工具持续开发中，请勿盲目相信计算结果">⚠ 持续开发中 · 结果仅供概念参考 · ZHAO STRUCTURAL LAB · <span id="ui-ver-status">v0.1.3</span></span>
     </div>
 
     <!-- 求解徽章 -->
@@ -346,16 +422,9 @@ var _hmt = _hmt || [];
           <div class="rRow" id="row-alloc3" style="display:none"><span class="lbl">三层</span><span class="val" id="r-alloc3">—</span></div>
         </div>
 
-        <div class="rGroup">
-          <div class="rGroupTitle">支座反力（柱脚）</div>
-          <div class="rRow" id="row-R0"><span class="lbl" id="lbl-R0">柱 1 Rx / Ry / M</span><span class="val" id="r-R0">—</span></div>
-          <div class="rRow" id="row-R1"><span class="lbl" id="lbl-R1">柱 2 Rx / Ry / M</span><span class="val" id="r-R1">—</span></div>
-          <div class="rRow" id="row-R2"><span class="lbl" id="lbl-R2">柱 3 Rx / Ry / M</span><span class="val" id="r-R2">—</span></div>
-          <div class="rRow" id="row-R3" style="display:none"><span class="lbl" id="lbl-R3">柱 4 Rx / Ry / M</span><span class="val" id="r-R3">—</span></div>
-          <div class="rRow"><span class="lbl" style="color:#cbd5e1">kN / kN / kN·m</span><span class="val" style="color:#cbd5e1;font-weight:400">+右 / +上 / 逆时针</span></div>
-        </div>
+        <!-- 支座反力已移至内力图 R 标签，此处留空 -->
 
-        <div class="rFoot" id="r-resid">—</div>
+        <!-- 平衡校验已移至右下角状态栏，此处不再显示 -->
       </aside>
 
       <div class="chart grow" id="chartForce">
@@ -367,6 +436,7 @@ var _hmt = _hmt || [];
               <button type="button" data-force="M" class="on">M</button>
               <button type="button" data-force="N">N</button>
               <button type="button" data-force="V">V</button>
+              <button type="button" data-force="R">R</button>
             </div>
             <div class="segMini" id="segElem">
               <button type="button" data-filter="all" class="on">全部</button>
@@ -428,7 +498,7 @@ var _hmt = _hmt || [];
         <div class="chartBar">
           <div class="cbRow cbRowSplit">
             <span class="barLbl" title="变形图显示缩放倍数（仅影响显示，不影响计算）">缩放</span>
-            <input type="range" id="dScale" min="10" max="100" step="5" value="30" title="变形图显示比例（30 为默认比例，仅影响显示，不改变计算结果）">
+            <input type="range" id="dScale" min="10" max="300" step="5" value="30" title="变形图显示比例（30 为默认比例，仅影响显示，不改变计算结果）">
             <b id="v-dScale" class="barVal">30</b>
             <span class="barLbl" title="柱脚转动约束：1=固接，0=铰接，中间=弹性">柱脚 β<sub>f</sub></span>
             <input type="range" id="betaF_d" min="0" max="1" step="0.01" value="1" title="柱脚转动约束 1=固接，0=铰接">
@@ -542,7 +612,7 @@ var _hmt = _hmt || [];
         <li style="margin-bottom:5px"><strong>β<sub>j</sub> 修正的梁单元</strong>是标准半刚接模型，但对多层多跨刚架，节点处柱的转动约束没有单独建模（即梁端的半刚接在节点处自动与柱刚接），这会影响含半刚接节点刚架的整体刚度。</li>
         <li style="margin-bottom:5px"><strong>D 值法分配</strong>采用<strong>规范 D 值法 α<sub>c</sub> 公式</strong>（见 <code>computeHShare</code>）：
           <ul style="margin-top:3px">
-            <li>底层：柱脚固接时 <code>K = Σi<sub>b</sub>/i<sub>c</sub>，α<sub>c</sub> = (0.5+K)/(2+K)</code>；柱脚铰接时 <code>K = Σi<sub>b</sub>/(2i<sub>c</sub>)，α<sub>c</sub> = 0.5K/(1+2K)</code>；中间按 β<sub>f</sub> 线性插值。</li>
+            <li>底层：柱脚固接时 <code>K = Σi<sub>b</sub>/i<sub>c</sub>，α<sub>c</sub> = (0.5+K)/(2+K)</code>；柱脚铰接时 <code>K = Σi<sub>b</sub>/i<sub>c</sub>，α<sub>c</sub> = 0.5K/(1+2K)</code>（注意：规范中铰接的 K 定义与固接相同，仅公式不同）；中间按 β<sub>f</sub> 线性插值。</li>
             <li>一般层：<code>K = Σi<sub>b</sub>/(2i<sub>c</sub>)，α<sub>c</sub> = K/(2+K)</code>。</li>
             <li>梁端 β<sub>j</sub>：启发式折减 <code>K ← K·β<sub>j</sub></code>，无严格推导，仅保证 β<sub>j</sub>→0 时侧移刚度下降；α<sub>c</sub> 下限 0.05 用于防止除零。</li>
             <li>同层各柱的 K 逐柱计算（边柱与内柱的 Σi<sub>b</sub> 和 i<sub>c</sub> 不同），不再取公共约束。</li>
@@ -553,6 +623,7 @@ var _hmt = _hmt || [];
         <li style="margin-bottom:5px"><strong>多跨对称结构的浮点虚假侧移</strong>：单跨无悬挑纯竖向荷载已在求解前用约束消除奇异；多跨对称结构（等跨、等层高、r=1、荷载对称）理论上水平位移为零，但代码未做此约束，浮点噪声可能产生极小侧移。对侧移刚度大的结构影响可忽略；对全铰接或半刚接的柔性框架，可能出现可见的虚假侧移。</li>
         <li style="margin-bottom:5px"><strong>无节点域</strong>：节点处按纯刚接或纯铰接处理，未考虑节点域剪切变形。</li>
         <li style="margin-bottom:5px"><strong>悬挑梁简化</strong>：悬挑梁按标准刚接单元处理，不参与 β<sub>j</sub> 半刚接修正；悬挑端为自由端，未建模实际边梁的弹性约束。</li>
+        <li style="margin-bottom:5px"><strong>两端完全铰接的梁</strong>：当 β<sub>j</sub> 降至 0 时，梁单元弯曲刚度归零，仅保留轴向刚度（类似链杆）。因此多跨连续梁若中间跨两端完全铰接，无法传递剪力，结构侧向柔度会显著增大。这是标准有限元处理方式，并非程序错误。</li>
         <li style="margin-bottom:5px"><strong>每根杆件一个单元</strong>：对于只有均布荷载的情况已足够精确，但对有多个集中力或复杂荷载的杆件精度有限。</li>
         <li style="margin-bottom:5px"><strong>无剪切变形</strong>：按 Euler-Bernoulli 梁理论，忽略 Timoshenko 梁的剪切效应。</li>
         <li style="margin-bottom:5px"><strong>无材料非线性</strong>：不考虑混凝土开裂、钢筋屈服等实际非线性效应。</li>
@@ -561,22 +632,46 @@ var _hmt = _hmt || [];
       </ol>
 
       <h3>九、力学概念自检建议</h3>
-      <ul>
-        <li><strong>框架作用</strong>：把 β<sub>j</sub> 从 1 拖到 0，观察中柱上下轴力差从不为 0 变为 0，验证"梁对柱的约束如何影响竖向荷载传递"。</li>
-        <li><strong>水平力分配</strong>：切换「仅左柱」与「D 值法」，观察柱脚 Rx 的差别；把 r 调到 2 或 4，对比两种模式下柱脚反力的差异。</li>
-        <li><strong>节点刚度的影响</strong>：把 β<sub>f</sub> 从 1 拖到 0，观察侧移刚度 K 和最大层间位移角如何变化。</li>
-        <li><strong>弯矩重分布</strong>：把 β<sub>j</sub> 从 1 拖到 0，观察梁端弯矩如何消失、跨中弯矩如何增大。</li>
-        <li><strong>支座约束的影响</strong>：把 β<sub>f</sub> 从 1 拖到 0.5 再拖到 0，观察柱脚反力矩从最大值降到 0 的过程。</li>
-        <li><strong>悬挑引起的偏心弯矩</strong>：把 q<sub>c1</sub>、q<sub>c2</sub> 调到 20 kN/m（其他荷载置 0），观察右柱顶出现的不平衡弯矩如何传到柱脚 —— 这是纯竖向荷载（H = 0）下的不对称侧移，与水平力侧移机制完全不同。</li>
-      </ul>
+      <div class="note" style="margin-bottom:12px">
+        左侧栏「自检」Tab 内置了 12 个一键播放的力学场景。点击卡片即可自动加载工况、开启扫掠并慢速播放。以下是这 12 个场景的具体考点：
+      </div>
+      <div style="margin-left:18px; margin-bottom:12px;">
+        <p><strong>A. 弯矩与刚度</strong></p>
+        <ul style="margin-top:2px; margin-bottom:8px;">
+          <li><strong>① 梁端弯矩释放</strong>：扫掠梁端 β<sub>j</sub> (0→1)，看梁端弯矩逐渐产生、跨中正弯矩随之减小。</li>
+          <li><strong>② 柱脚弯矩释放</strong>：扫掠柱脚 β<sub>f</sub> (0→1)，看柱脚弯矩逐渐产生、底层侧移随之减小。</li>
+          <li><strong>③ 强梁弱柱效应</strong>：扫掠梁高 h<sub>b</sub>，看梁刚度变大如何使柱反弯点下移。</li>
+          <li><strong>④ 跨中与支座弯矩</strong>：扫掠均布荷载 q<sub>1</sub> (0→100)，观察跨中正弯矩与支座负弯矩线性增长。</li>
+        </ul>
+        
+        <p><strong>B. 轴力与框架</strong></p>
+        <ul style="margin-top:2px; margin-bottom:8px;">
+          <li><strong>⑤ 框架作用传递</strong>：扫掠梁端 β<sub>j</sub> (0→1)，看中柱轴力如何随梁约束的增强而增大。</li>
+          <li><strong>⑥ 悬挑偏心拉力</strong>：扫掠悬挑荷载 q<sub>c1</sub> (0→100)，看悬挑倾覆力矩导致的柱拉力。</li>
+        </ul>
+
+        <p><strong>C. 变形与侧移</strong></p>
+        <ul style="margin-top:2px; margin-bottom:8px;">
+          <li><strong>⑦ 薄弱层转移</strong>：扫掠二层层高 h<sub>2</sub> (2.5→7)，看层间位移角如何从一层转移到二层。</li>
+          <li><strong>⑧ 不对称侧移</strong>：扫掠左跨长 L<sub>1</sub> (3→12)，看单侧竖向荷载偏心引起的框架侧移。</li>
+          <li><strong>⑨ 悬挑重力侧移</strong>：扫掠悬挑荷载 q<sub>c1</sub>，看纯重力偏心侧移（放大显示）。</li>
+        </ul>
+
+        <p><strong>D. 水平力与二阶</strong></p>
+        <ul style="margin-top:2px; margin-bottom:8px;">
+          <li><strong>⑩ D值法内柱分配</strong>：扫掠内柱刚度比 r (0.25→4)，看内柱与边柱分担的剪力与变形的变化。</li>
+          <li><strong>⑪ D值法梁约束影响</strong>：扫掠梁端转动 β<sub>j</sub> (0→1)，看中柱如何从铰接时的“几乎不分担水平剪力”，逐渐分担更多剪力，以及整体侧移的减小。</li>
+          <li><strong>⑫ P-Δ 二阶效应</strong>：扫掠均布荷载 q<sub>1</sub>，看竖向荷载如何使 B 值急剧放大并逼近失稳。</li>
+        </ul>
+      </div>
 
       <h3>十、界面速览</h3>
       <ul>
         <li><strong>左栏摘要卡</strong>：拓扑（跨 × 层 + 悬挑）、各跨跨度、各层层高、总高 H、总宽 B（柱列间净宽，<strong>不含悬挑</strong>）、高宽比 H/B，均实时更新。</li>
-        <li><strong>左栏 Tab</strong>：「模型」放拓扑 / 几何 / 截面，「荷载」放均布 / 悬挑 / 水平力 / 二阶效应。快捷键 <code>1</code> / <code>2</code> 切换。</li>
+        <li><strong>左栏 Tab</strong>：「自检」内置 12 个预设工况，「模型」放拓扑 / 几何 / 截面，「荷载」放均布 / 悬挑 / 水平力 / 二阶效应。快捷键 <code>1</code> / <code>2</code> / <code>3</code> 切换。</li>
         <li><strong>内力图卡（右上角工具条）</strong>：
           <ul style="margin-top:3px">
-            <li><code>M</code> / <code>N</code> / <code>V</code>：切换内力类型；</li>
+            <li><code>M</code> / <code>N</code> / <code>V</code> / <code>R</code>：切换内力类型或支座反力图；</li>
             <li><code>全部</code> / <code>柱</code> / <code>梁</code>：筛选单元；</li>
             <li><code>数值</code>：标注杆端内力；</li>
             <li><code>冻结</code>：把当前结果存为浅灰虚线基准，后续改动与它对比；</li>
@@ -585,10 +680,10 @@ var _hmt = _hmt || [];
           </ul>
           弯矩图会自动标出<strong>反弯点</strong>（空心圆圈，仅标构件内部 M 严格变号处）。底栏「缩放」滑块只影响显示比例，不改变计算结果。
         </li>
-        <li><strong>荷载简图卡</strong>：均布荷载箭头按屏幕像素自适应，两端封口；标签纯数字（位置已说明含义）；<strong>顶层标签贴箭头下方，中间层标签落在本层梁与上层梁之间的空格</strong>；柱脚符号随 β<sub>f</sub> 切换（固定 / 铰接 / 弹簧）；右上角标注柱梁截面尺寸。</li>
-        <li><strong>变形图卡</strong>：挠度曲线由 <code>EI·v'' = M(x)</code> 双重积分得到（对半刚接与悬挑同样成立）。叠加层显示最大位移、最大层间位移角、侧移刚度 K、P-Δ 放大系数 B。底栏「缩放」滑块控制变形放大倍数（10~100）。</li>
+        <li><strong>荷载简图卡</strong>：均布荷载箭头按屏幕像素自适应，两端封口；标签纯数字（位置已说明含义）；<strong>顶层标签贴箭头上方，中间层标签落在本层梁与上层梁之间的空格</strong>；柱脚符号随 β<sub>f</sub> 切换（固定 / 铰接 / 弹簧）；右上角标注柱梁截面尺寸。</li>
+        <li><strong>变形图卡</strong>：挠度曲线由 <code>EI·v'' = M(x)</code> 双重积分得到（对半刚接与悬挑同样成立）。叠加层显示最大位移、最大层间位移角、侧移刚度 K、P-Δ 放大系数 B。底栏「缩放」滑块控制变形放大倍数（10~300）。</li>
         <li><strong>显示模式</strong>（右上角浮层）：<code>全部</code> / <code>仅受力图</code> / <code>仅变形图</code>。</li>
-        <li><strong>参数扫掠</strong>（底栏「▶ 扫掠」）：单参数 3s 循环播放，可暂停 / 重置 / 录制；参数按当前拓扑自动过滤（如无悬挑则不显示 q<sub>c</sub> 系列）。</li>
+        <li><strong>参数扫掠</strong>（底栏「▶ 扫掠」）：单参数默认 3s 循环播放（自检卡片为 6s 慢速播放），可暂停 / 重置 / 录制；参数按当前拓扑自动过滤（如无悬挑则不显示 q<sub>c</sub> 系列）。</li>
         <li><strong>录制</strong>：录制范围为内力图或变形图单张 canvas。录制期间自动切白底、关扫描线、限制分辨率 ≤ 1920×1080，优先 mp4，回退 webm。</li>
         <li><strong>URL 分享</strong>（底栏 🔗）：把当前工况编码进 <code>#st=...</code> 一键复制。支持 <code>file://</code> / <code>https://</code> / <code>localhost</code>。重置全部时自动清除 hash。</li>
         <li><strong>底部状态栏</strong>：<code>NODES</code> 节点数 · <code>ELEMENTS</code> 单元数 · <code>DOF</code> 自由度数 · <code>SOLVE</code> 本次求解耗时（ms）· <code>RESIDUAL</code> 平衡残差（柱脚反力之和与外部荷载之和的差值，越小越准）· <code>STATUS</code> 状态（残差 &lt; 1e-8 显示绿色 OK，否则 CHECK）。</li>

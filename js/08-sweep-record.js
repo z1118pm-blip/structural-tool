@@ -79,6 +79,9 @@ function sweepPlay(loop){
   S.sweep.loop     = loop !== false;
   sweepUpdatePlayBtn();
 
+  /* 播放时长倍率：默认 1（3s 单程）；自检场景设为 2（6s 单程，放慢一倍） */
+  const DUR = SWEEP_DUR * (S.sweep.durMul || 1);
+
   const tick = (now) => {
     if(!S.sweep.playing) return;
 
@@ -88,7 +91,7 @@ function sweepPlay(loop){
       return;
     }
 
-    let t = (now - S.sweep.t0) / SWEEP_DUR;
+    let t = (now - S.sweep.t0) / DUR;
     if(t >= 1){
       if(S.sweep.loop){
         S.sweep.startVal = min;
@@ -147,7 +150,11 @@ function sweepToggle(){
     else                             openSweep();
   });
   if(btnClose) btnClose.addEventListener('click', closeSweep);
-  if(btnPlay)  btnPlay.addEventListener('click', sweepToggle);
+  if(btnPlay)  btnPlay.addEventListener('click', ()=>{
+    /* 手动点播放时恢复默认速度，避免沿用自检的慢放倍率 */
+    S.sweep.durMul = 1;
+    sweepToggle();
+  });
   if(btnReset) btnReset.addEventListener('click', sweepReset);
 
   sel.addEventListener('change', ()=>{
@@ -244,6 +251,7 @@ function startRecording(){
 
   R.active  = true;
   S.lightBg = true;
+  S.sweep.durMul = 1;
   document.body.classList.add('recording');
   sweepReset();
 

@@ -151,9 +151,8 @@ function computeHShare(p, nCol, level){
          旧实现底层 K 始终用固接公式 sum_ib/ic，却代入铰接 α_c，
          β_f=0 时 D 高估约 38%，内柱份额偏差约 2.5 个百分点。 */
       const Kfix = Math.max((sum_ib / ic)     * bjRed, 1e-4);
-      const Khin = Math.max((sum_ib / (2*ic)) * bjRed, 1e-4);
       const aFix = (0.5 + Kfix) / (2 + Kfix);
-      const aHin = (0.5 * Khin) / (1 + 2 * Khin);
+      const aHin = (0.5 * Kfix) / (1 + 2 * Kfix);
       alpha = aHin + (aFix - aHin) * p.betaF;
     } else {
       /* 一般层：K = Σi_b/(2i_c)，α_c = K/(2+K) */
@@ -385,7 +384,15 @@ for(let i=0;i<ndof;i++) if(!fixed.has(i)) free.push(i);
   const U=new Float64Array(ndof);
   for(let a=0;a<nf;a++){
     U[free[a]] = Ys[a] * scaleD[a];
-    // 依靠后续的格式化和对称修正处理浮点误差，不在此处硬截断，以免非对称结构丢失微小侧移。
+  }
+
+  // 过滤纯竖向荷载在多跨对称结构下产生的极微小浮点侧移噪声（阈值 1e-7 米，即 0.0001 毫米）
+  let hasLateralForce = false;
+  for(let lv=1; lv<=nLev; lv++) { if(p['H'+lv] > 0) hasLateralForce = true; }
+  if (!hasLateralForce) {
+    for(let i=0; i<ndof; i+=3) {
+      if (Math.abs(U[i]) < 1e-7) U[i] = 0;
+    }
   }
 
   /* 已删除：单跨纯竖向荷载的"求解后虚假侧移修正"。

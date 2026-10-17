@@ -4,6 +4,14 @@ let MODEL = null;
 let BASE  = null;   // 冻结的基准结果（对比模式）
 
 function getMaxInternal(model, type, filter){
+  if(type === 'R'){
+    let maxR = 0;
+    for(let c=0; c<model.nCol; c++){
+      const nd = model.nid(c, 0);
+      maxR = Math.max(maxR, Math.abs(model.R[nd*3]), Math.abs(model.R[nd*3+1]), Math.abs(model.R[nd*3+2]));
+    }
+    return maxR;
+  }
   let maxF = 0;
   for(const res of model.results){
     const el = res.el;
@@ -20,10 +28,15 @@ function getMaxInternal(model, type, filter){
 
 function updateReadout(model){
   const p = model.p;
+  
+  // 增加辅助函数，仅在文本内容发生变化时才更新 DOM，防止高频扫掠时重排闪烁
+  const setTxt = (id, v) => {
+    const el = document.getElementById(id);
+    if(el && el.textContent !== v) el.textContent = v;
+  };
 
-  document.getElementById('r-colsec').textContent =
-    `柱 ${p.bc}×${p.hc} · 梁 ${p.bb}×${p.hb}`;
-  document.getElementById('r-kmid').textContent = p.r.toFixed(2);
+  setTxt('r-colsec', `柱 ${Math.round(p.bc)}×${Math.round(p.hc)} · 梁 ${Math.round(p.bb)}×${Math.round(p.hb)}`);
+  setTxt('r-kmid', p.r.toFixed(2));
 
   {
     const box = document.getElementById('r-rhoBox');
@@ -34,7 +47,7 @@ function updateReadout(model){
         const vals = row.map(v => v.toFixed(2)).join(' / ');
         html += `<div class="rRow"><span class="lbl">${lv} 层</span><span class="val">${vals}</span></div>`;
       }
-      box.innerHTML = html;
+      if(box.innerHTML !== html) box.innerHTML = html;
     }
   }
 
@@ -49,7 +62,7 @@ function updateReadout(model){
       if(d > maxD) maxD = d;
     }
   }
-  document.getElementById('r-maxD').textContent = (maxD * 1000).toFixed(3) + ' mm';
+  setTxt('r-maxD', (maxD * 1000).toFixed(3) + ' mm');
 
   let maxDrift = 0, driftFloor = 0;
   for(let c=0;c<model.nCol;c++){
@@ -71,7 +84,7 @@ function updateReadout(model){
     } else {
       driftTxt = '1/∞（无水平力）';
     }
-    document.getElementById('r-drift').textContent = driftTxt;
+    setTxt('r-drift', driftTxt);
   }
 
   let totalH = 0;
@@ -79,10 +92,9 @@ function updateReadout(model){
   let uTopAvg = 0;
   for(let c=0;c<model.nCol;c++) uTopAvg += model.U[model.nid(c, model.nLev)*3];
   uTopAvg /= model.nCol;
-  document.getElementById('r-K').textContent =
-    (totalH > 0 && Math.abs(uTopAvg) > 1e-12)
-      ? (totalH / Math.abs(uTopAvg)).toFixed(1) + ' kN/m'
-      : '—（无水平力）';
+  setTxt('r-K', (totalH > 0 && Math.abs(uTopAvg) > 1e-12)
+    ? (totalH / Math.abs(uTopAvg)).toFixed(1) + ' kN/m'
+    : '—（无水平力）');
 
   const rowPD = document.getElementById('rowPD');
   if(p.showPDelta){
@@ -98,7 +110,8 @@ function updateReadout(model){
       const pPureKey = [
         p.nBay, p.nLev, p.hasCant,
         p.L1, p.L2, p.L3, p.h1, p.h2, p.h3, p.Lc,
-        p.bc, p.hc, p.bb, p.hb, p.r, p.betaF, p.betaJ
+        p.bc, p.hc, p.bb, p.hb, p.r, p.betaF, p.betaJ,
+        p.H1, p.H2, p.H3, p.Hmode
       ].join('|');
       let uPure;
       if (S._uPureCache && S._uPureCache.key === pPureKey) {
@@ -129,11 +142,11 @@ function updateReadout(model){
       let sign = '', bTxt, ratioTxt;
       if(ratio >= 1){
         sign = '⚠ ';
-        bTxt = '>1000（已超过临界荷载）';
+        bTxt = '>1000（已超限）';
         ratioTxt = ratio > 9.999 ? '>9.999' : ratio.toFixed(3);
       } else if(1 - ratio < 1e-4){
         bTxt = B > 10000 ? '>10000' : B.toFixed(0);
-        ratioTxt = '≈1.000（接近失稳）';
+        ratioTxt = '≈1.000';
       } else if(B < 10){
         bTxt = B.toFixed(3);
         ratioTxt = ratio.toFixed(3);
@@ -141,10 +154,9 @@ function updateReadout(model){
         bTxt = B.toFixed(2);
         ratioTxt = ratio.toFixed(3);
       }
-      document.getElementById('r-pd').textContent =
-        `${sign}${bTxt}  (ΣN/ΣN_cr = ${ratioTxt})`;
+      setTxt('r-pd', `${sign}${bTxt}  (ΣN/ΣN_cr = ${ratioTxt})`);
     } else {
-      document.getElementById('r-pd').textContent = '—（无水平力或无轴力）';
+      setTxt('r-pd', '—（无水平力或无轴力）');
     }
   } else {
     rowPD.style.display = 'none';
@@ -157,36 +169,11 @@ function updateReadout(model){
     for(const v of w) sum += v;
     return w.map(v => (v/sum*100).toFixed(0) + '%').join(' / ');
   }
-  document.getElementById('r-alloc1').textContent = allocStr(1);
-  if (model.nLev >= 2) document.getElementById('r-alloc2').textContent = allocStr(2);
-  const a3 = document.getElementById('r-alloc3');
-  if(a3 && model.nLev >= 3) a3.textContent = allocStr(3);
+  setTxt('r-alloc1', allocStr(1));
+  if (model.nLev >= 2) setTxt('r-alloc2', allocStr(2));
+  if (model.nLev >= 3) setTxt('r-alloc3', allocStr(3));
 
-  {
-    const nCol = model.nCol;
-    for(let i=0; i<4; i++){
-      const rowEl = document.getElementById('row-R'+i);
-      const lblEl = document.getElementById('lbl-R'+i);
-      const valEl = document.getElementById('r-R'+i);
-      if(!rowEl) continue;
-      if(i >= nCol){ rowEl.style.display = 'none'; continue; }
-      rowEl.style.display = '';
-      if(lblEl){
-        let tag;
-        if(i === 0) tag = '左';
-        else if(i === nCol-1) tag = '右';
-        else tag = '内 ' + i;
-        lblEl.textContent = `${tag}柱 Rx / Ry / M`;
-      }
-      if(valEl){
-        const nd = model.nid(i, 0);
-        const rx = model.R[nd*3];
-        const ry = model.R[nd*3+1];
-        const rm = model.R[nd*3+2];
-        valEl.textContent = `${rx.toFixed(1)} / ${ry.toFixed(1)} / ${rm.toFixed(1)}`;
-      }
-    }
-  }
+  /* 支座反力已移至内力图 R 标签，此处不再更新 DOM */
 
   let sumV = 0, sumH = 0;
   let baySum = 0;
@@ -196,11 +183,9 @@ function updateReadout(model){
     if(p.hasCant) sumV += p['qc'+lv] * p.Lc;
     sumH += p['H'+lv];
   }
-  document.getElementById('loadSum').textContent =
-    `ΣV = ${sumV.toFixed(1)} kN · ΣH = ${sumH.toFixed(1)} kN`;
+  setTxt('loadSum', `ΣV = ${sumV.toFixed(1)} kN · ΣH = ${sumH.toFixed(1)} kN`);
 
-  document.getElementById('r-resid').textContent =
-    `ΣFx = ${model.residX.toExponential(1)}  ΣFy = ${model.residY.toExponential(1)} kN`;
+  /* 左侧残差 UI 已移除，仅通过右下角状态栏状态展示 */
 }
 
 function run(){
@@ -242,7 +227,7 @@ function run(){
       ctx.textAlign = 'start';
       ctx.textBaseline = 'alphabetic';
     }
-    for(const id of ['r-colsec','r-kmid','r-maxD','r-drift','r-K','r-R0','r-R1','r-R2','r-R3','r-alloc1','r-alloc2','r-alloc3','r-pd']){
+    for(const id of ['r-colsec','r-kmid','r-maxD','r-drift','r-K','r-alloc1','r-alloc2','r-alloc3','r-pd']){
       const el = document.getElementById(id);
       if(el) el.textContent = '—';
     }
@@ -279,14 +264,16 @@ function run(){
   drawInternal(document.getElementById('cvForce'), MODEL);
   drawDeform(document.getElementById('cvD'), MODEL);
   updateReadout(MODEL);
-  updateModelSummary();
   updateStatusBar(MODEL);
   if(_badge) requestAnimationFrame(()=> _badge.classList.remove('on'));
 }
 
 function updateStatusBar(m){
   if(!m) return;
-  const set = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = v; };
+  const set = (id, v) => {
+    const el = document.getElementById(id);
+    if(el && el.textContent !== v) el.textContent = v;
+  };
   set('ssbNodes', m.nodes.length);
   set('ssbElems', m.els.length);
   set('ssbDof',   (m.nFree != null ? m.nFree : m.U.length) + ' / ' + m.U.length);
@@ -345,6 +332,11 @@ function updateSweepOptions(){
   if(!sel) return;
 
   const req = {
+    L2: ()=>S.nBay  >= 2,
+    L3: ()=>S.nBay  >= 3,
+    h2: ()=>S.nLev  >= 2,
+    h3: ()=>S.nLev  >= 3,
+    Lc: ()=>S.hasCant,
     q2: ()=>S.nLev  >= 2,
     q3: ()=>S.nLev  >= 3,
     qc1:()=>S.hasCant,
@@ -382,40 +374,7 @@ function updateSweepOptions(){
   }
 }
 
-function updateModelSummary(){
-  const top = document.getElementById('msTop');
-  const sp  = document.getElementById('msSpans');
-  const hh  = document.getElementById('msHeights');
-  if(!top || !sp || !hh) return;
-  const bayStr = S.nBay + ' 跨';
-  const levStr = S.nLev + ' 层';
-  const tag = S.hasCant ? '<span class="msTag">右悬挑</span>' : '';
-  top.innerHTML = `${bayStr} × ${levStr}${tag}`;
-
-  const spans = [];
-  let totalB = 0;
-  for(let i=1; i<=S.nBay; i++){
-    spans.push(S['L'+i].toFixed(1));
-    totalB += S['L'+i];
-  }
-  sp.textContent = spans.join(' / ') + ' m';
-
-  const heights = [];
-  let totalH = 0;
-  for(let i=1; i<=S.nLev; i++){
-    heights.push(S['h'+i].toFixed(1));
-    totalH += S['h'+i];
-  }
-  hh.textContent = heights.join(' / ') + ' m';
-
-  const totalW = totalB;
-  const elH = document.getElementById('msTotalH');
-  const elB = document.getElementById('msTotalW');
-  const elA = document.getElementById('msAspect');
-  if(elH) elH.textContent = totalH.toFixed(1);
-  if(elB) elB.textContent = totalW.toFixed(1);
-  if(elA) elA.textContent = totalW > 0 ? (totalH / totalW).toFixed(2) : '—';
-}
+/* 已删除：updateModelSummary —— msTop / msSpans / msHeights 等摘要卡元素已从 HTML 移除，此函数为死代码 */
 
 function updateTabInd(){
   const bar = document.getElementById('tabBar');
@@ -449,10 +408,10 @@ function updateTabInd(){
 })();
 
 (function bindTabKeys(){
-  const order = ['model','load'];
+  const order = ['selftest','model','load'];
   document.addEventListener('keydown', e=>{
     const t = e.target;
-    if(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+    if(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
     const idx = parseInt(e.key) - 1;
     if(idx >= 0 && idx < order.length){
       const bar = document.getElementById('tabBar');

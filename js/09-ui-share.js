@@ -246,7 +246,7 @@ function applyStateFromObj(obj){
     if(k === 'Hmode'){
       if(v === 'left' || v === 'dstiff') S[k] = v;
     } else if(k === 'forceType'){
-      if(v === 'M' || v === 'N' || v === 'V') S[k] = v;
+      if(v === 'M' || v === 'N' || v === 'V' || v === 'R') S[k] = v;
     } else if(k === 'elFilter'){
       if(v === 'all' || v === 'col' || v === 'beam') S[k] = v;
     } else if(k === 'displayMode'){
@@ -320,6 +320,11 @@ function applyStateFromObj(obj){
   }
 
   applyTopoState();
+  
+  // 清理可能残留的扫掠慢放倍率和高亮状态（防止分享链接或自检后污染普通扫掠）
+  S.sweep.durMul = 1;
+  S.highlight = null;
+
   run();
   return true;
 }
