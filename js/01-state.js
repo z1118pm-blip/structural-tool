@@ -7,7 +7,7 @@ const E_CONC = 3.0e7;
 const E_STEEL = 2.06e8;
 
 // 全局版本号：以后升级版本只需修改这里，全站自动联动
-const APP_VERSION = 'v0.1.4';
+const APP_VERSION = 'v0.1.5';
 
 // ⚠️ 重要：线上部署地址。本地 file:// 打开时，分享二维码指向这里。
 // 如果你更换了 GitHub 仓库名或部署到自定义域名，请务必同步修改此处的 URL，否则本地生成的分享二维码会失效。
@@ -34,6 +34,8 @@ const S = {
   qc1:0, qc2:0, qc3:0,
   H1:0, H2:0, H3:0,
   Hmode:'none',
+  settleDy:0, settleCol:0,
+  axialMode:'real',
   frameMat:'conc',
   braceMat:'steel',
   As:2000,
@@ -50,6 +52,7 @@ const S = {
   elFilter:'all',
   showVals:false,
   showIds:false,
+  showAntiPts:true,
   showPDelta:false,
   displayMode:'all',
   highlight:null,

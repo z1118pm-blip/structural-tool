@@ -152,8 +152,12 @@ function analyze(p, opts = {}){
   
   const EIc = E_frame*Ic;
   const EIb = E_frame*Ib;
-  const EAc = E_frame*Ac;
-  const EAb = E_frame*Ab;
+  /* 轴向变形开关：'rigid' 时把梁柱轴向刚度相对放大 1e6 倍，
+     使轴向变形远小于弯曲变形，模拟传统手算"轴向不可伸长"假定。
+     注意：EI 不动（只锁轴向），支撑 EAs 不受影响。 */
+  const axialBoost = (p.axialMode === 'rigid') ? 1e6 : 1;
+  const EAc = E_frame*Ac*axialBoost;
+  const EAb = E_frame*Ab*axialBoost;
   
   const EAs = E_brace * ((p.As || 2000) / 1000000); // mm² 转 m²
 
@@ -297,14 +301,29 @@ function analyze(p, opts = {}){
   }
 
 /* =====================================================================
+   支座沉降：非零已知位移（仅单柱竖向）
+   - fixedDisp 记录 DOF 索引 → 位移值（米）
+   - 组装 RHS 时减 K_fc·U_c，求解后把值写回 U
+   - 有沉降时跳过"单跨对称约束"和"浮点噪声清理"，避免掩盖沉降效应
+   ===================================================================== */
+const fixedDisp = new Map();
+const hasSettlement = (p.settleDy > 0);
+if (hasSettlement) {
+  const sc = Math.max(0, Math.min(nCol - 1, p.settleCol | 0));
+  const nSettle = nid(sc, 0);
+  fixedDisp.set(nSettle*3 + 1, -(p.settleDy | 0) * 1e-3);  // uy 向下为负
+}
+
+/* =====================================================================
    【核心修复：消除数值虚假侧移 - 求解前约束】
    单跨无悬挑且无水平力时，利用对称性将各层水平位移直接设为已知边界条件(0)，
    避免全铰接时侧向刚度阵为0导致的矩阵奇异崩溃。
+   注意：有沉降时必须跳过，否则会吃掉沉降引起的不对称侧移。
    ===================================================================== */
 let sumH = 0;
 for(let lv=1; lv<=nLev; lv++) sumH += p['H'+lv];
 
-if (Math.abs(sumH) < 1e-12 && nBay === 1 && !p.hasCant) {
+if (Math.abs(sumH) < 1e-12 && nBay === 1 && !p.hasCant && !hasSettlement) {
   for(let lv=1; lv<=nLev; lv++){
     fixed.add(nid(0, lv)*3);
     fixed.add(nid(1, lv)*3);
@@ -370,7 +389,15 @@ for(let i=0;i<ndof;i++) if(!fixedR.has(i) && reduce[i] === i) free.push(i);
     for(let b=0;b<nf;b++){
       A[a][b] = K[ia][free[b]] * da * scaleD[b];
     }
-    A[a][nf] = F[ia] * da;
+    // 沉降产生的等效荷载：RHS -= K_fc · U_c
+    // 按缩并后 DOF 映射，避免将来支持非柱脚沉降时索引错位（当前柱脚 uy 不参与缩并，映射为自身）
+    let rhs = F[ia];
+    if(hasSettlement){
+      for(const [cdof, cval] of fixedDisp){
+        rhs -= K[ia][reduce[cdof]] * cval;
+      }
+    }
+    A[a][nf] = rhs * da;
   }
 
   for(let col=0;col<nf;col++){
@@ -405,11 +432,16 @@ for(let i=0;i<ndof;i++) if(!fixedR.has(i) && reduce[i] === i) free.push(i);
   for(let a=0;a<nf;a++){
     U[free[a]] = Ys[a] * scaleD[a];
   }
+  // 已知非零位移（支座沉降）写回 U（按缩并后 DOF 写入；从属 DOF 随后由刚性楼板循环统一继承）
+  for(const [cdof, cval] of fixedDisp){
+    U[reduce[cdof]] = cval;
+  }
   // 过滤纯竖向荷载在多跨对称结构下产生的极微小浮点侧移噪声（阈值 1e-7 米，即 0.0001 毫米）
   // 先清理，再同步从属 DOF，保证刚性楼板约束一致性
+  // 有沉降时不清理，避免抹掉沉降引起的结构倾斜
   let hasLateralForce = false;
   for(let lv=1; lv<=nLev; lv++) { if(p['H'+lv] > 0) hasLateralForce = true; }
-  if (!hasLateralForce) {
+  if (!hasLateralForce && !hasSettlement) {
     for(let i=0; i<ndof; i+=3) {
       if (Math.abs(U[i]) < 1e-7) U[i] = 0;
     }

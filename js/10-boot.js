@@ -125,6 +125,11 @@ const SELF_TEST_CASES = [
     id: 'brace-angle',
     sweep: 'L1',
     state: { nBay: 1, nLev: 1, hasCant: false, L1: 3, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 400, hc: 400, bb: 250, hb: 500, r: 1, q1: 0, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 50, H2: 0, H3: 0, Hmode: 'none', frameMat: 'conc', braceMat: 'steel', As: 2000, braceOnlyTension: false, braceMap: {'1-1':'X'}, braceTensionMap: {}, brushBrace: 'X', betaF: 1, betaJ: 1, forceType: 'N', elFilter: 'brace', showVals: true, showIds: false, showPDelta: false, displayMode: 'force', mScale: 8, dScale: 100 }
+  },
+  {
+    id: 'settlement',
+    sweep: 'settleDy',
+    state: { nBay: 2, nLev: 2, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 400, hc: 400, bb: 250, hb: 500, r: 1, q1: 0, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 0, H2: 0, H3: 0, Hmode: 'none', settleDy: 0, settleCol: 0, frameMat: 'conc', braceMat: 'steel', As: 2000, braceOnlyTension: false, braceMap: {}, braceTensionMap: {}, brushBrace: 'none', betaF: 1, betaJ: 1, forceType: 'M', elFilter: 'all', showVals: true, showIds: false, showPDelta: false, displayMode: 'all', mScale: 0.6, dScale: 10 }
   }
 ];
 
@@ -138,6 +143,12 @@ function runSelfTest(caseId){
 
   /* 2. 停止可能正在播放的扫掠 */
   if(S.sweep.playing) sweepStop();
+
+  /* 2.5 清空可能残留的支撑状态：部分自检工况未在 state 中显式携带 braceMap，
+     若不重置，用户此前布置的支撑会被带入自检场景，导致与卡片描述不符 */
+  S.braceMap = {};
+  S.braceTensionMap = {};
+  S.brushBrace = 'none';
 
   /* 3. 应用预设状态（内部同步 UI 控件、分段按钮，并调用 run()） */
   if(!applyStateFromObj(tc.state)) return;

@@ -174,58 +174,123 @@ function drawFrameLines(ctx, model, toS, color, lwBase, dashed, useSectionWidth)
   ctx.restore();
 }
 
-function drawSupports(ctx, model, toS, base){
+function drawSingleSupport(ctx, sx, sy, base, T, colW) {
+  const topY = (base >= BETA_FIXED) ? sy + 9
+             : (base <= BETA_HINGE) ? sy + 11
+             :                        sy + 4;
+  ctx.strokeStyle = T.support;
+  ctx.lineWidth   = colW;
+  ctx.beginPath();
+  ctx.moveTo(sx, sy);
+  ctx.lineTo(sx, topY);
+  ctx.stroke();
+  ctx.strokeStyle = T.support;
+  ctx.lineWidth = 1.6;
+  if(base >= BETA_FIXED){
+    ctx.beginPath(); ctx.moveTo(sx-11, sy+9); ctx.lineTo(sx+11, sy+9); ctx.stroke();
+    for(let k=-9;k<=9;k+=6){
+      ctx.beginPath(); ctx.moveTo(sx+k, sy+9); ctx.lineTo(sx+k-5, sy+16); ctx.stroke();
+    }
+  } else if(base <= BETA_HINGE){
+    ctx.beginPath(); ctx.moveTo(sx-11, sy+11); ctx.lineTo(sx+11, sy+11); ctx.stroke();
+    for(let k=-9;k<=9;k+=6){
+      ctx.beginPath(); ctx.moveTo(sx+k, sy+11); ctx.lineTo(sx+k-5, sy+18); ctx.stroke();
+    }
+    ctx.beginPath(); ctx.arc(sx, sy, 4.5, 0, Math.PI*2);
+    ctx.fillStyle = T.supportFill; ctx.fill();
+    ctx.strokeStyle = T.support; ctx.lineWidth = 1.6; ctx.stroke();
+  } else {
+    const y0 = sy + 4;
+    const yBottom = sy + 22;
+    ctx.beginPath();
+    ctx.moveTo(sx, y0);
+    const nZig = 5;
+    const yStep = (yBottom - y0) / nZig;
+    for(let k=0;k<nZig;k++){
+      const yy1 = y0 + yStep*(k+0.5);
+      const yy2 = y0 + yStep*(k+1);
+      const xoff = (k%2 === 0) ? 5 : -5;
+      ctx.lineTo(sx + xoff, yy1);
+      if(k < nZig-1) ctx.lineTo(sx - xoff, yy2);
+      else ctx.lineTo(sx, yy2);
+    }
+    ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(sx-11, yBottom+2); ctx.lineTo(sx+11, yBottom+2); ctx.stroke();
+    for(let k=-9;k<=9;k+=6){
+      ctx.beginPath(); ctx.moveTo(sx+k, yBottom+2); ctx.lineTo(sx+k-5, yBottom+9); ctx.stroke();
+    }
+  }
+}
+
+function drawSupports(ctx, model, toS, base, isDeform, deformF){
   const T = theme();
   const nCol = model.nCol || 3;
   const nLev = model.nLev || 2;
   const colW = 2.5;
+
+  const hasSettle = (model.p.settleDy > 0);
+  const settleCol = hasSettle ? Math.max(0, Math.min(nCol - 1, model.p.settleCol | 0)) : -1;
+
   for(let c=0;c<nCol;c++){
     const n = model.nodes[c*(nLev+1)];
-    const [sx,sy] = toS(n.x, n.y);
-    const topY = (base >= BETA_FIXED) ? sy + 9
-               : (base <= BETA_HINGE) ? sy + 11
-               :                        sy + 4;
-    ctx.strokeStyle = T.support;
-    ctx.lineWidth   = colW;
-    ctx.beginPath();
-    ctx.moveTo(sx, sy);
-    ctx.lineTo(sx, topY);
-    ctx.stroke();
-    ctx.strokeStyle = T.support;
-    ctx.lineWidth = 1.6;
-    if(base >= BETA_FIXED){
-      ctx.beginPath(); ctx.moveTo(sx-11, sy+9); ctx.lineTo(sx+11, sy+9); ctx.stroke();
-      for(let k=-9;k<=9;k+=6){
-        ctx.beginPath(); ctx.moveTo(sx+k, sy+9); ctx.lineTo(sx+k-5, sy+16); ctx.stroke();
-      }
-    } else if(base <= BETA_HINGE){
-      ctx.beginPath(); ctx.moveTo(sx-11, sy+11); ctx.lineTo(sx+11, sy+11); ctx.stroke();
-      for(let k=-9;k<=9;k+=6){
-        ctx.beginPath(); ctx.moveTo(sx+k, sy+11); ctx.lineTo(sx+k-5, sy+18); ctx.stroke();
-      }
-      ctx.beginPath(); ctx.arc(sx, sy, 4.5, 0, Math.PI*2);
-      ctx.fillStyle = T.supportFill; ctx.fill();
-      ctx.strokeStyle = T.support; ctx.lineWidth = 1.6; ctx.stroke();
+    let sx, sy;
+    
+    if (isDeform) {
+      // 变形图：支座跟随节点位移（按放大系数 F 放大）
+      const ux = model.U[c*(nLev+1)*3];
+      const uy = model.U[c*(nLev+1)*3+1];
+      [sx, sy] = toS(n.x + (deformF || 0) * ux, n.y + (deformF || 0) * uy);
     } else {
-      const y0 = sy + 4;
-      const yBottom = sy + 22;
+      // 受力/荷载图：原位
+      [sx, sy] = toS(n.x, n.y);
+    }
+
+    const isSettledCol = (c === settleCol);
+
+    if (!isDeform && isSettledCol) {
+      // 1. 画半透明虚线支座（原位）
+      ctx.save();
+      ctx.globalAlpha = 0.3;
+      ctx.setLineDash([3, 3]);
+      drawSingleSupport(ctx, sx, sy, base, T, colW);
+      ctx.restore();
+      
+      // 2. 计算下沉后的支座位置（向下偏移 20px）
+      const dropPx = 20;
+      const syDrop = sy + dropPx;
+      
+      // 3. 画红色虚线和箭头连接
+      ctx.save();
+      ctx.strokeStyle = '#ef4444';
+      ctx.fillStyle = '#ef4444';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([2, 2]);
+      
+      ctx.beginPath(); ctx.moveTo(sx - 8, sy + 2); ctx.lineTo(sx - 8, syDrop - 2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(sx + 8, sy + 2); ctx.lineTo(sx + 8, syDrop - 2); ctx.stroke();
+      
+      ctx.setLineDash([]);
+      ctx.beginPath(); ctx.moveTo(sx, sy + 2); ctx.lineTo(sx, syDrop - 5); ctx.stroke();
+      
       ctx.beginPath();
-      ctx.moveTo(sx, y0);
-      const nZig = 5;
-      const yStep = (yBottom - y0) / nZig;
-      for(let k=0;k<nZig;k++){
-        const yy1 = y0 + yStep*(k+0.5);
-        const yy2 = y0 + yStep*(k+1);
-        const xoff = (k%2 === 0) ? 5 : -5;
-        ctx.lineTo(sx + xoff, yy1);
-        if(k < nZig-1) ctx.lineTo(sx - xoff, yy2);
-        else ctx.lineTo(sx, yy2);
-      }
-      ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(sx-11, yBottom+2); ctx.lineTo(sx+11, yBottom+2); ctx.stroke();
-      for(let k=-9;k<=9;k+=6){
-        ctx.beginPath(); ctx.moveTo(sx+k, yBottom+2); ctx.lineTo(sx+k-5, yBottom+9); ctx.stroke();
-      }
+      ctx.moveTo(sx, syDrop);
+      ctx.lineTo(sx - 4, syDrop - 6);
+      ctx.lineTo(sx + 4, syDrop - 6);
+      ctx.closePath();
+      ctx.fill();
+      
+      // 添加文字标注
+      ctx.font = 'bold 10.5px ui-sans-serif,system-ui,sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`↓ ${Math.round(model.p.settleDy)}mm`, sx + 14, (sy + syDrop)/2);
+      ctx.restore();
+      
+      // 4. 在下方画实心新支座
+      drawSingleSupport(ctx, sx, syDrop, base, T, colW);
+    } else {
+      // 正常画支座
+      drawSingleSupport(ctx, sx, sy, base, T, colW);
     }
   }
 }
@@ -246,7 +311,7 @@ function drawLoadDiagram(canvas, model, dprOverride){
   drawGrid(ctx, W, H);
   drawHUD(ctx, W, H, 'LOAD DIAGRAM', false);
   drawFrameLines(ctx, model, toS, T.frame, 2.5, false, false);
-  drawSupports(ctx, model, toS, model.p.betaF);
+  drawSupports(ctx, model, toS, model.p.betaF, false);
   ctx.fillStyle=T.node;
   for(const n of model.nodes){
     if(Math.abs(n.y) < 1e-9) continue;
@@ -297,6 +362,7 @@ function drawLoadDiagram(canvas, model, dprOverride){
     drawHF(ctx, toS, model.nodes[model.nid(0, level)], H, H.toFixed(1));
   }
   for(let lv=1; lv<=model.nLev; lv++) drawFloorH(lv, p['H'+lv]);
+
   /* 绘制支撑角度 */
   ctx.font = 'bold 10.5px "JetBrains Mono", ui-monospace, monospace';
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';

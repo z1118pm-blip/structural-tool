@@ -33,6 +33,17 @@
   });
 })();
 
+(function bindAntiPts(){
+  const btn = document.getElementById('btnAntiPts');
+  if(!btn) return;
+  btn.classList.toggle('on', S.showAntiPts);
+  btn.addEventListener('click', ()=>{
+    S.showAntiPts = !S.showAntiPts;
+    btn.classList.toggle('on', S.showAntiPts);
+    run();
+  });
+})();
+
 (function bindDisplayMode(){
   const seg = document.getElementById('segDisp');
   const stageEl = document.getElementById('stage');
@@ -74,7 +85,10 @@
       if(!MODEL) return;
       BASE = {
         nodes: MODEL.nodes, els: MODEL.els,
-        results: MODEL.results, U: MODEL.U, p: {...MODEL.p}
+        results: MODEL.results, U: MODEL.U,
+        p: { ...MODEL.p,
+             braceMap: { ...MODEL.p.braceMap },
+             braceTensionMap: { ...MODEL.p.braceTensionMap } }
       };
       if(btn) btn.classList.add('on');
       if(btnD) btnD.classList.add('on');
@@ -167,6 +181,19 @@ function exportCanvasPNG(canvasId, baseName){
   });
 })();
 
+(function bindAxial(){
+  const seg = document.getElementById('segAxial');
+  if(!seg) return;
+  seg.querySelectorAll('button').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      seg.querySelectorAll('button').forEach(b=>b.classList.remove('on'));
+      btn.classList.add('on');
+      S.axialMode = btn.dataset.axial;
+      run();
+    });
+  });
+})();
+
 (function bindHelp(){
   const modal = document.getElementById('modalHelp');
   const btnOpen = document.getElementById('btn-help');
@@ -206,10 +233,10 @@ const SHARE_KEYS = [
   'L1','L2','L3','h1','h2','h3','Lc',
   'bc','hc','bb','hb','r',
   'q1','q2','q3','qc1','qc2','qc3','H1','H2','H3',
-  'Hmode','braceMap','braceTensionMap','brushBrace','betaF','betaJ',
-  'frameMat','braceMat','As','braceOnlyTension',
+  'Hmode','settleDy','settleCol','braceMap','braceTensionMap','brushBrace','betaF','betaJ',
+  'frameMat','braceMat','As','axialMode',
   'mScale','dScale','forceType','elFilter','displayMode',
-  'showVals','showIds','showPDelta'
+  'showVals','showIds','showAntiPts','showPDelta'
 ];
 
 function encodeState(){
@@ -222,6 +249,7 @@ function encodeState(){
   if(S.nBay < 2){ obj.L2 = 6; }
   if(S.nBay < 3){ obj.L3 = 6; }
   if(!S.hasCant){ obj.Lc = 1.5; obj.qc1 = 0; obj.qc2 = 0; obj.qc3 = 0; }
+  if(!(obj.settleDy > 0)){ obj.settleDy = 0; obj.settleCol = 0; }
   try{
     return btoa(JSON.stringify(obj))
       .replace(/\+/g, '-')
@@ -268,7 +296,9 @@ function applyStateFromObj(obj){
       if(v === 'all' || v === 'force' || v === 'deform') S[k] = v;
     } else if(k === 'frameMat' || k === 'braceMat'){
       if(v === 'conc' || v === 'steel') S[k] = v;
-    } else if(k === 'showVals' || k === 'showIds' || k === 'showPDelta' || k === 'braceOnlyTension'){
+    } else if(k === 'axialMode'){
+      if(v === 'real' || v === 'rigid') S[k] = v;
+    } else if(k === 'showVals' || k === 'showIds' || k === 'showPDelta' || k === 'braceOnlyTension' || k === 'showAntiPts'){
       if(typeof v === 'boolean') S[k] = v;
     } else if(k === 'braceMap'){
       /* 白名单过滤：只接受 "层-跨" 键 + X / ╱ / ╲ 值，防止 __proto__ 原型污染 */
@@ -359,14 +389,17 @@ function applyStateFromObj(obj){
     b.classList.toggle('on', b.dataset.mat === S.frameMat));
   document.querySelectorAll('#segBraceMat button').forEach(b =>
     b.classList.toggle('on', b.dataset.mat === S.braceMat));
-  const btnBT = document.getElementById('btnBraceTension');
-  if(btnBT) btnBT.classList.toggle('on', S.braceOnlyTension);
+  document.querySelectorAll('#segAxial button').forEach(b =>
+    b.classList.toggle('on', b.dataset.axial === S.axialMode));
+  /* 「全部仅受拉」按钮状态由 renderBraceGrid → refreshBraceTensionBtn 统一管理（依据 braceTensionMap），此处不再单独 toggle，避免遗留 S.braceOnlyTension 造成瞬间误显 */
 
   {
     const btnV = document.getElementById('btnVals');
     if(btnV) btnV.classList.toggle('on', S.showVals);
     const btnIds = document.getElementById('btnIds');
     if(btnIds) btnIds.classList.toggle('on', S.showIds);
+    const btnAntiPts = document.getElementById('btnAntiPts');
+    if(btnAntiPts) btnAntiPts.classList.toggle('on', S.showAntiPts);
     const btnPD = document.getElementById('btnPDelta');
     if(btnPD) btnPD.classList.toggle('on', S.showPDelta);
   }
@@ -377,6 +410,18 @@ function applyStateFromObj(obj){
       stageEl.classList.remove('mode-all','mode-force','mode-deform');
       stageEl.classList.add('mode-' + S.displayMode);
     }
+  }
+
+  /* settleCol 越界钳制到当前柱数范围；settleDy 钳制到 0–100 mm */
+  if(typeof S.settleCol !== 'number' || isNaN(S.settleCol)){
+    S.settleCol = 0;
+  } else {
+    S.settleCol = Math.max(0, Math.min(S.nBay, S.settleCol | 0));
+  }
+  if(typeof S.settleDy !== 'number' || isNaN(S.settleDy)){
+    S.settleDy = 0;
+  } else {
+    S.settleDy = Math.max(0, Math.min(100, S.settleDy));
   }
 
   applyTopoState();
@@ -621,15 +666,20 @@ document.getElementById('btn-reset').addEventListener('click', ()=>{
   S.Hmode = 'none';
   S.frameMat = 'conc';
   S.braceMat = 'steel';
+  S.axialMode = 'real';
   S.As = 2000;
   S.braceOnlyTension = false;
   S.braceTensionMap = {};
   S.braceMap = {};
   S.brushBrace = 'none';
+  S.settleDy = 0;
+  S.settleCol = 0;
   const segFMR = document.getElementById('segFrameMat');
   if(segFMR) segFMR.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.mat === 'conc'));
   const segBMR = document.getElementById('segBraceMat');
   if(segBMR) segBMR.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.mat === 'steel'));
+  const segAx = document.getElementById('segAxial');
+  if(segAx) segAx.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.axial === 'real'));
   const btnBTR = document.getElementById('btnBraceTension');
   if(btnBTR) btnBTR.classList.remove('on');
   const segBraceTopo = document.getElementById('segBraceTopo');
@@ -640,6 +690,7 @@ document.getElementById('btn-reset').addEventListener('click', ()=>{
   S.elFilter = 'all';
   S.showVals = false;
   S.showIds = false;
+  S.showAntiPts = true;
   S.showPDelta = false;
   S.displayMode = 'all';
   BASE = null;
@@ -653,6 +704,8 @@ document.getElementById('btn-reset').addEventListener('click', ()=>{
   if(btnV) btnV.classList.remove('on');
   const btnIds = document.getElementById('btnIds');
   if(btnIds) btnIds.classList.remove('on');
+  const btnAntiPts = document.getElementById('btnAntiPts');
+  if(btnAntiPts) btnAntiPts.classList.add('on');
   const btnFz = document.getElementById('btnFreeze');
   if(btnFz) btnFz.classList.remove('on');
   const btnFzD = document.getElementById('btnFreezeDeform');

@@ -83,6 +83,7 @@ function drawInternal(canvas, model, dprOverride){
     }
     const maxVal = Math.max(maxRx, maxRy, 1e-6); 
     const Lbase = Math.min(W,H) * 0.12;
+    const rGreen = S.lightBg ? '#059669' : '#10b981';
 
     for(let c=0; c<model.nCol; c++){
       const nd = model.nid(c, 0);
@@ -93,6 +94,7 @@ function drawInternal(canvas, model, dprOverride){
       // 画轴力/剪力反力箭头
       const drawArrow = (val, isX) => {
         if (Math.abs(val) < 0.05) return;
+        ctx.save();
         const len = Math.max(4, (Math.abs(val)/maxVal)*Lbase);
         const dir = Math.sign(val);
         ctx.beginPath();
@@ -103,7 +105,7 @@ function drawInternal(canvas, model, dprOverride){
           ctx.moveTo(sx, sy); ctx.lineTo(sx, sy - dir*len);
           ctx.lineTo(sx - 4, sy - dir*(len-8)); ctx.moveTo(sx, sy - dir*len); ctx.lineTo(sx + 4, sy - dir*(len-8));
         }
-        ctx.strokeStyle = '#10b981'; ctx.lineWidth = 2; ctx.stroke();
+        ctx.strokeStyle = rGreen; ctx.lineWidth = 2; ctx.stroke();
         
         // 标签
         const txt = val.toFixed(1);
@@ -111,7 +113,8 @@ function drawInternal(canvas, model, dprOverride){
         const tx = isX ? sx + dir*(len+14) : sx + 18;
         const ty = isX ? sy - 14 : sy - dir*(len+14);
         ctx.fillStyle = T.bg; ctx.fillRect(tx - tw/2 - 3, ty - 7, tw + 6, 14);
-        ctx.fillStyle = '#10b981'; ctx.fillText(txt, tx, ty);
+        ctx.fillStyle = rGreen; ctx.fillText(txt, tx, ty);
+        ctx.restore();
       };
       drawArrow(rx, true);
       drawArrow(ry, false);
@@ -127,7 +130,7 @@ function drawInternal(canvas, model, dprOverride){
         
         ctx.beginPath();
         ctx.arc(cx, cy, r, startA, endA, anticlockwise);
-        ctx.strokeStyle = '#10b981'; ctx.lineWidth = 2; ctx.stroke();
+        ctx.strokeStyle = rGreen; ctx.lineWidth = 2; ctx.stroke();
         
         // 画箭头
         const tipX = cx + r * Math.cos(endA);
@@ -138,13 +141,13 @@ function drawInternal(canvas, model, dprOverride){
         ctx.moveTo(tipX, tipY);
         ctx.lineTo(tipX - 7 * Math.cos(angle - 0.5), tipY - 7 * Math.sin(angle - 0.5));
         ctx.lineTo(tipX - 7 * Math.cos(angle + 0.5), tipY - 7 * Math.sin(angle + 0.5));
-        ctx.fillStyle = '#10b981'; ctx.fill();
+        ctx.fillStyle = rGreen; ctx.fill();
         
         // 弯矩数值放到圆弧正下方
         const txt = m.toFixed(1);
         const tw = ctx.measureText(txt).width;
         ctx.fillStyle = T.bg; ctx.fillRect(cx - tw/2 - 3, cy + r + 4, tw + 6, 14);
-        ctx.fillStyle = '#10b981'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillStyle = rGreen; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText(txt, cx, cy + r + 11);
       }
     }
@@ -173,7 +176,7 @@ function drawInternal(canvas, model, dprOverride){
     ctx.fillText(sumTxt, 24, 87);
 
     drawFrameLines(ctx, model, toS, T.frameThin, 1.5, false, false);
-    drawSupports(ctx, model, toS, model.p.betaF);
+    drawSupports(ctx, model, toS, model.p.betaF, false);
     
     ctx.fillStyle=T.node;
     for(const n of model.nodes){
@@ -261,7 +264,7 @@ function drawInternal(canvas, model, dprOverride){
   }
 
   drawFrameLines(ctx, model, toS, T.frameThin, 1.5, false, false);
-  drawSupports(ctx, model, toS, model.p.betaF);
+  drawSupports(ctx, model, toS, model.p.betaF, false);
 
   if(model.p.showVals){
     ctx.font = 'bold 10.5px ui-sans-serif,system-ui,sans-serif';
@@ -340,8 +343,8 @@ function drawInternal(canvas, model, dprOverride){
     ctx.strokeStyle = '#22d3ee'; ctx.lineWidth = 1.5; ctx.setLineDash([]); ctx.stroke();
   }
 
-  /* 反弯点标注（仅弯矩图） */
-  if(type === 'M'){
+  /* 反弯点标注（仅弯矩图，且受独立开关控制） */
+  if(type === 'M' && model.p.showAntiPts){
     ctx.strokeStyle = T.antiCurve;
     ctx.lineWidth = 1.6;
     for(const res of model.results){
@@ -370,6 +373,25 @@ function drawInternal(canvas, model, dprOverride){
           const bx = ni.x + (nj.x-ni.x)*xi, by = ni.y + (nj.y-ni.y)*xi;
           const [sx,sy] = toS(bx,by);
           ctx.beginPath(); ctx.arc(sx,sy,3.2,0,Math.PI*2); ctx.stroke();
+          /* 反弯点位置数值：柱标 x/h（从柱底），梁标 x/L（从左端）；悬挑与支撑跳过 */
+          if(el.kind !== 'brace' && !el.isCant){
+            const unit = (el.kind === 'col') ? 'h' : 'L';
+            const txt  = xi.toFixed(2) + unit;
+            ctx.font = 'bold 9.5px "JetBrains Mono", ui-monospace, monospace';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            const tw = ctx.measureText(txt).width;
+            let lx, ly;
+            if(el.kind === 'col'){
+              lx = sx + 18; ly = sy;          /* 柱：文字放右侧 */
+            } else {
+              lx = sx;      ly = sy - 13;     /* 梁：文字放上方 */
+            }
+            ctx.fillStyle = T.bg;
+            ctx.fillRect(lx - tw/2 - 3, ly - 7, tw + 6, 14);
+            ctx.fillStyle = T.antiCurve;
+            ctx.fillText(txt, lx, ly);
+            ctx.textAlign = 'start'; ctx.textBaseline = 'alphabetic';
+          }
         }
         prevV = v; prevX = x;
       }

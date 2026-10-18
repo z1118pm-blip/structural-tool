@@ -75,6 +75,8 @@ function updateReadout(model){
   }
   setTxt('r-maxD', (maxD * 1000).toFixed(3) + ' mm');
 
+  /* 逐层收集层间位移角最大值（与 maxDrift 口径一致），挂到 model 上供变形图小图使用 */
+  const floorDrifts = new Float64Array(model.nLev + 1);
   let maxDrift = 0, driftFloor = 0;
   for(let c=0;c<model.nCol;c++){
     for(let lv=1; lv<=model.nLev; lv++){
@@ -82,20 +84,38 @@ function updateReadout(model){
       const uHi = model.U[model.nid(c, lv)*3];
       const hlv = p['h'+lv];
       const d = Math.abs(uHi - uLo) / hlv;
+      if(d > floorDrifts[lv]) floorDrifts[lv] = d;
       if(d > maxDrift){ maxDrift = d; driftFloor = lv; }
     }
   }
+  model.floorDrifts = floorDrifts;
   {
-    let driftTxt;
-    if(maxDrift > 0){
-      const denom = 1 / maxDrift;
-      driftTxt = denom > 1e6
-        ? '1/∞（可忽略）'
-        : `1/${Math.round(denom)}（${driftFloor}层）`;
-    } else {
-      driftTxt = '1/∞（无水平力）';
+    // 生成带虚线引导和对齐的动态逐层列表
+    const listEl = document.getElementById('r-drift-list');
+    if(listEl){
+      let html = `<div style="color:#94a3b8; font-weight:600; margin-bottom:2px;">层间位移角 θ</div>`;
+      
+      for(let lv=1; lv<=model.nLev; lv++){
+        const d = floorDrifts[lv];
+        let vTxt = '≈0';
+        if (d > 1e-7) {
+           const denom = Math.round(1 / d);
+           vTxt = denom > 99999 ? '1/∞' : `1/${denom}`;
+        }
+        
+        const isWorst = (lv === driftFloor && maxDrift > 1e-7);
+        const color = isWorst ? '#f97316' : '#e2e8f0';
+        const dotColor = isWorst ? '#f97316' : '#475569';
+        
+        html += `<div style="display:flex; align-items:baseline; color:${color};">
+          <span style="color:#94a3b8; font-weight:${isWorst?'600':'400'}; width:26px;">${lv}层</span>
+          <span style="flex:1; border-bottom:1px dashed ${dotColor}; margin:0 6px; position:relative; top:-3px; opacity:0.7;"></span>
+          <span style="font-weight:600;">${vTxt}${isWorst?' (最大)':''}</span>
+        </div>`;
+      }
+      
+      if (listEl.innerHTML !== html) listEl.innerHTML = html;
     }
-    setTxt('r-drift', driftTxt);
   }
 
   let totalH = 0;
@@ -124,7 +144,7 @@ function updateReadout(model){
         p.L1, p.L2, p.L3, p.h1, p.h2, p.h3, p.Lc,
         p.bc, p.hc, p.bb, p.hb, p.r, p.betaF, p.betaJ,
         p.H1, p.H2, p.H3, p.Hmode,
-        p.frameMat, p.braceMat, p.As,
+        p.frameMat, p.braceMat, p.As, p.axialMode,
         JSON.stringify(p.braceMap || {}),
         JSON.stringify(p.braceTensionMap || {})
       ].join('|');
@@ -132,7 +152,7 @@ function updateReadout(model){
       if (S._uPureCache && S._uPureCache.key === pPureKey) {
         uPure = S._uPureCache.value;
       } else {
-        const pPure = { ...p, q1:0, q2:0, q3:0, qc1:0, qc2:0, qc3:0 };
+        const pPure = { ...p, q1:0, q2:0, q3:0, qc1:0, qc2:0, qc3:0, settleDy:0, settleCol:0 };
         try {
           const mPure = analyze(pPure);
           let uMax = 0;
@@ -262,12 +282,14 @@ function run(){
       ctx.textAlign = 'start';
       ctx.textBaseline = 'alphabetic';
     }
-    for(const id of ['r-colsec','r-kmid','r-maxD','r-drift','r-K','r-alloc1','r-alloc2','r-alloc3','r-pd']){
+    for(const id of ['r-colsec','r-bracesec','r-kmid','r-maxD','r-K','r-alloc1','r-alloc2','r-alloc3','r-pd']){
       const el = document.getElementById(id);
       if(el) el.textContent = '—';
     }
     const rhoBox = document.getElementById('r-rhoBox');
     if(rhoBox) rhoBox.innerHTML = '';
+    const driftList = document.getElementById('r-drift-list');
+    if(driftList) driftList.innerHTML = '';
     const rf = document.getElementById('r-resid');
     if(rf) rf.textContent = '计算失败：' + err.message;
     const statusEl = document.getElementById('ssbStatus');
@@ -367,6 +389,7 @@ function applyTopoState(){
   hide('row-R3', S.nBay < 3);
 
   updateSweepOptions();
+  updateSettleColOptions();
   
   try{ window.dispatchEvent(new CustomEvent('structura-topo-change')); } catch(e){}
 }
@@ -417,6 +440,26 @@ function updateSweepOptions(){
       if(el) sweepSetValue(firstVisible, parseFloat(el.min));
     }
   }
+}
+
+/* 沉降位置下拉：按当前 nBay 动态生成选项（左柱 / 中柱 / 右柱） */
+function updateSettleColOptions(){
+  const sel = document.getElementById('settleCol');
+  if(!sel) return;
+  const nCol = S.nBay + 1;
+  let html = '';
+  for(let c = 0; c < nCol; c++){
+    let label;
+    if(c === 0)            label = '左柱';
+    else if(c === nCol - 1) label = '右柱';
+    else if(c === 1 && nCol === 3) label = '中柱';
+    else                   label = (c + 1) + '号柱';
+    html += `<option value="${c}">${label}</option>`;
+  }
+  sel.innerHTML = html;
+  const cur = Math.max(0, Math.min(nCol - 1, S.settleCol | 0));
+  S.settleCol = cur;
+  sel.value = String(cur);
 }
 
 /* 已删除：updateModelSummary —— msTop / msSpans / msHeights 等摘要卡元素已从 HTML 移除，此函数为死代码 */
@@ -525,7 +568,8 @@ const fmtMap = {
   betaF_d: v=>v.toFixed(2),
   betaJ_d: v=>v.toFixed(2),
   mScale: v=>v.toFixed(2), dScale: v=>v.toFixed(0),
-  As: v=>v.toFixed(0)+' mm²'
+  As: v=>v.toFixed(0)+' mm²',
+  settleDy: v=>v.toFixed(0)+' mm'
 };
 
 let hlTimer = null;
@@ -614,6 +658,16 @@ bindRange('dScale','dScale', v=>v.toFixed(0));
 bindRange('betaF_d','betaF', v=>v.toFixed(2));
 bindRange('betaJ_d','betaJ', v=>v.toFixed(2));
 bindRange('As','As', v=>v.toFixed(0)+' mm²');
+bindRange('settleDy','settleDy', v=>v.toFixed(0)+' mm');
+
+(function bindSettleCol(){
+  const sel = document.getElementById('settleCol');
+  if(!sel) return;
+  sel.addEventListener('change', ()=>{
+    S.settleCol = parseInt(sel.value, 10) || 0;
+    run();
+  });
+})();
 
 (function bindFrameMat() {
   const seg = document.getElementById('segFrameMat');

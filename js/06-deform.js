@@ -6,9 +6,8 @@
 function drawDeform(canvas, model, dprOverride){
   const T = theme();
   const {ctx,W,H} = setupCanvas(canvas, dprOverride);
-  const pad = (model.p.displayMode === 'deform')
-    ? {padL: 60, padT: 150, padR: 80, padB: 42}
-    : {padL: 170, padT: 150, padR: 60, padB: 36}; // 进一步将 padT 提升至 150，彻底避开 HUD
+  // 统一 pad 与受力图一致（120,100,60,36），使得两张图的结构比例完全一样大
+  const pad = {padL: 120, padT: 100, padR: 60, padB: 36};
   const {toS} = makeTransform(model, W, H, pad);
 
   ctx.fillStyle=T.bg; ctx.fillRect(0,0,W,H);
@@ -119,5 +118,5 @@ function drawDeform(canvas, model, dprOverride){
   }
 
   if(model.p.showIds) drawIds(ctx, model, toS);
-  drawSupports(ctx, model, toS, model.p.betaF);
+  drawSupports(ctx, model, toS, model.p.betaF, true, F);
 }

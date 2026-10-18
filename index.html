@@ -43,7 +43,7 @@ var _hmt = _hmt || [];
       <div class="brandText">
         <div class="brandRow">
           <span class="brandName">Structura<span class="brandTest">测试版</span></span>
-          <span class="brandVer" id="ui-ver-brand">v0.1.4</span>
+          <span class="brandVer" id="ui-ver-brand">v0.1.5</span>
         </div>
         <div class="brandRule"></div>
         <div class="brandSub">基于矩阵位移法的平面刚架线弹性静力分析</div>
@@ -160,6 +160,13 @@ var _hmt = _hmt || [];
           <div class="selfTestCard" data-selftest="brace-angle">
             <div class="stcTitle">⑮ 支撑角度与轴力分配</div>
             <div class="stcDesc">单层单跨 · X 撑 · 水平力。扫掠左跨 L₁ (3→12)，看支撑变平后单根斜杆轴力反而减小（水平分量占比增大），但侧向刚度在 θ≈35° 附近最大。</div>
+            <span class="stcAction">▶ 播放</span>
+          </div>
+
+          <div class="selfTestCategory">F. 非荷载作用</div>
+          <div class="selfTestCard" data-selftest="settlement">
+            <div class="stcTitle">⑯ 支座沉降的附加内力</div>
+            <div class="stcDesc">两层两跨 · 无外荷载、无水平力。扫掠左柱沉降 (0→100mm)，看超静定结构在"什么都没加"的情况下，M 图从零逐渐出现、反力重新分配、结构整体倾斜。</div>
             <span class="stcAction">▶ 播放</span>
           </div>
         </div>
@@ -286,6 +293,14 @@ var _hmt = _hmt || [];
             <input type="range" id="r" min="0.25" max="4" step="0.05" value="1">
           </div>
           <div class="hint">内柱 EI、EA 均为边柱的 r 倍。r &gt; 1 时内柱更刚，水平力分配更偏向内柱。</div>
+          <div class="ctrl">
+            <div class="head"><span>轴向变形</span></div>
+            <div class="seg" id="segAxial">
+              <button type="button" data-axial="real" class="on">考虑（精确）</button>
+              <button type="button" data-axial="rigid">忽略（刚性）</button>
+            </div>
+          </div>
+          <div class="hint">忽略轴向变形 = 梁柱 EA 放大 1e6 倍，模拟传统手算"轴向不可伸长"假定。仅影响梁柱，支撑不受影响。</div>
         </div>
       </div>
 
@@ -356,6 +371,23 @@ var _hmt = _hmt || [];
           </div>
           <div class="hint">开启后，变形图显示 B = 1/(1−ΣN/ΣN_cr)。<br><strong style="color:#38bdf8">💡 算法说明：</strong>系统会在后台自动“剥离”所有竖向荷载，临时计算一次纯水平力下的侧向刚度，从而推导出真实的 N_cr。因此，即使存在大悬挑或不对称竖向荷载，B 值也不受重力偏心引起的假侧移干扰。</div>
         </div>
+
+        <div class="group">
+          <div class="gtitle">非荷载作用 · 支座沉降</div>
+          <div class="ctrl" id="row-settleCol">
+            <div class="head"><span>沉降柱位置</span></div>
+            <select id="settleCol" class="sweepSel">
+              <option value="0">左柱</option>
+              <option value="1">中柱</option>
+              <option value="2">右柱</option>
+            </select>
+          </div>
+          <div class="ctrl" id="row-settleDy">
+            <div class="head"><span>柱脚竖向沉降 Δ↓</span><b id="v-settleDy">0 mm</b></div>
+            <input type="range" id="settleDy" min="0" max="100" step="1" value="0">
+          </div>
+          <div class="hint">超静定结构在<strong>无外荷载</strong>时，支座沉降也会产生内力。内力与沉降量成正比、与刚度成正比。仅支持单柱竖向沉降；可与「冻结」对比，查看沉降前后的内力重分布。</div>
+        </div>
       </div>
     </div>
 
@@ -401,6 +433,9 @@ var _hmt = _hmt || [];
             <option value="betaF">柱脚 β_f</option>
             <option value="betaJ">梁端 β_j</option>
           </optgroup>
+          <optgroup label="非荷载作用">
+            <option value="settleDy">柱脚沉降 Δ</option>
+          </optgroup>
         </select>
       </div>
       <div class="sweepRow btns">
@@ -437,7 +472,7 @@ var _hmt = _hmt || [];
       <span class="ssbItem"><b>RESIDUAL</b><i id="ssbResid">—</i></span>
       <span class="ssbItem"><b>STATUS</b><i id="ssbStatus" class="ok">OK</i></span>
       <span class="ssbSpacer"></span>
-      <span class="ssbMeta" title="工具持续开发中，请勿盲目相信计算结果">⚠ 持续开发中 · 结果仅供概念参考 · ZHAO STRUCTURAL LAB · <span id="ui-ver-status">v0.1.4</span></span>
+      <span class="ssbMeta" title="工具持续开发中，请勿盲目相信计算结果">⚠ 持续开发中 · 结果仅供概念参考 · ZHAO STRUCTURAL LAB · <span id="ui-ver-status">v0.1.5</span></span>
     </div>
 
     <!-- 求解徽章 -->
@@ -503,6 +538,7 @@ var _hmt = _hmt || [];
             </div>
             <div class="segMini" id="segView">
               <button type="button" id="btnVals">数值</button>
+              <button type="button" id="btnAntiPts" title="显示/隐藏反弯点及位置">反弯点</button>
               <button type="button" id="btnFreeze">冻结</button>
               <button type="button" id="btnIds" title="显示节点/单元编号">N#</button>
               <button type="button" id="btnShotForce" title="导出内力图为 PNG（2x）">📷</button>
@@ -549,7 +585,7 @@ var _hmt = _hmt || [];
         <div class="deformOverlay">
           <div class="dTitle">变形图</div>
           <div class="dRow"><span>最大位移</span><b id="r-maxD">—</b></div>
-          <div class="dRow"><span>最大层间位移角</span><b id="r-drift">—</b></div>
+          <div id="r-drift-list" style="margin: 4px 0 8px 0; display: flex; flex-direction: column; gap: 4px; font-size: 11.5px; font-family: 'JetBrains Mono', ui-monospace, monospace;"></div>
           <div class="dRow"><span>表观侧移刚度 K</span><b id="r-K">—</b></div>
           <div class="dRow" id="rowPD" style="display:none"><span>P-Δ 放大系数 B</span><b id="r-pd">—</b></div>
         </div>
@@ -595,7 +631,8 @@ var _hmt = _hmt || [];
       <ul>
         <li><strong>结构模型</strong>：平面刚架，参数化拓扑 —— 1~3 跨 × 1~3 层，可选右侧悬挑。柱列数 = 跨数 + 1；跨内梁数 = 跨数 × 层数；悬挑梁数 = 层数（开启悬挑时）。</li>
         <li><strong>材料</strong>：均质、各向同性、线弹性。混凝土弹性模量 E = 3.0×10⁷ kN/m²（C30 规范值）。</li>
-        <li><strong>变形</strong>：小变形、小应变。不做真正的几何非线性迭代（不迭代 K<sub>g</sub>）；P-Δ 放大系数 B 为基于等效单自由度的粗估（见第十二节）。</li>
+        <li><strong>变形</strong>：小变形、小应变。不做真正的几何非线性迭代（不迭代 K<sub>g</sub>）；P-Δ 放大系数 B 为基于等效单自由度的粗估（见第十三节）。</li>
+        <li><strong>轴向变形开关</strong>：默认「考虑（精确）」。切换为「忽略（刚性）」时，梁柱轴向刚度 EA 相对放大 1e6 倍，使轴向变形远小于弯曲变形，模拟传统手算"轴向不可伸长"假定。这是数值近似（相对放大），不是数学上的无限刚性；EI 不变，仅锁轴向；支撑 A<sub>s</sub> 的轴向刚度不受影响。</li>
         <li><strong>单元</strong>：平面梁单元，每节点 3 个自由度（水平、竖向、转角）。</li>
         <li><strong>支撑单元</strong>：二力杆，<code>kind:'brace'</code>，局部刚度仅保留轴向项 <code>EA/L</code>，所有弯曲刚度项（<code>12EI/L³</code> 等）置 0；两端强制铰接，不参与 β<sub>j</sub> 半刚接修正。按「层 × 跨」网格逐格布置（X / ╱ / ╲），每格可独立选择材质（钢 Q355 / 混凝土 C30）与截面积 A<sub>s</sub>，并可逐格开启「仅受拉」。</li>
         <li><strong>忽略</strong>：剪切变形、扭转变形、材料非线性、节点域变形、施工阶段效应、温度作用、收缩徐变、钢筋与混凝土滑移。</li>
@@ -724,7 +761,7 @@ var _hmt = _hmt || [];
             <li><strong>刚性楼板（Hmode = 'rigid'）</strong>：采用自由度缩并技术，强制同层各节点水平位移相等。水平力同样作用于左柱顶，由刚性约束自动按各柱侧移刚度分配。适用于现浇混凝土楼盖。</li>
           </ul>
         </li>
-        <li style="margin-bottom:5px"><strong>二阶效应为粗估</strong>：不做真正的 P-Δ 迭代（不组装几何刚度矩阵 K<sub>g</sub>），仅用等效单自由度反推 <code>B = 1/(1−ΣN/ΣN<sub>cr</sub>)</code>，见第十二节。</li>
+        <li style="margin-bottom:5px"><strong>二阶效应为粗估</strong>：不做真正的 P-Δ 迭代（不组装几何刚度矩阵 K<sub>g</sub>），仅用等效单自由度反推 <code>B = 1/(1−ΣN/ΣN<sub>cr</sub>)</code>，见第十三节。</li>
         <li style="margin-bottom:5px"><strong>多跨对称结构的浮点虚假侧移</strong>：单跨无悬挑纯竖向荷载已在求解前用约束消除奇异；多跨对称结构（等跨、等层高、r=1、荷载对称）理论上水平位移为零，但代码未做此约束，浮点噪声可能产生极小侧移。对侧移刚度大的结构影响可忽略；对全铰接或半刚接的柔性框架，可能出现可见的虚假侧移。</li>
         <li style="margin-bottom:5px"><strong>无节点域</strong>：节点处按纯刚接或纯铰接处理，未考虑节点域剪切变形。</li>
         <li style="margin-bottom:5px"><strong>悬挑梁简化</strong>：悬挑梁按标准刚接单元处理，不参与 β<sub>j</sub> 半刚接修正；悬挑端为自由端，未建模实际边梁的弹性约束。</li>
@@ -739,7 +776,7 @@ var _hmt = _hmt || [];
 
       <h3>十、力学概念自检建议</h3>
       <div class="note" style="margin-bottom:12px">
-        左侧栏「自检」Tab 内置了 15 个一键播放的力学场景。点击卡片即可自动加载工况、开启扫掠并慢速播放。以下是这 15 个场景的具体考点：
+        左侧栏「自检」Tab 内置了 16 个一键播放的力学场景。点击卡片即可自动加载工况、开启扫掠并慢速播放。以下是这 16 个场景的具体考点：
       </div>
       <div style="margin-left:18px; margin-bottom:12px;">
         <p><strong>A. 弯矩与刚度</strong></p>
@@ -776,12 +813,27 @@ var _hmt = _hmt || [];
           <li><strong>⑭ 仅受拉支撑的单向工作</strong>：扫掠 H₁，N 图上始终只有受拉斜杆有数值，受压杆自动退出。</li>
           <li><strong>⑮ 支撑角度与轴力分配</strong>：扫掠 L₁ (3→12)，看支撑变平后单根斜杆轴力反而减小。</li>
         </ul>
+
+        <p><strong>F. 非荷载作用</strong></p>
+        <ul style="margin-top:2px; margin-bottom:8px;">
+          <li><strong>⑯ 支座沉降的附加内力</strong>：扫掠左柱沉降 (0→100mm)，看超静定结构在"什么都没加"的情况下 M 图从零逐渐出现、反力重新分配、结构整体倾斜。</li>
+        </ul>
       </div>
 
-      <h3>十一、界面速览</h3>
+      <h3>十一、支座沉降</h3>
+      <p>在「荷载」Tab 的「非荷载作用 · 支座沉降」组中，可指定单根柱的柱脚竖向沉降，范围 0–100 mm。</p>
+      <ul>
+        <li><strong>力学本质</strong>：支座沉降是非齐次边界条件。求解方程由 <code>K_ff·U_f = F_f</code> 变为 <code>K_ff·U_f = F_f − K_fc·U_c</code>，右端多出的等效荷载即"约束位移通过刚度耦合传到自由节点的力"。</li>
+        <li><strong>核心概念</strong>：超静定结构在<strong>无外荷载</strong>时，支座沉降也会产生内力，且内力与沉降量成正比、与构件刚度成正比。静定结构（如简支梁）对支座沉降不敏感。</li>
+        <li><strong>符号约定</strong>：UI 输入正数（如 20 表示沉降 20mm），代码内部转换为 <code>U[uy] = −0.02 m</code>（向下为负）。</li>
+        <li><strong>与冻结对比</strong>：先关闭沉降、点击「冻结」保存基线，再拖动沉降滑块，变形图与内力图会以浅灰虚线（基线）与实线（当前）对比，沉降前后差异一目了然。</li>
+        <li><strong>局限</strong>：仅支持单柱竖向沉降；不支持水平位移与转角；不支持多柱独立沉降；未考虑土体固结时间效应。</li>
+      </ul>
+
+      <h3>十二、界面速览</h3>
       <ul>
         <li><strong>左栏 Tab 与读数面板</strong>：「自检」放 15 个预设工况，「模型」放拓扑 / 几何 / 截面 / 支撑，「荷载」放均布 / 悬挑 / 水平力 / 二阶效应；右侧读数面板显示截面尺寸、内柱刚度比 r、逐层逐跨 ρ、水平力分配。原「左栏摘要卡」已合并进读数面板（避免与左栏重复）。</li>
-        <li><strong>左栏 Tab</strong>：「自检」内置 15 个预设工况（A 弯矩与刚度 / B 轴力与框架 / C 变形与侧移 / D 水平力与二阶 / E 支撑系统），「模型」放拓扑 / 几何 / 截面 / 支撑，「荷载」放均布 / 悬挑 / 水平力 / 二阶效应。快捷键 <code>1</code> / <code>2</code> / <code>3</code> 切换。</li>
+        <li><strong>左栏 Tab</strong>：「自检」内置 16 个预设工况（A 弯矩与刚度 / B 轴力与框架 / C 变形与侧移 / D 水平力与二阶 / E 支撑系统 / F 非荷载作用），「模型」放拓扑 / 几何 / 截面 / 支撑，「荷载」放均布 / 悬挑 / 水平力 / 二阶效应。快捷键 <code>1</code> / <code>2</code> / <code>3</code> 切换。</li>
         <li><strong>内力图卡（右上角工具条）</strong>：
           <ul style="margin-top:3px">
             <li><code>M</code> / <code>N</code> / <code>V</code> / <code>R</code>：切换内力类型或支座反力图；</li>
@@ -802,7 +854,7 @@ var _hmt = _hmt || [];
         <li><strong>底部状态栏</strong>：<code>NODES</code> 节点数 · <code>ELEMENTS</code> 单元数 · <code>DOF</code> 自由度数 · <code>SOLVE</code> 本次求解耗时（ms）· <code>RESIDUAL</code> <strong>相对</strong>平衡残差（柱脚反力之和与外部荷载之和的差值，除以柱脚反力量级，越小越准）· <code>STATUS</code> 状态（<strong>相对残差</strong> &lt; 1e-8 显示绿色 OK，否则 CHECK；仅受拉迭代 10 次未收敛时显示 NC·未收敛）。</li>
       </ul>
 
-      <h3>十二、P-Δ 放大系数与侧移刚度的说明</h3>
+      <h3>十三、P-Δ 放大系数与侧移刚度的说明</h3>
       <p><strong>P-Δ 放大系数 B</strong>（仅在「荷载」Tab 开启 P-Δ 开关后显示）：</p>
       <ul>
         <li>物理含义：二阶效应会把当前的内力和位移<strong>放大</strong>约 B 倍。B = 1 表示无二阶效应；B = 1.1 表示放大 10%。</li>
@@ -819,7 +871,7 @@ var _hmt = _hmt || [];
         <li>自检场景下，K 的<strong>变化趋势</strong>（拖动 β<sub>f</sub>、r 时 K 怎么变）比绝对值更有意义。</li>
       </ul>
 
-      <h3>十三、支持作者</h3>
+      <h3>十四、支持作者</h3>
       <p>如果这个工具帮你理清过某个力学概念，可以请作者喝杯咖啡。</p>
       <div class="tipInline">
         <img src="m.jpg" alt="打赏码">
