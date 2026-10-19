@@ -432,6 +432,24 @@ function analyze(p, opts = {}){
     }
   }
 
+  /* 把「截面温差梯度系数 × κ」预先写入每个单元，供 03-internal.js 的 elemDisp 使用。 */
+  if (Math.abs(p.tempGrad || 0) > 1e-9) {
+    const alphaT = 1.0e-5;
+    for (const el of els) {
+      if (el.kind === 'brace' || el.isCant) continue;
+      let gf = 0;
+      if (el.kind === 'col') {
+        if (el.col === 0) gf = 1.0;
+        else if (el.col === nBay) gf = -1.0;
+      } else if (el.kind === 'beam' && el.lev === nLev) {
+        gf = 1.0;
+      }
+      if (gf === 0) continue;
+      const h = (el.kind === 'col') ? (p.hc/1000) : (p.hb/1000);
+      el.tempGradEff = alphaT * p.tempGrad * gf / h;
+    }
+  }
+
   const ndof = nodes.length*3;
   const K = zeros(ndof,ndof);
   const F = new Float64Array(ndof);

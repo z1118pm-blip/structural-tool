@@ -61,6 +61,12 @@ function elemDisp(res, x){
   if (w !== 0 && !el.isCant) {
     vly += (w * x*x * (L-x)*(L-x)) / (24 * EI);
   }
+  /* 温度梯度特解：截面内外温差使杆产生均匀曲率 κ = α·ΔT/h，
+     变形近似为抛物线 v(x) = κ/2 · x·(L−x)，两端位移为零。
+     注意：只有「结构外围构件」才承受截面温差，内部构件 tempGradEff 未定义，附加项自动为 0。 */
+  if (!el.isCant && el.kind !== 'brace' && el.tempGradEff) {
+    vly += el.tempGradEff * x * (L - x) / 2;
+  }
 
   return [cs*ulx - sn*vly, sn*ulx + cs*vly];
 }

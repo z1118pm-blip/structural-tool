@@ -9,14 +9,10 @@
   html,body{height:100%;background:radial-gradient(circle at center, #0f172a 0%, #0b1120 100%);color:#f8fafc;overflow:hidden;
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
     -webkit-font-smoothing:antialiased;}
-  :root{
-    --cv-w: min(calc((100vh - 100px) * 4 / 3), calc(100vw - 244px));
-    --game-w: calc(var(--cv-w) + 214px);
-  }
+  /* 移除旧的 :root 魔法变量，采用完全自适应的 Flex 弹性布局 */
   #wrap{display:flex;flex-direction:column;height:100vh;height:100dvh;width:100%;align-items:center;justify-content:center;
-    padding:6px;gap:8px;overflow:hidden;}
-  #hudBar{display:flex;justify-content:space-between;align-items:center;width:var(--game-w);
-    max-width:calc(100vw - 20px);
+    padding:8px;gap:8px;overflow:hidden;}
+  #hudBar{display:flex;justify-content:space-between;align-items:center;width:100%;max-width:1100px;flex-shrink:0;
     font-family:"JetBrains Mono","SF Mono","Cascadia Mono","Roboto Mono",Menlo,Consolas,monospace;
     font-size:12px;color:#94a3b8;letter-spacing:.5px;}
   #hudBar .left{display:flex;gap:22px;flex-wrap:wrap;align-items:center;}
@@ -32,29 +28,17 @@
   .hudBtn.on{background:rgba(56,189,248,.10);border-color:#38bdf8;color:#38bdf8;}
   .hudVol{display:flex;align-items:center;gap:6px;}
   .hudVol .volLbl{font-size:9.5px;color:#64748b;letter-spacing:1px;font-weight:600;}
-  .hudVol input[type=range]{
-    width:60px;height:3px;-webkit-appearance:none;appearance:none;
-    background:#1e293b;border-radius:2px;outline:none;cursor:pointer;
-  }
-  .hudVol input[type=range]::-webkit-slider-thumb{
-    -webkit-appearance:none;appearance:none;width:11px;height:11px;
-    background:#38bdf8;border-radius:50%;box-shadow:0 0 8px rgba(56,189,248,.6);cursor:pointer;
-  }
-  .hudVol input[type=range]::-moz-range-thumb{
-    width:11px;height:11px;background:#38bdf8;border-radius:50%;border:none;cursor:pointer;
-  }
-  .hudVol .volVal{
-    font-size:10px;color:#38bdf8;min-width:24px;text-align:right;
-    font-variant-numeric:tabular-nums;font-weight:600;
-  }
-  #canvasRow{display:flex;gap:14px;align-items:stretch;justify-content:center;
-    flex:0 1 auto;min-height:0;width:var(--game-w);max-width:calc(100vw - 20px);}
-  #canvasWrap{position:relative;flex:0 0 auto;width:var(--cv-w);aspect-ratio:4/3;
-    background:#050914;border:1px solid #334155;border-radius:12px;overflow:hidden;
-    box-shadow:0 16px 48px rgba(0,0,0,.75), 0 0 0 1px rgba(56,189,248,.12) inset;
-    touch-action:none;cursor:none;}
+  .hudVol input[type=range]{width:60px;height:3px;-webkit-appearance:none;appearance:none;background:#1e293b;border-radius:2px;outline:none;cursor:pointer;}
+  .hudVol input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:11px;height:11px;background:#38bdf8;border-radius:50%;box-shadow:0 0 8px rgba(56,189,248,.6);cursor:pointer;}
+  .hudVol input[type=range]::-moz-range-thumb{width:11px;height:11px;background:#38bdf8;border-radius:50%;border:none;cursor:pointer;}
+  .hudVol .volVal{font-size:10px;color:#38bdf8;min-width:24px;text-align:right;font-variant-numeric:tabular-nums;font-weight:600;}
+
+  #canvasRow{display:flex;gap:14px;align-items:stretch;justify-content:center;flex:1 1 auto;min-height:0;width:100%;max-width:1100px;}
+  #canvasWrap{position:relative;flex:1 1 auto;width:100%;min-height:0;background:#050914;border:1px solid #334155;border-radius:12px;overflow:hidden;
+    box-shadow:0 16px 48px rgba(0,0,0,.75), 0 0 0 1px rgba(56,189,248,.12) inset;touch-action:none;cursor:none;}
   #overlay.show{cursor:default;}
   #gcv{display:block;width:100%;height:100%;}
+  
   #legend{flex:0 0 200px;display:flex;flex-direction:column;gap:6px;
     padding:12px 10px;background:rgba(15,23,42,.6);border:1px solid #334155;
     border-radius:12px;font-family:"JetBrains Mono",Menlo,Consolas,monospace;font-size:10.5px;
@@ -69,7 +53,8 @@
   #legend .lgText{flex:1;min-width:0;}
   #legend .lgText b{display:block;color:#cbd5e1;font-size:11px;font-weight:600;margin-bottom:1px;}
   #legend .lgText span{font-size:9px;color:#64748b;line-height:1.3;display:block;}
-  #touchBar{display:none;gap:10px;width:var(--cv-w);justify-content:center;}
+
+  #touchBar{display:none;gap:10px;width:100%;justify-content:center;flex-shrink:0;}
   #touchBar button{flex:1;max-width:240px;padding:14px 0;font-size:15px;font-weight:600;
     border-radius:10px;border:1px solid #1e293b;background:#0a1220;color:#94a3b8;
     font-family:inherit;cursor:pointer;touch-action:manipulation;transition:all .15s;
@@ -95,14 +80,18 @@
   #overlay .layoutTag{display:inline-block;font-size:11px;color:#fbbf24;border:1px solid rgba(251,191,36,.4);
     padding:2px 10px;border-radius:4px;background:rgba(251,191,36,.08);letter-spacing:1px;
     font-family:"JetBrains Mono",Menlo,monospace;margin-top:4px;}
-  /* ===== 移动端：竖屏（画布最大化） ===== */
-  @media (max-width:1000px) and (orientation:portrait){
-    :root{
-      --cv-w: calc(100vw - 12px);
-      --game-w: calc(100vw - 12px);
-    }
-    #wrap{justify-content:flex-start;padding-top:6px;gap:6px;}
-    #canvasRow{flex-direction:column;gap:6px;width:var(--cv-w);margin-bottom:68px;}
+  
+  /* ===== 移动端通用适配（横竖屏统一弹性） ===== */
+  @media (max-width:1000px) {
+    #wrap{padding:6px;gap:6px;}
+    #hudBar{font-size:11px;}
+    #hudBar .left{gap:8px;}
+    #hudBar .right{gap:4px;}
+    #hudBar .hudVol {display:none;} /* 隐藏音量条 */
+    #btnLegend{padding:4px 6px;font-size:11px;letter-spacing:0;}
+    .hudBtn{padding:4px 8px;font-size:11px;}
+    
+    #canvasRow{flex-direction:column;gap:6px;}
     #legend:not(.show){display:none!important;}
     #legend.show{
       display:flex;position:fixed;
@@ -110,53 +99,24 @@
       width:min(340px,92vw);max-height:72vh;
       flex-direction:column;gap:6px;
       padding:14px;z-index:200;overflow-y:auto;
-      background:rgba(15,23,42,.97);
-      backdrop-filter:blur(8px);
+      background:rgba(15,23,42,.97);backdrop-filter:blur(8px);
       border:1px solid #334155;border-radius:14px;
       box-shadow:0 20px 60px rgba(0,0,0,.85);
     }
     #legend .lgItem{flex:0 0 auto;min-width:0;}
-    #hudBar{font-size:11px;}
-    #hudBar .left{gap:10px;}
-    #hudBar .right{gap:4px;flex-wrap:nowrap;}
-    #hudBar .hudVol {display:none;} /* 瘦身：隐藏音量条 */
-    #btnLegend{padding:3px 7px;font-size:11px;letter-spacing:0;}
-    #touchBar{display:flex;position:fixed;bottom:10px;left:50%;transform:translateX(-50%);width:var(--cv-w);z-index:10;background:transparent;}
-    #touchBar button{flex:1;max-width:none;padding:10px 0;font-size:14px;background:rgba(10,18,32,0.85);backdrop-filter:blur(4px);}
+    
+    #touchBar{display:flex;gap:8px;width:100%;flex-shrink:0;padding-bottom:env(safe-area-inset-bottom,4px);}
+    #touchBar button{flex:1;padding:12px 0;font-size:14px;background:rgba(10,18,32,0.85);border:1px solid #1e293b;color:#cbd5e1;border-radius:8px;font-family:inherit;cursor:pointer;touch-action:manipulation;letter-spacing:1px;}
+    #touchBar button:active{background:#1e293b;border-color:#38bdf8;color:#38bdf8;box-shadow:0 0 18px rgba(56,189,248,.25);}
   }
 
-  /* ===== 移动端：横屏（HUD 浮层化） ===== */
-  @media (orientation:landscape) and (max-height:560px){
-    :root{
-      --cv-w: min(calc((100vh - 40px) * 4 / 3), calc(100vw - 12px));
-      --game-w: calc(100vw - 12px);
-    }
+  /* ===== 横屏特别处理（小高度设备） ===== */
+  @media (orientation:landscape) and (max-height:560px) {
     #wrap{padding:4px;gap:4px;}
-    #hudBar{
-      position:absolute; top:4px; left:50%; transform:translateX(-50%);
-      width:var(--cv-w); z-index:10;
-      background:rgba(15,23,42,.7); backdrop-filter:blur(4px);
-      padding:4px 10px; border-radius:8px; border:1px solid #334155;
-      font-size:10px; pointer-events:none;
-    }
-    #hudBar .right {pointer-events:auto;}
-    #hudBar .left{gap:12px;}
-    #canvasRow{flex-direction:row;gap:8px;width:var(--game-w);justify-content:center;}
-    #legend:not(.show){display:none!important;}
-    #legend.show{
-      display:flex;position:fixed;
-      top:50%;left:50%;transform:translate(-50%,-50%);
-      width:min(340px,92vw);max-height:80vh;
-      flex-direction:column;gap:6px;
-      padding:14px;z-index:200;overflow-y:auto;
-      background:rgba(15,23,42,.97);
-      backdrop-filter:blur(8px);
-      border:1px solid #334155;border-radius:14px;
-      box-shadow:0 20px 60px rgba(0,0,0,.85);
-    }
-    #legend .lgItem{flex:0 0 auto;min-width:0;}
-    #touchBar{display:flex;width:var(--cv-w);}
-    #touchBar button{flex:1;max-width:none;padding:8px 0;font-size:12px;}
+    #hudBar{font-size:10px;}
+    #canvasRow{flex-direction:row;gap:8px;}
+    #touchBar{flex-direction:row;width:100%;}
+    #touchBar button{padding:8px 0;font-size:12px;}
   }
 
   /* ===== 最后一球警告 & 连击 HUD & 返回按钮 ===== */
@@ -248,22 +208,22 @@
 (function(){
   'use strict';
 
-  /* ===================== 常量 ===================== */
-  const W = 800, H = 600;
-  const WALL = 20;
-  const PADDLE_W = 110, PADDLE_H = 14;
-  const PADDLE_Y = H - 50;
-  let BALL_R = 8; // 改为 let，支持动态变大变小
-  const BASE_SPEED = 380;
-  const PADDLE_SPEED = 720;
+  /* ===================== 常量（改为动态以适应屏幕） ===================== */
+  let W = 800, H = 600;
+  let WALL = 20;
+  let PADDLE_W = 110, PADDLE_H = 14;
+  let PADDLE_Y = H - 50;
+  let BALL_R = 8; 
+  let BASE_SPEED = 380;
+  let PADDLE_SPEED = 720;
   const MAX_BOUNCE_ANGLE = Math.PI / 3;
   const MIN_VY_RATIO = Math.sin(Math.PI / 12);
 
-  const BRICK_COLS = 10;
-  const BRICK_MARGIN_X = 40;
-  const BRICK_MARGIN_TOP = 90;
-  const BRICK_H = 24, BRICK_GAP = 8;
-  const BRICK_W = (W - BRICK_MARGIN_X * 2 - BRICK_GAP * (BRICK_COLS - 1)) / BRICK_COLS;
+  let BRICK_COLS = 10;
+  let BRICK_MARGIN_X = 40;
+  let BRICK_MARGIN_TOP = 90;
+  let BRICK_H = 24, BRICK_GAP = 8;
+  let BRICK_W = 0;
 
   const BRICK_COLORS = ['#f97316', '#a855f7', '#22d3ee', '#10b981', '#fde68a'];
   /* 随机图案库（24 种）。每关从 PATTERNS 抽取一个图案，
@@ -468,7 +428,10 @@
       osc.type = type || 'sine';
       osc.frequency.setValueAtTime(freq, ac.currentTime);
       const scale = G.volume / 35;   /* 35 为基准，滑到 100 音量约 3 倍，0 则静音 */
-      g.gain.setValueAtTime((vol || 0.045) * scale, ac.currentTime);
+      /* exponentialRamp 起始值不能为 0（Web Audio 未定义行为），
+         音量滑到 0 时用 0.0001 兜底，听感仍是静音 */
+      const startGain = Math.max(0.0001, (vol || 0.045) * scale);
+      g.gain.setValueAtTime(startGain, ac.currentTime);
       g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + dur);
       osc.connect(g);
       g.connect(ac.destination);
@@ -479,7 +442,9 @@
   function sfxWall(){ tone(180, 0.05, 'sine', 0.035); }
   function sfxPaddle(){ tone(320, 0.06, 'triangle', 0.05); }
   function sfxBrick(row, combo){
-    const baseFreq = 380 + (4 - row) * 65;
+    /* rows 最多 14，row=13 时 380+(4-13)*65 为负；
+       Web Audio 负频率会抛异常，被 tone() 的 try/catch 静默吞掉，表现为音效消失 */
+    const baseFreq = Math.max(120, 380 + (4 - row) * 65);
     const comboShift = Math.min((combo || 0) * 10, 400); // 连击越高，音调越高，封顶400
     tone(baseFreq + comboShift, 0.045, 'square', 0.03);
   }
@@ -633,13 +598,108 @@
 
   function resizeCanvas(){
     const rect = canvas.getBoundingClientRect();
+    if (rect.width < 10 || rect.height < 10) return;
     const isMobile = window.matchMedia('(pointer: coarse)').matches || window.innerWidth <= 1000;
     dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.5 : 2);
     cw = Math.max(1, rect.width);
     ch = Math.max(1, rect.height);
     canvas.width  = Math.round(cw * dpr);
     canvas.height = Math.round(ch * dpr);
+    
+    const oldW = W, oldH = H;
+    const aspect = cw / ch;
+    const baseArea = 480000; // 800 * 600 的基准面积
+    W = Math.sqrt(baseArea * aspect);
+    H = Math.sqrt(baseArea / aspect);
+    
+    const s = W / 800;
+    WALL = 20 * s;
+    PADDLE_W = 110 * s;
+    PADDLE_H = 14 * s;
+    PADDLE_Y = H - 50 * s;
+    BASE_SPEED = 380 * s;
+    PADDLE_SPEED = 720 * s;
+    BRICK_MARGIN_X = Math.max(WALL + 2, 40 * s);
+    BRICK_MARGIN_TOP = 90 * s;
+    BRICK_H = 24 * s;
+    BRICK_GAP = 8 * s;
+    /* 极端窄屏下加下限保护，避免 BRICK_W 为负导致砖块重叠 */
+    BRICK_W = Math.max(6 * s, (W - BRICK_MARGIN_X * 2 - BRICK_GAP * (BRICK_COLS - 1)) / BRICK_COLS);
+    
+    // 如果宽高发生改变，无缝按比例迁移当前物体位置
+    if (oldW > 0 && oldH > 0 && (oldW !== W || oldH !== H)) {
+      const sx = W / oldW, sy = H / oldH;
+      /* 先按新尺寸更新球半径，后续 clamp 才能用正确的 BALL_R */
+      updateBallRadius();
+
+      /* 砖块：位置按 sx/sy 缩放，宽高统一取新的全局 BRICK_W/BRICK_H。
+         砖块尺寸只随宽度缩放（BRICK_H = 24 * W/800），不能按 sy 拉伸，
+         否则 sx !== sy 时砖块会被非等比扭曲。 */
+      for (const b of G.bricks) {
+        b.x *= sx; b.y *= sy;
+        b.w = BRICK_W; b.h = BRICK_H;
+      }
+
+      /* 球：位置按 sx/sy 缩放；速度大小按宽度比例 sx 统一缩放，保持方向不变，
+         避免 sx !== sy 时合速度被扭曲。随后做边界与挡板位置钳制。 */
+      const speedScale = sx;
+      const clampBall = (b) => {
+        if (!b) return;
+        if (b.x < WALL + BALL_R) b.x = WALL + BALL_R;
+        if (b.x > W - WALL - BALL_R) b.x = W - WALL - BALL_R;
+        if (b.y < WALL + BALL_R) b.y = WALL + BALL_R;
+        /* 球落到挡板下方时抬回挡板上方，防止 resize 后直接判负 */
+        if (b.y + BALL_R > PADDLE_Y + PADDLE_H) b.y = PADDLE_Y - BALL_R - 2;
+      };
+      /* resize 后球速钳制：避免拉宽窗口后球速超过发射路径的 950 硬上限，
+         或缩窄后趋近 0 */
+      const clampSpeed = (b) => {
+        const sp = Math.hypot(b.vx, b.vy);
+        if (sp < 1e-6) return;
+        const capped = Math.min(950, Math.max(BASE_SPEED * 0.35, sp));
+        if (Math.abs(capped - sp) > 1e-6) {
+          b.vx *= capped / sp; b.vy *= capped / sp;
+        }
+      };
+      if (G.ball) {
+        G.ball.x *= sx; G.ball.y *= sy;
+        if (!G.ball.stuck && !G.ball.held) {
+          G.ball.vx *= speedScale; G.ball.vy *= speedScale;
+          clampSpeed(G.ball);
+        }
+        clampBall(G.ball);
+      }
+      for (const b of G.extraBalls) {
+        b.x *= sx; b.y *= sy;
+        b.vx *= speedScale; b.vy *= speedScale;
+        clampSpeed(b);
+        clampBall(b);
+      }
+      /* 挡板宽度跟随新的 PADDLE_W 重算，paused 状态下也能正确显示 */
+      updatePaddleWidth();
+      if (G.paddle) {
+        G.paddle.x *= sx; G.paddle.targetX *= sx;
+        const half = G.paddle.w / 2;
+        G.paddle.x = Math.max(half + WALL, Math.min(W - half - WALL, G.paddle.x));
+        G.paddle.targetX = Math.max(half + WALL, Math.min(W - half - WALL, G.paddle.targetX));
+      }
+      for (const pu of G.powerups) { pu.x *= sx; pu.y *= sy; }
+      for (const bu of G.bullets) {
+        bu.x *= sx; bu.y *= sy;
+        bu.vy *= speedScale;
+      }
+      G.particles = []; G.rings = []; G.floaters = []; G.trail = [];
+    }
+    
     prerenderBackground();
+
+    /* resize 后所有依赖尺寸的渐变/光晕缓存失效，否则砖块、挡板、
+       暗角会保留旧尺寸的渐变，出现拉伸错位 */
+    _wallGradCache = null;
+    _centerGlowCache = null;
+    _vignetteCache = null;
+    brickGradCache.clear();
+    Object.keys(_paddleGradCache).forEach(k => delete _paddleGradCache[k]);
   }
 
   function fromScreen(clientX, clientY){
@@ -722,7 +782,7 @@
     if(s === 'ready'){
       showOverlay('应力释放', [
         { text: '按 空格 / 点击画布 / 发射按钮 发射', small: false },
-        { text: '← → 或 A D 移动 · 鼠标/手指可拖动 · P 暂停 · R 重开', small: true },
+        { text: '← → 或 A D 移动 · 鼠标/手指可拖动 · ESC 暂停 · R 重开', small: true },
         { text: '打碎砖块有概率掉落道具，接住即可触发', small: true }
       ]);
       addLayoutTag();
@@ -742,7 +802,7 @@
       hideOverlay();
     } else if(s === 'paused'){
       showOverlay('已暂停', [
-        { text: '按 P / 继续按钮 恢复', small: false }
+        { text: '按 ESC / P / 继续按钮 恢复', small: false }
       ]);
       const btnWrap = document.createElement('div');
       const resumeBtn = document.createElement('button');
@@ -792,6 +852,25 @@
   function buildBricks(){
     const cols = BRICK_COLS;
     const rnd = Math.random;
+    /* 行数与顶部留白自适应：
+       - 先按全局 BRICK_MARGIN_TOP 计算可放行数；
+       - 若连 5 行都放不下（超宽横屏/矮窗口），逐步压缩顶部 margin，
+         而不是把 rows 硬拉到 5 导致砖块压到挡板甚至溢出画布；
+       - 最终 rows 下限 2 行，上限 14 行。 */
+    const s = W / 800;
+    const bottomReserve = 150 * s;
+    const rowUnit = BRICK_H + BRICK_GAP;
+    let marginTop = BRICK_MARGIN_TOP;
+    let availH = H - marginTop - bottomReserve;
+    let maxRows = Math.floor(availH / rowUnit);
+    if (maxRows < 5) {
+      const minMargin = WALL + 8 * s;
+      const need = (5 - maxRows) * rowUnit;
+      marginTop = Math.max(minMargin, marginTop - need);
+      availH = H - marginTop - bottomReserve;
+      maxRows = Math.floor(availH / rowUnit);
+    }
+    const rows = Math.max(2, Math.min(14, maxRows));
 
     /* 排除最近 5 关用过的图案；全用完则清空记忆 */
     if(!G.recentPatterns) G.recentPatterns = [];
@@ -809,7 +888,6 @@
     do {
       attempts++;
       pid = avail[Math.floor(Math.random() * avail.length)];
-      const rows = 6 + Math.floor(Math.random() * 4);
       const patternFn = PATTERNS[pid].fn;
       const colorScheme = Math.floor(Math.random() * 3);
       const cache = {};
@@ -830,7 +908,7 @@
 
           bricks.push({
             x: BRICK_MARGIN_X + c * (BRICK_W + BRICK_GAP),
-            y: BRICK_MARGIN_TOP + r * (BRICK_H + BRICK_GAP),
+            y: marginTop + r * (BRICK_H + BRICK_GAP),
             w: BRICK_W, h: BRICK_H,
             color: color,
             score: (rows - r) * 10,
@@ -849,7 +927,6 @@
     if(bricks.length < 40){
       pid = 0;
       bricks = [];
-      const rows = 6 + Math.floor(Math.random() * 4);
       const colorScheme = Math.floor(Math.random() * 3);
       for(let r = 0; r < rows; r++){
         for(let c = 0; c < cols; c++){
@@ -863,7 +940,7 @@
           else if(roll < 0.28) hp = 2;
           bricks.push({
             x: BRICK_MARGIN_X + c * (BRICK_W + BRICK_GAP),
-            y: BRICK_MARGIN_TOP + r * (BRICK_H + BRICK_GAP),
+            y: marginTop + r * (BRICK_H + BRICK_GAP),
             w: BRICK_W, h: BRICK_H,
             color: color, score: (rows - r) * 10, row: r,
             alive: true, flash: 0, phase: Math.random() * Math.PI * 2,
@@ -990,6 +1067,13 @@
       G.effects.paddleNarrow = tpl.duration;
       G.effects.paddleWide = 0;
     } else if(tpl.id === 'slowBall'){
+      /* 慢速与加速互斥：先撤销加速的速度倍率，再应用慢速 */
+      if(G.effects.fastBall > 0){
+        for(const b of [G.ball, ...G.extraBalls]){
+          if(!b.stuck){ b.vx /= 1.4; b.vy /= 1.4; }
+        }
+        G.effects.fastBall = 0;
+      }
       if(G.effects.slowBall <= 0){
         for(const b of [G.ball, ...G.extraBalls]){
           if(!b.stuck){ b.vx *= 0.65; b.vy *= 0.65; }
@@ -997,6 +1081,13 @@
       }
       G.effects.slowBall = tpl.duration;
     } else if(tpl.id === 'fastBall'){
+      /* 加速与慢速互斥：先撤销慢速的速度倍率，再应用加速 */
+      if(G.effects.slowBall > 0){
+        for(const b of [G.ball, ...G.extraBalls]){
+          if(!b.stuck){ b.vx /= 0.65; b.vy /= 0.65; }
+        }
+        G.effects.slowBall = 0;
+      }
       if(G.effects.fastBall <= 0){
         for(const b of [G.ball, ...G.extraBalls]){
           if(!b.stuck){ b.vx *= 1.4; b.vy *= 1.4; }
@@ -1009,6 +1100,9 @@
     } else if(tpl.id === 'darkVision'){
       G.effects.darkVision = tpl.duration;
     } else if(tpl.id === 'multiball'){
+      /* 球被粘住时先释放主球：否则 atan2(0,0)=0，额外球水平向右飞出，
+         主球仍 held 不动，与额外球方向不一致 */
+      if(G.ball.held) releaseHeldBall();
       const baseSpeed = Math.hypot(G.ball.vx, G.ball.vy) || BASE_SPEED;
       const baseAng = G.ball.stuck ? -Math.PI / 2 : Math.atan2(G.ball.vy, G.ball.vx);
       for(let i = 0; i < 2; i++){
@@ -1045,9 +1139,10 @@
   }
 
   function updateBallRadius() {
-    if(G.effects.bigBall > 0) BALL_R = 14;
-    else if(G.effects.miniBall > 0) BALL_R = 5;
-    else BALL_R = 8;
+    const s = W / 800;
+    if(G.effects.bigBall > 0) BALL_R = 14 * s;
+    else if(G.effects.miniBall > 0) BALL_R = 5 * s;
+    else BALL_R = 8 * s;
   }
 
   function updateEffects(dt){
@@ -1094,15 +1189,22 @@
     }
     if(G.effects.pierce > 0){
       G.effects.pierce -= dt;
-      if(G.effects.pierce < 0) G.effects.pierce = 0;
+      if(G.effects.pierce <= 0){
+        G.effects.pierce = 0;
+        /* 穿透结束时清空所有砖的穿透免疫集合，避免残留球引用导致
+           下次获得穿透时该球对某砖永久免疫 */
+        for(const b of G.bricks){
+          if(b._piercedSet && b._piercedSet.size > 0) b._piercedSet.clear();
+        }
+      }
     }
     if(G.effects.bigBall > 0){
       G.effects.bigBall -= dt;
-      if(G.effects.bigBall < 0) { G.effects.bigBall = 0; updateBallRadius(); }
+      if(G.effects.bigBall <= 0) { G.effects.bigBall = 0; updateBallRadius(); }
     }
     if(G.effects.miniBall > 0){
       G.effects.miniBall -= dt;
-      if(G.effects.miniBall < 0) { G.effects.miniBall = 0; updateBallRadius(); }
+      if(G.effects.miniBall <= 0) { G.effects.miniBall = 0; updateBallRadius(); }
     }
     updatePaddleWidth();
   }
@@ -1202,9 +1304,16 @@
     G.powerups = [];
     G.bullets = [];
     for(const k in G.effects) G.effects[k] = 0;
+    /* 直接归零 effects.pierce 绕过了 updateEffects 里的清理路径，
+       loseLife 后旧球引用会残留在砖块 _piercedSet 上，
+       导致下一局重新获得穿透时该球对残留砖块永久免疫 */
+    for(const b of G.bricks){
+      if(b._piercedSet && b._piercedSet.size > 0) b._piercedSet.clear();
+    }
     updateBallRadius(); // 恢复初始大小
     G.laserCooldown = 0;
     G.ball.held = false;
+    G.ball.heldOffset = 0;
   }
 
   function resetGame(){
@@ -1260,7 +1369,11 @@
     if(G.effects.fastBall > 0) speed *= 1.4;
     speed = Math.min(speed, 950); // 球速硬上限
     const half = G.paddle.w / 2;
-    const t = Math.max(-1, Math.min(1, (b.x - G.paddle.x) / half));
+    /* 用 heldOffset 而非 b.x - G.paddle.x：held 球的位置只在 update 末尾同步，
+       释放可能发生在 update 之前（keydown/pointerdown），此时 b.x 是上一帧值，
+       直接用会引入 paddle_dx 偏差（单帧最大约 40° 角度偏移） */
+    const off = Math.max(-half, Math.min(half, b.heldOffset || 0));
+    const t = Math.max(-1, Math.min(1, off / half));
     const angle = t * MAX_BOUNCE_ANGLE;
     b.vx = Math.sin(angle) * speed;
     b.vy = -Math.cos(angle) * speed;
@@ -1336,12 +1449,13 @@
     for(let i = 0; i < n; i++){
       const ang = Math.random() * Math.PI * 2;
       const sp  = 90 + Math.random() * 190;
+      const life = 0.5 + Math.random() * 0.5;
       G.particles.push({
         x: cx, y: cy,
         vx: Math.cos(ang) * sp,
         vy: Math.sin(ang) * sp,
-        life: 0.5 + Math.random() * 0.5,
-        maxLife: 1.0,
+        life: life,
+        maxLife: life,
         size: 2.5 + Math.random() * 3.5,
         color: brick.color
       });
@@ -1464,8 +1578,11 @@
           b.vy *= speed / s2;
         }
         b.y = PADDLE_Y - BALL_R;
-        G.combo = 0;
-        if(comboHudEl) comboHudEl.classList.remove('show');
+        /* 只有主球碰挡板才清连击；额外球碰挡板不影响主球正在延续的连击 */
+        if(b === G.ball){
+          G.combo = 0;
+          if(comboHudEl) comboHudEl.classList.remove('show');
+        }
         G.paddle.squash = 1;
         G.rings.push({ x: b.x, y: PADDLE_Y + PADDLE_H / 2, r: 6, maxR: 40, life: 1, color: '#38bdf8', w: 2 });
         sfxPaddle();
@@ -1475,6 +1592,8 @@
         if(G.effects.catch > 0 && b === G.ball){
           b.vx = 0; b.vy = 0;
           b.held = true;
+          /* 记录接住瞬间相对挡板中心的横向偏移，释放时据此决定角度 */
+          b.heldOffset = Math.max(-half, Math.min(half, b.x - G.paddle.x));
         }
       }
     }
@@ -1553,8 +1672,12 @@
       G.ball.x = G.paddle.x;
       G.ball.y = PADDLE_Y - BALL_R - 2;
     } else if(G.ball.held){
-      /* 粘球：跟随挡板，等待玩家释放 */
-      G.ball.x = G.paddle.x;
+      /* 粘球：跟随挡板并保留接住时的横向偏移，等待玩家释放 */
+      const half = G.paddle.w / 2;
+      let off = G.ball.heldOffset || 0;
+      off = Math.max(-half, Math.min(half, off));
+      G.ball.heldOffset = off;
+      G.ball.x = G.paddle.x + off;
       G.ball.y = PADDLE_Y - BALL_R - 2;
       G.ball.vx = 0;
       G.ball.vy = 0;
@@ -1653,8 +1776,10 @@
       let hit = false;
       for(const brick of G.bricks){
         if(!brick.alive) continue;
+        /* 用子弹视觉体 [y-10, y+4] 与砖块 AABB 做区间重叠判定，与 drawBullets 的绘制长度一致；
+           比中心点判定多覆盖 14px，降低大步长漏判概率 */
         if(bullet.x >= brick.x && bullet.x <= brick.x + brick.w &&
-           bullet.y <= brick.y + brick.h && bullet.y >= brick.y){
+           bullet.y + 4 >= brick.y && bullet.y - 10 <= brick.y + brick.h){
           hitBrick(brick);
           hit = true;
           break;
@@ -1711,10 +1836,10 @@
     return g;
   }
 
-  function drawStars(now){
+  function drawStars(now, dt){
     ctx.save();
     for(const s of G.stars){
-      s.y += s.sp * (1 / 60);
+      s.y += s.sp * dt;
       if(s.y > H + 4){ s.y = -4; s.x = Math.random() * W; }
       const tw = 0.55 + 0.45 * Math.sin(now * 0.0015 + s.tw);
       ctx.globalAlpha = s.a * tw;
@@ -2029,7 +2154,9 @@
 
   const _paddleGradCache = {};
   function getPaddleGrad(key, pw){
-    if(_paddleGradCache[key]) return _paddleGradCache[key];
+    /* key 里带上 pw，避免宽/窄切换后宽度变了但渐变仍返回旧值 */
+    const cacheKey = key + '|' + pw;
+    if(_paddleGradCache[cacheKey]) return _paddleGradCache[cacheKey];
     const pg = ctx.createLinearGradient(0, 0, pw, 0);
     if(key === 'wide'){
       pg.addColorStop(0, '#d97706');
@@ -2050,7 +2177,7 @@
       pg.addColorStop(0.7, '#38bdf8');
       pg.addColorStop(1, '#0284c7');
     }
-    _paddleGradCache[key] = pg;
+    _paddleGradCache[cacheKey] = pg;
     return pg;
   }
 
@@ -2132,7 +2259,7 @@
     ctx.restore();
   }
 
-  function draw(now){
+  function draw(now, dt){
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, cw, ch);
 
@@ -2152,7 +2279,7 @@
       ctx.translate(sx, sy);
     }
 
-    drawStars(now);
+    drawStars(now, dt || 0);
     drawWalls();
     drawBricks(now);
     drawRings();
@@ -2198,7 +2325,9 @@
     }
 
     updateParticles(dt);
-    draw(now);
+    /* 暂停/结束时星星冻结，与暂停语义一致；ready/playing 正常漂移 */
+    const starDt = (G.state === 'paused' || G.state === 'over') ? 0 : dt;
+    draw(now, starDt);
     requestAnimationFrame(loop);
   }
 
@@ -2216,6 +2345,11 @@
       kickFullscreenOnce();
       if(G.state === 'ready' || G.state === 'paused') launchBall();
       else if(G.state === 'playing' && G.ball.held) releaseHeldBall();
+    } else if(k === 'Escape'){
+      /* ESC 统一负责暂停/继续，是唯一主动打断游戏的键。
+         注：全屏状态下浏览器会先退出全屏，再按一次才暂停。 */
+      if(G.state === 'playing') setState('paused');
+      else if(G.state === 'paused' && !G.overTimer) setState('playing');
     } else if(k === 'p' || k === 'P'){
       if(G.state === 'playing') setState('paused');
       else if(G.state === 'paused' && !G.overTimer) setState('playing');
@@ -2303,10 +2437,15 @@
   }
 
   window.addEventListener('blur', () => {
-    if(G.state === 'playing') setState('paused');
+    /* 失焦只清按键状态，不再自动暂停。
+       鼠标模式下游玩时，QQ/微信弹窗等意外失焦不再打断游戏；
+       暂停/退出统一由 ESC 触发。 */
+    G.keys = {};
   });
   document.addEventListener('visibilitychange', () => {
-    if(document.hidden && G.state === 'playing') setState('paused');
+    /* 页面隐藏时 rAF 自然停止，切回来继续；不再自动暂停。
+       清空按键状态，防止切标签页时 keyup 丢失导致卡键。 */
+    if(document.hidden) G.keys = {};
   });
 
   /* 音量滑块：同时作用于 BGM 与 SFX */
@@ -2383,6 +2522,12 @@
     resizeCanvas();
     buildStars();
     buildLegend();
+    /* 移动端初始收起图例浮层，避免一进游戏就盖住画面；
+       桌面端保留常驻侧栏。 */
+    if(window.matchMedia('(max-width:1000px), (orientation:landscape) and (max-height:560px)').matches){
+      const lg = document.getElementById('legend');
+      if(lg) lg.classList.remove('show');
+    }
     /* 图例默认展开：桌面常驻侧栏，移动端浮层；点击空白处自动收起 */
     resetGame();
     updateHUD();

@@ -241,10 +241,10 @@ function setSweepLocked(locked){
     const el = document.getElementById(id);
     if(el) el.classList.toggle('sweepLocked', locked);
   }
-  // 录制时锁定左侧所有滑块和分段按钮，防止用户误触中断录制
+  // 录制时锁定左侧所有滑块、下拉和分段按钮，防止用户误触中断录制
   const leftCol = document.getElementById('leftCol');
   if(leftCol){
-    leftCol.querySelectorAll('input, .seg button').forEach(el => {
+    leftCol.querySelectorAll('input, select, .seg button').forEach(el => {
       el.disabled = locked;
     });
   }
@@ -258,6 +258,24 @@ function setSweepLocked(locked){
   if(gameBtn) gameBtn.classList.toggle('is-locked', locked);
   // 右侧 chartBar 内所有 slider（拖动会触发 sweepStop 中断录制）
   document.querySelectorAll('#stage input[type=range]').forEach(el => {
+    el.disabled = locked;
+  });
+
+  /* ===== 录制锁定补强：右侧图表工具条 + 支撑网格 + 逐跨编辑器 =====
+     这些控件点击都会触发 run()，录制画面会突变但录制不会停止。
+     - 右侧 segMini 按钮是 <button>，直接 disabled；
+     - 支撑网格是 <div>，用 pointer-events 拦截（事件委托层另有一道保险）；
+     - 逐跨编辑器按钮是 <button>，已插入的 input 直接 disabled；
+       录制中动态展开的新 input 在 renderSpanEditors / renderPSpanEditors 里按 S.rec.active 处理。 */
+  document.querySelectorAll('#stage .segMini button, #chartForce .tagBar button, #chartDeform .tagBar button').forEach(el => {
+    el.disabled = locked;
+  });
+  const braceWrap = document.getElementById('braceGridWrap');
+  if(braceWrap) braceWrap.style.pointerEvents = locked ? 'none' : '';
+  document.querySelectorAll('.spanEditToggle, .spanEditClear').forEach(el => {
+    el.disabled = locked;
+  });
+  document.querySelectorAll('.spanEditBox input[type=range]').forEach(el => {
     el.disabled = locked;
   });
 }

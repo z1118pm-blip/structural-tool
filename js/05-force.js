@@ -72,6 +72,8 @@ function drawInternal(canvas, model, dprOverride){
 
   /* ======== 反力图专属渲染 ======== */
   if(type === 'R'){
+    /* R 图不支持冻结对比：支座反力是标量，画成虚线叠加在弯矩图上会与当前值混在一起，
+       反而干扰判读。若存在 BASE，只提示一句，不做任何虚线绘制。 */
     if(BASE){
       ctx.save();
       ctx.font = '10px ui-sans-serif,system-ui,sans-serif';

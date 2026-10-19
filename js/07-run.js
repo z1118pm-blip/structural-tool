@@ -184,7 +184,7 @@ function updateReadout(model){
         } else {
           if(hasBrace){
             try{
-              const mNB = analyze({ ...p, braceMap: {}, braceTensionMap: {} });
+              const mNB = analyze({ ...p, braceMap: {}, braceTensionMap: {}, settleDy: 0, settleCol: 0 });
               let uAvg = 0;
               for(let c=0;c<mNB.nCol;c++) uAvg += mNB.U[mNB.nid(c, mNB.nLev)*3];
               uAvg /= mNB.nCol;
@@ -200,7 +200,7 @@ function updateReadout(model){
                 anyTension = true; break;
               }
             }
-            const mNM = anyTension ? analyzeTensionOnly({ ...p, betaJ: 0 }) : analyze({ ...p, betaJ: 0 });
+            const mNM = anyTension ? analyzeTensionOnly({ ...p, betaJ: 0, settleDy: 0, settleCol: 0 }) : analyze({ ...p, betaJ: 0, settleDy: 0, settleCol: 0 });
             let uAvg = 0;
             for(let c=0;c<mNM.nCol;c++) uAvg += mNM.U[mNM.nid(c, mNM.nLev)*3];
             uAvg /= mNM.nCol;
@@ -927,6 +927,9 @@ function renderPSpanEditors(onlyLev){
     }
     html += `<button type="button" class="spanEditClear" data-lev="${lv}" data-type="P">清除本层覆盖</button>`;
     box.innerHTML = html;
+    if(S.rec && S.rec.active){
+      box.querySelectorAll('input[type=range]').forEach(inp => { inp.disabled = true; });
+    }
 
     box.querySelectorAll('input[type=range]').forEach(inp=>{
       const key = inp.dataset.spankey;
@@ -1006,6 +1009,9 @@ function renderSpanEditors(onlyLev){
     }
     html += `<button type="button" class="spanEditClear" data-lev="${lv}">清除本层覆盖</button>`;
     box.innerHTML = html;
+    if(S.rec && S.rec.active){
+      box.querySelectorAll('input[type=range]').forEach(inp => { inp.disabled = true; });
+    }
 
     box.querySelectorAll('.spanEditRange').forEach(inp=>{
       const spanKey = inp.dataset.spankey;

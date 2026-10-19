@@ -1218,17 +1218,20 @@ var _hmt = _hmt || [];
   </div>
 </div>
 
-<script src="js/01-state.js"></script>
-<script src="js/02-solver.js"></script>
-<script src="js/03-internal.js"></script>
-<script src="js/04-canvas.js"></script>
-<script src="js/05-force.js"></script>
-<script src="js/06-deform.js"></script>
+<script src="js/01-state.js?v=0.1.6.1"></script>
+<script src="js/02-solver.js?v=0.1.6.1"></script>
+<script src="js/03-internal.js?v=0.1.6.1"></script>
+<script src="js/04-canvas.js?v=0.1.6.1"></script>
+<script src="js/05-force.js?v=0.1.6.1"></script>
+<script src="js/06-deform.js?v=0.1.6.1"></script>
 
-<script src="js/07-run.js"></script>
-<script src="js/08-sweep-record.js"></script>
-<script src="js/09-ui-share.js"></script>
-<script src="js/11-construct.js"></script>
-<script src="js/10-boot.js"></script>
+<script src="js/07-run.js?v=0.1.6.1"></script>
+<script src="js/08-sweep-record.js?v=0.1.6.1"></script>
+<script src="js/09-ui-share.js?v=0.1.6.1"></script>
+<!-- 注意加载顺序：11-construct.js 必须在 10-boot.js 之前，
+     因为 10-boot.js 顶层的 applyTopoState() 会 dispatch 'structura-topo-change'，
+     而该事件的监听器在 11-construct.js 的 bindBraceTopo 里注册。 -->
+<script src="js/11-construct.js?v=0.1.6.1"></script>
+<script src="js/10-boot.js?v=0.1.6.1"></script>
 </body>
 </html>

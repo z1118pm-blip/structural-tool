@@ -31,9 +31,15 @@ function renderBraceGrid() {
     html += '</div>';
   }
   wrap.innerHTML = html;
-  
-  wrap.querySelectorAll('.braceGridCell').forEach(cell => {
-    cell.addEventListener('click', (e) => {
+
+  /* 事件委托：只绑一次，后续 innerHTML 重建不需要重新绑监听器。 */
+  if (!wrap._delegated) {
+    wrap._delegated = true;
+    wrap.addEventListener('click', (e) => {
+      /* 录制期间锁定支撑网格，防止误触触发 run() 污染录制画面 */
+      if (S.rec && S.rec.active) return;
+      const cell = e.target.closest('.braceGridCell');
+      if (!cell) return;
       const key = cell.dataset.key;
       // 点击 T 角标：只切换该格「仅受拉」，不改支撑形式
       if(e.target.classList.contains('braceGridT')) {
@@ -62,7 +68,7 @@ function renderBraceGrid() {
       if(typeof updateSweepOptions === 'function') updateSweepOptions();
       run();
     });
-  });
+  }
 
   // 同步「全部仅受拉」批量按钮的文案与状态
   if(typeof window.refreshBraceTensionBtn === 'function') window.refreshBraceTensionBtn();
