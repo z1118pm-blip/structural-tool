@@ -428,6 +428,28 @@
     ]
   };
 
+  /* 台词去重：每种类型独立记录最近用过的索引，短时间不重复同一句。
+     规则：最近 2 条不重复（池子只有 3 条时相当于「不连续重复」）。
+     跨 resetGame 保留，重开一局也不会马上蹦出刚喊过的句子。 */
+  const TAUNT_RECENT = {};
+  const TAUNT_RECENT_MAX = 2;
+  function pickTaunt(type){
+    const arr = TAUNTS[type];
+    if(!arr || arr.length === 0) return null;
+    if(arr.length === 1) return arr[0];
+    const recent = TAUNT_RECENT[type] || [];
+    const pool = [];
+    for(let i = 0; i < arr.length; i++){
+      if(!recent.includes(i)) pool.push(i);
+    }
+    const idx = pool[Math.floor(Math.random() * pool.length)];
+    recent.push(idx);
+    const cap = Math.min(TAUNT_RECENT_MAX, arr.length - 1);
+    while(recent.length > cap) recent.shift();
+    TAUNT_RECENT[type] = recent;
+    return arr[idx];
+  }
+
   /* ===================== 音频 ===================== */
   let audioCtx = null;
   function ensureAudio(){
@@ -822,6 +844,34 @@
         }
       }
     } while(bricks.length < 40 && attempts < 10);
+
+    /* 极端保底：10 次都抽到稀疏图案时，强制回退到「满铺」重做一次 */
+    if(bricks.length < 40){
+      pid = 0;
+      bricks = [];
+      const rows = 6 + Math.floor(Math.random() * 4);
+      const colorScheme = Math.floor(Math.random() * 3);
+      for(let r = 0; r < rows; r++){
+        for(let c = 0; c < cols; c++){
+          let color;
+          if(colorScheme === 0)      color = BRICK_COLORS[r % BRICK_COLORS.length];
+          else if(colorScheme === 1) color = BRICK_COLORS[Math.floor(Math.random() * BRICK_COLORS.length)];
+          else                       color = BRICK_COLORS[c % BRICK_COLORS.length];
+          const roll = Math.random();
+          let hp = 1;
+          if(roll < 0.06) hp = 3;
+          else if(roll < 0.28) hp = 2;
+          bricks.push({
+            x: BRICK_MARGIN_X + c * (BRICK_W + BRICK_GAP),
+            y: BRICK_MARGIN_TOP + r * (BRICK_H + BRICK_GAP),
+            w: BRICK_W, h: BRICK_H,
+            color: color, score: (rows - r) * 10, row: r,
+            alive: true, flash: 0, phase: Math.random() * Math.PI * 2,
+            hp: hp, maxHp: hp
+          });
+        }
+      }
+    }
 
     G.bricks = bricks;
     G.layoutName = PATTERNS[pid].name;
@@ -1307,8 +1357,8 @@
   let tauntTimer = null;
   function showTaunt(type) {
     if (!tauntEl || !TAUNTS[type]) return;
-    const arr = TAUNTS[type];
-    const text = arr[Math.floor(Math.random() * arr.length)];
+    const text = pickTaunt(type);
+    if(!text) return;
     tauntEl.textContent = text;
     tauntEl.classList.add('show');
     
@@ -1429,15 +1479,18 @@
       }
     }
 
-    /* 穿透状态：先清理已离开砖块 AABB 的标记，确保同一块砖可被再次穿透 */
+    /* 穿透状态：清理已离开砖块 AABB 的球标记。
+       用 Set 记录所有正在穿透该砖的球，多球时互相独立，避免互相顶掉标记。 */
     if(G.effects.pierce > 0){
       for(const brick of G.bricks){
-        if(!brick._piercedBy) continue;
-        const pb = brick._piercedBy;
-        const pnx = Math.max(brick.x, Math.min(pb.x, brick.x + brick.w));
-        const pny = Math.max(brick.y, Math.min(pb.y, brick.y + brick.h));
-        const pddx = pb.x - pnx, pddy = pb.y - pny;
-        if(pddx * pddx + pddy * pddy >= BALL_R * BALL_R) brick._piercedBy = null;
+        const set = brick._piercedSet;
+        if(!set || set.size === 0) continue;
+        for(const pb of set){
+          const pnx = Math.max(brick.x, Math.min(pb.x, brick.x + brick.w));
+          const pny = Math.max(brick.y, Math.min(pb.y, brick.y + brick.h));
+          const pddx = pb.x - pnx, pddy = pb.y - pny;
+          if(pddx * pddx + pddy * pddy >= BALL_R * BALL_R) set.delete(pb);
+        }
       }
     }
 
@@ -1448,10 +1501,11 @@
       const ddx = b.x - nx, ddy = b.y - ny;
       if(ddx * ddx + ddy * ddy >= BALL_R * BALL_R) continue;
 
-      /* 穿透球：不反弹，直接扣耐久；同一块砖在穿透状态下只触发一次，球离开后重置 */
+      /* 穿透球：不反弹，直接扣耐久；同一块砖对同一颗球在穿透状态下只触发一次 */
       if(G.effects.pierce > 0){
-        if(brick._piercedBy !== b){
-          brick._piercedBy = b;
+        if(!brick._piercedSet) brick._piercedSet = new Set();
+        if(!brick._piercedSet.has(b)){
+          brick._piercedSet.add(b);
           hitBrick(brick);
         }
         continue;
@@ -1553,27 +1607,29 @@
 
     if(G.state !== 'playing') return;
 
-    /* 防卡死 */
-    const now = performance.now();
-    G.stuckSamples.push({ x: G.ball.x, y: G.ball.y, t: now });
-    for(let i = G.stuckSamples.length - 1; i >= 0; i--){
-      if(now - G.stuckSamples[i].t >= 1500){
-        G.stuckSamples[i] = G.stuckSamples[G.stuckSamples.length - 1];
-        G.stuckSamples.pop();
+    /* 防卡死（仅对真正飞行的主球生效，stuck/held 不参与，避免无意义采样） */
+    if(!G.ball.stuck && !G.ball.held){
+      const now = performance.now();
+      G.stuckSamples.push({ x: G.ball.x, y: G.ball.y, t: now });
+      for(let i = G.stuckSamples.length - 1; i >= 0; i--){
+        if(now - G.stuckSamples[i].t >= 1500){
+          G.stuckSamples[i] = G.stuckSamples[G.stuckSamples.length - 1];
+          G.stuckSamples.pop();
+        }
       }
-    }
-    if(G.stuckSamples.length > 24){
-      let minX = 1e9, maxX = -1e9, minY = 1e9, maxY = -1e9;
-      for(const p of G.stuckSamples){
-        if(p.x < minX) minX = p.x; if(p.x > maxX) maxX = p.x;
-        if(p.y < minY) minY = p.y; if(p.y > maxY) maxY = p.y;
-      }
-      if(maxX - minX < 60 && maxY - minY < 60){
-        const ang = Math.atan2(G.ball.vy, G.ball.vx) + (Math.random() - 0.5) * 0.5;
-        const sp  = Math.hypot(G.ball.vx, G.ball.vy) || BASE_SPEED;
-        G.ball.vx = Math.cos(ang) * sp;
-        G.ball.vy = Math.sin(ang) * sp;
-        G.stuckSamples = [];
+      if(G.stuckSamples.length > 24){
+        let minX = 1e9, maxX = -1e9, minY = 1e9, maxY = -1e9;
+        for(const p of G.stuckSamples){
+          if(p.x < minX) minX = p.x; if(p.x > maxX) maxX = p.x;
+          if(p.y < minY) minY = p.y; if(p.y > maxY) maxY = p.y;
+        }
+        if(maxX - minX < 60 && maxY - minY < 60){
+          const ang = Math.atan2(G.ball.vy, G.ball.vx) + (Math.random() - 0.5) * 0.5;
+          const sp  = Math.hypot(G.ball.vx, G.ball.vy) || BASE_SPEED;
+          G.ball.vx = Math.cos(ang) * sp;
+          G.ball.vy = Math.sin(ang) * sp;
+          G.stuckSamples = [];
+        }
       }
     }
 
@@ -1670,12 +1726,19 @@
     ctx.restore();
   }
 
+  let _wallGradCache = null;
+  function getWallGrad(){
+    if(!_wallGradCache){
+      _wallGradCache = ctx.createLinearGradient(0, 0, 0, H);
+      _wallGradCache.addColorStop(0, 'rgba(56,189,248,0.18)');
+      _wallGradCache.addColorStop(1, 'rgba(56,189,248,0.04)');
+    }
+    return _wallGradCache;
+  }
+
   function drawWalls(){
     ctx.save();
-    const wallGrad = ctx.createLinearGradient(0, 0, 0, H);
-    wallGrad.addColorStop(0, 'rgba(56,189,248,0.18)');
-    wallGrad.addColorStop(1, 'rgba(56,189,248,0.04)');
-    ctx.fillStyle = wallGrad;
+    ctx.fillStyle = getWallGrad();
     ctx.fillRect(0, 0, WALL, H);
     ctx.fillRect(W - WALL, 0, WALL, H);
     ctx.fillRect(0, 0, W, WALL);
@@ -1964,26 +2027,17 @@
     }
   }
 
-  function drawPaddle(now){
-    const pw = G.paddle.w;
-    const px = G.paddle.x - pw / 2;
-    const squash = G.paddle.squash;
-    const h = PADDLE_H * (1 - squash * 0.35);
-    const y = PADDLE_Y + (PADDLE_H - h);
-
-    ctx.save();
-    const wide   = G.effects.paddleWide > 0;
-    const narrow = G.effects.paddleNarrow > 0;
-    ctx.shadowColor = wide ? '#fbbf24' : (narrow ? '#dc2626' : '#38bdf8');
-    ctx.shadowBlur = wide ? 26 : (narrow ? 22 : 18);
-    const pg = ctx.createLinearGradient(px, 0, px + pw, 0);
-    if(wide){
+  const _paddleGradCache = {};
+  function getPaddleGrad(key, pw){
+    if(_paddleGradCache[key]) return _paddleGradCache[key];
+    const pg = ctx.createLinearGradient(0, 0, pw, 0);
+    if(key === 'wide'){
       pg.addColorStop(0, '#d97706');
       pg.addColorStop(0.3, '#fbbf24');
       pg.addColorStop(0.5, '#fef3c7');
       pg.addColorStop(0.7, '#fbbf24');
       pg.addColorStop(1, '#d97706');
-    } else if(narrow){
+    } else if(key === 'narrow'){
       pg.addColorStop(0, '#7f1d1d');
       pg.addColorStop(0.3, '#dc2626');
       pg.addColorStop(0.5, '#fecaca');
@@ -1996,37 +2050,69 @@
       pg.addColorStop(0.7, '#38bdf8');
       pg.addColorStop(1, '#0284c7');
     }
-    ctx.fillStyle = pg;
-    roundRect(ctx, px, y, pw, h, h / 2);
+    _paddleGradCache[key] = pg;
+    return pg;
+  }
+
+  function drawPaddle(now){
+    const pw = G.paddle.w;
+    const squash = G.paddle.squash;
+    const h = PADDLE_H * (1 - squash * 0.35);
+    const y = PADDLE_Y + (PADDLE_H - h);
+
+    ctx.save();
+    ctx.translate(G.paddle.x - pw / 2, y);
+
+    const wide   = G.effects.paddleWide > 0;
+    const narrow = G.effects.paddleNarrow > 0;
+    ctx.shadowColor = wide ? '#fbbf24' : (narrow ? '#dc2626' : '#38bdf8');
+    ctx.shadowBlur = wide ? 26 : (narrow ? 22 : 18);
+
+    ctx.fillStyle = getPaddleGrad(wide ? 'wide' : (narrow ? 'narrow' : 'normal'), pw);
+    roundRect(ctx, 0, 0, pw, h, h / 2);
     ctx.fill();
 
     ctx.shadowBlur = 0;
     ctx.fillStyle = 'rgba(255,255,255,0.55)';
     ctx.beginPath();
-    ctx.arc(px + h / 2, y + h / 2, h * 0.28, 0, Math.PI * 2);
-    ctx.arc(px + pw - h / 2, y + h / 2, h * 0.28, 0, Math.PI * 2);
+    ctx.arc(h / 2, h / 2, h * 0.28, 0, Math.PI * 2);
+    ctx.arc(pw - h / 2, h / 2, h * 0.28, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
+  }
+
+  let _centerGlowCache = null;
+  function getCenterGlow(){
+    if(!_centerGlowCache){
+      _centerGlowCache = ctx.createRadialGradient(W / 2, H * 0.62, 0, W / 2, H * 0.62, W * 0.7);
+      _centerGlowCache.addColorStop(0, 'rgba(56,189,248,0.05)');
+      _centerGlowCache.addColorStop(0.5, 'rgba(56,189,248,0.02)');
+      _centerGlowCache.addColorStop(1, 'rgba(56,189,248,0)');
+    }
+    return _centerGlowCache;
   }
 
   function drawCenterGlow(){
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
-    const g = ctx.createRadialGradient(W / 2, H * 0.62, 0, W / 2, H * 0.62, W * 0.7);
-    g.addColorStop(0, 'rgba(56,189,248,0.05)');
-    g.addColorStop(0.5, 'rgba(56,189,248,0.02)');
-    g.addColorStop(1, 'rgba(56,189,248,0)');
-    ctx.fillStyle = g;
+    ctx.fillStyle = getCenterGlow();
     ctx.fillRect(0, 0, W, H);
     ctx.restore();
   }
 
+  let _vignetteCache = null;
+  function getVignette(){
+    if(!_vignetteCache){
+      _vignetteCache = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.32, W / 2, H / 2, Math.max(W, H) * 0.78);
+      _vignetteCache.addColorStop(0, 'rgba(0,0,0,0)');
+      _vignetteCache.addColorStop(1, 'rgba(0,0,0,0.45)');
+    }
+    return _vignetteCache;
+  }
+
   function drawVignette(){
     ctx.save();
-    const vg = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.32, W / 2, H / 2, Math.max(W, H) * 0.78);
-    vg.addColorStop(0, 'rgba(0,0,0,0)');
-    vg.addColorStop(1, 'rgba(0,0,0,0.45)');
-    ctx.fillStyle = vg;
+    ctx.fillStyle = getVignette();
     ctx.fillRect(0, 0, W, H);
     ctx.restore();
   }
