@@ -38,6 +38,20 @@ function sweepSetValue(key, v){
       updateRangeProgress(elD);
     }
   }
+
+  // 同步扫掠进度条
+  const progEl = document.getElementById('sweepProgress');
+  const progOut = document.getElementById('v-sweepProgress');
+  if(progEl) {
+    progEl.min = el.min;
+    progEl.max = el.max;
+    progEl.step = el.step;
+    progEl.value = v;
+    updateRangeProgress(progEl);
+  }
+  if(progOut && fmtMap[key]) {
+    progOut.textContent = fmtMap[key](v);
+  }
 }
 
 function sweepStop(){
@@ -45,8 +59,14 @@ function sweepStop(){
     cancelAnimationFrame(S.sweep.rafId);
     S.sweep.rafId = null;
   }
+  const wasPlaying = S.sweep.playing;
   S.sweep.playing = false;
   sweepUpdatePlayBtn();
+  /* 扫掠期间跳过了刚度分解（额外 2 次 analyze 会拖慢帧率）；
+     停止后异步补一次完整计算 */
+  if(wasPlaying && typeof scheduleRender === 'function'){
+    scheduleRender();
+  }
 }
 
 function sweepReset(){
@@ -59,6 +79,7 @@ function sweepReset(){
 }
 
 function sweepPlay(loop){
+  if(S.sweep.playing) return; // 防重入：如果已在播放，直接忽略
   const key = S.sweep.param;
   const el  = document.getElementById(key);
   if(!el) return;
@@ -134,6 +155,39 @@ function sweepToggle(){
 
   S.sweep.param = sel.value;
 
+  /* 动态注入扫掠进度滑块 */
+  let progRow = document.getElementById('sweepProgressRow');
+  if(!progRow){
+    progRow = document.createElement('div');
+    progRow.className = 'sweepRow';
+    progRow.id = 'sweepProgressRow';
+    progRow.style.marginBottom = '2px';
+    progRow.innerHTML = `
+      <input type="range" id="sweepProgress" style="flex:1; height:4px; margin:0 8px 0 2px;" value="0">
+      <b id="v-sweepProgress" style="font-size:11px; font-weight:600; width:52px; text-align:right; color:#38bdf8; font-variant-numeric:tabular-nums;">—</b>
+    `;
+    const btnRow = bar.querySelector('.sweepRow.btns');
+    if(btnRow) bar.insertBefore(progRow, btnRow);
+    else bar.appendChild(progRow);
+  }
+  
+  const progEl = document.getElementById('sweepProgress');
+  const progOut = document.getElementById('v-sweepProgress');
+  
+  let progRaf = null;
+  progEl.addEventListener('input', ()=>{
+    if(S.sweep.playing) sweepStop();
+    const v = parseFloat(progEl.value);
+    const key = S.sweep.param;
+    sweepSetValue(key, v);
+    // 进度条独立走自己的 rAF，避免与主滑块 dragRaf 互相抢占导致偶发一帧迟滞
+    if(progRaf) return;
+    progRaf = requestAnimationFrame(()=>{
+      progRaf = null;
+      if(typeof run === 'function') run();
+    });
+  });
+
   const openSweep = () => {
     bar.classList.add('on');
     btnBar.classList.add('on');
@@ -174,7 +228,7 @@ function updateRecBtn(){
   }else{
     btn.textContent = '⬇ 录制';
     btn.classList.remove('rec');
-    btn.title = '录制为视频（自动选 mp4 / webm，再点一次取消）';
+    btn.title = '录制为视频（自动选 mp4 / webm，建议单次不超过 60 秒，再点一次取消）';
   }
 }
 
@@ -199,6 +253,9 @@ function setSweepLocked(locked){
     const el = document.getElementById(id);
     if(el) el.disabled = locked;
   }
+  // 游戏侧边按钮是 <a>，无 disabled 属性，用类切换视觉禁用；实际拦截在 click 监听里
+  const gameBtn = document.getElementById('gameSideBtn');
+  if(gameBtn) gameBtn.classList.toggle('is-locked', locked);
   // 右侧 chartBar 内所有 slider（拖动会触发 sweepStop 中断录制）
   document.querySelectorAll('#stage input[type=range]').forEach(el => {
     el.disabled = locked;

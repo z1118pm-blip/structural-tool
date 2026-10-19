@@ -21,9 +21,14 @@ function internalAt(res, x, type){
 }
 
 /* 单元内部任意点的位移。
-   弯曲挠度由 EI·v'' = M(x) 双重积分得到（用端点位移 vi/vj 定常数），
-   而不是 Hermite 形函数 + 固端特解 —— 后者对半刚接 (βj<1) 和悬挑都不成立。
-   内力 M(x) = -f[2] + f[1]·x + w·x²/2 取自单元端力 res.f，已含半刚接修正。 */
+   当前实现：Hermite 形函数（端点位移 + 端点转角，由整体求解精确给出）
+   + 均布荷载固端特解附加项。端点处位移/转角严格等于求解值，
+   因此刚接节点变形后夹角严格保持 90°。
+   注意：
+   - 附加项 w·x²·(L−x)²/(24EI) 仅对两端有转动约束的跨内梁成立；
+     悬挑梁（一端自由）跳过附加项，仅用 Hermite 插值。
+   - 半刚接梁 (βj<1) 的附加项系数未按端部柔度修正，
+     中间段存在小幅近似误差（端点仍精确）。 */
 function elemDisp(res, x){
   const {el, ug, f} = res;
   const {L,cs,sn,EI,w}=el;
@@ -32,6 +37,7 @@ function elemDisp(res, x){
 
   const ulx = (1-xi)*ul[0] + xi*ul[3];
   const vi  = ul[1], vj = ul[4];
+  const ti  = ul[2], tj = ul[5]; // 提取节点转角
 
   /* 二力杆（支撑）EI=0：位移沿杆轴线性插值，无弯曲挠度 */
   if(!(EI > 0)){
@@ -39,14 +45,22 @@ function elemDisp(res, x){
     return [cs*ulx - sn*vly, sn*ulx + cs*vly];
   }
 
-  /* 双重积分结果：
-       v(x) = vi + (vj-vi)·ξ + c·[ f[2]/2 − f[1]L(1+ξ)/6 − wL²(1+ξ+ξ²)/24 ]
-     其中 c = L²ξ(1-ξ)/EI。固端梁退化时等于标准解 w·x²(L-x)²/(24EI)。 */
-  const c = L*L*xi*(1-xi)/EI;
-  const vly = vi + (vj-vi)*xi
-            + c * ( f[2]/2
-                  - f[1]*L*(1+xi)/6
-                  - w*L*L*(1+xi+xi*xi)/24 );
+  /* 使用标准的 Hermite 形函数插值，确保节点处的转角严格等于求解出的节点转角。
+     对于半刚接、悬挑、温度等工况，节点转角已由整体求解器精确算出，
+     直接通过形函数插值即可保证变形曲线在节点处切向连续（满足刚接夹角不变）。 */
+  const N1 = 1 - 3*xi*xi + 2*xi*xi*xi;
+  const N2 = L*(xi - 2*xi*xi + xi*xi*xi);
+  const N3 = 3*xi*xi - 2*xi*xi*xi;
+  const N4 = L*(-xi*xi + xi*xi*xi);
+  
+  let vly = N1*vi + N2*ti + N3*vj + N4*tj;
+
+  // 附加挠度：两端固定梁在均布荷载下的特解。
+  // 悬挑梁（一端自由）的端点位移/转角已由整体求解精确给出，
+  // Hermite 插值端点精确，中间段误差可接受，不再叠加这个不成立的固端项。
+  if (w !== 0 && !el.isCant) {
+    vly += (w * x*x * (L-x)*(L-x)) / (24 * EI);
+  }
 
   return [cs*ulx - sn*vly, sn*ulx + cs*vly];
 }

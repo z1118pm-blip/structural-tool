@@ -88,7 +88,9 @@
         results: MODEL.results, U: MODEL.U,
         p: { ...MODEL.p,
              braceMap: { ...MODEL.p.braceMap },
-             braceTensionMap: { ...MODEL.p.braceTensionMap } }
+             braceTensionMap: { ...MODEL.p.braceTensionMap },
+             qSpanMap: { ...(MODEL.p.qSpanMap || {}) },
+             pLoadMap: { ...(MODEL.p.pLoadMap || {}) } }
       };
       if(btn) btn.classList.add('on');
       if(btnD) btnD.classList.add('on');
@@ -232,7 +234,9 @@ const SHARE_KEYS = [
   'nBay','nLev','hasCant',
   'L1','L2','L3','h1','h2','h3','Lc',
   'bc','hc','bb','hb','r',
-  'q1','q2','q3','qc1','qc2','qc3','H1','H2','H3',
+  'q1','q2','q3','qSpanMap','P1','P2','P3','pLoadMap',
+  'qc1','qc2','qc3','H1','H2','H3',
+  'tempAll','tempGrad','tempT0',
   'Hmode','settleDy','settleCol','braceMap','braceTensionMap','brushBrace','betaF','betaJ',
   'frameMat','braceMat','As','axialMode',
   'mScale','dScale','forceType','elFilter','displayMode',
@@ -241,13 +245,68 @@ const SHARE_KEYS = [
 
 function encodeState(){
   const obj = {};
-  for(const k of SHARE_KEYS) obj[k] = S[k];
+  const defaults = {
+    nBay: 1, nLev: 1, hasCant: false,
+    L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5,
+    bc: 400, hc: 400, bb: 250, hb: 500, r: 1,
+    q1: 0, q2: 0, q3: 0, qSpanMap: {},
+    P1: 0, P2: 0, P3: 0, pLoadMap: {},
+    qc1: 0, qc2: 0, qc3: 0,
+    H1: 0, H2: 0, H3: 0, Hmode: 'none', settleDy: 0, settleCol: 0,
+    tempAll: 0, tempGrad: 0, tempT0: 20,
+    braceMap: {}, braceTensionMap: {}, brushBrace: 'none',
+    betaF: 1, betaJ: 1, frameMat: 'conc', braceMat: 'steel',
+    As: 2000, axialMode: 'real', mScale: 1, dScale: 30,
+    forceType: 'M', elFilter: 'all', displayMode: 'all',
+    showVals: false, showIds: false, showAntiPts: true, showPDelta: true
+  };
+
+  for(const k of SHARE_KEYS) {
+    const def = defaults[k];
+    const val = S[k];
+
+    if (typeof def === 'object' && def !== null) {
+      if (val && Object.keys(val).length > 0) {
+        obj[k] = val;
+      }
+    } else {
+      if (val !== def) {
+        obj[k] = val;
+      }
+    }
+  }
   /* 拓扑无效的滑块值置为默认值，避免分享链接携带冗余参数、
      打开者看到禁用滑块却显示旧值的困惑 */
-  if(S.nLev < 2){ obj.h2 = 4; obj.q2 = 0; obj.qc2 = 0; obj.H2 = 0; }
-  if(S.nLev < 3){ obj.h3 = 4; obj.q3 = 0; obj.qc3 = 0; obj.H3 = 0; }
+    if(S.nLev < 2){ obj.h2 = 4; obj.q2 = 0; obj.qc2 = 0; obj.H2 = 0; obj.P2 = 0; }
+  if(S.nLev < 3){ obj.h3 = 4; obj.q3 = 0; obj.qc3 = 0; obj.H3 = 0; obj.P3 = 0; }
+  /* pLoadMap 越界键剔除（与 qSpanMap 同步处理，避免分享链接携带无效跨） */
+  if(obj.pLoadMap && typeof obj.pLoadMap === 'object'){
+    const cleanP = {};
+    for(const kk of Object.keys(obj.pLoadMap)){
+      const parts = kk.split('-');
+      const lv = parseInt(parts[0]), c = parseInt(parts[1]);
+      if(lv >= 1 && lv <= S.nLev && c >= 1 && c <= S.nBay){
+        cleanP[kk] = obj.pLoadMap[kk];
+      }
+    }
+    if(Object.keys(cleanP).length > 0) obj.pLoadMap = cleanP;
+    else delete obj.pLoadMap;
+  }
   if(S.nBay < 2){ obj.L2 = 6; }
   if(S.nBay < 3){ obj.L3 = 6; }
+  /* qSpanMap 越界键剔除，避免分享链接携带无效跨 */
+  if(obj.qSpanMap && typeof obj.qSpanMap === 'object'){
+    const clean = {};
+    for(const kk of Object.keys(obj.qSpanMap)){
+      const parts = kk.split('-');
+      const lv = parseInt(parts[0]), c = parseInt(parts[1]);
+      if(lv >= 1 && lv <= S.nLev && c >= 1 && c <= S.nBay){
+        clean[kk] = obj.qSpanMap[kk];
+      }
+    }
+    if(Object.keys(clean).length > 0) obj.qSpanMap = clean;
+    else delete obj.qSpanMap;
+  }
   if(!S.hasCant){ obj.Lc = 1.5; obj.qc1 = 0; obj.qc2 = 0; obj.qc3 = 0; }
   if(!(obj.settleDy > 0)){ obj.settleDy = 0; obj.settleCol = 0; }
   try{
@@ -274,6 +333,32 @@ function decodeState(str){
 function applyStateFromObj(obj){
   if(!obj) return false;
 
+  /* 先把所有可分享字段重置为默认值，防止分享链接省略默认值时，
+     继承当前页面残留的支撑/荷载/显示开关等脏状态。 */
+  const DEFAULTS = {
+    nBay: 1, nLev: 1, hasCant: false,
+    L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5,
+    bc: 400, hc: 400, bb: 250, hb: 500, r: 1,
+    q1: 0, q2: 0, q3: 0, qSpanMap: {},
+    P1: 0, P2: 0, P3: 0, pLoadMap: {},
+    qc1: 0, qc2: 0, qc3: 0,
+    H1: 0, H2: 0, H3: 0, Hmode: 'none', settleDy: 0, settleCol: 0,
+    tempAll: 0, tempGrad: 0, tempT0: 20,
+    braceMap: {}, braceTensionMap: {}, brushBrace: 'none',
+    betaF: 1, betaJ: 1, frameMat: 'conc', braceMat: 'steel',
+    As: 2000, axialMode: 'real', mScale: 1, dScale: 30,
+    forceType: 'M', elFilter: 'all', displayMode: 'all',
+    showVals: false, showIds: false, showAntiPts: true, showPDelta: true
+  };
+  for (const k of SHARE_KEYS) {
+    const def = DEFAULTS[k];
+    if (def !== undefined) {
+      S[k] = (typeof def === 'object' && def !== null)
+        ? JSON.parse(JSON.stringify(def))
+        : def;
+    }
+  }
+
   const nb = parseInt(obj.nBay);
   const nl = parseInt(obj.nLev);
   if(nb >= 1 && nb <= 3) S.nBay = nb;
@@ -298,7 +383,7 @@ function applyStateFromObj(obj){
       if(v === 'conc' || v === 'steel') S[k] = v;
     } else if(k === 'axialMode'){
       if(v === 'real' || v === 'rigid') S[k] = v;
-    } else if(k === 'showVals' || k === 'showIds' || k === 'showPDelta' || k === 'braceOnlyTension' || k === 'showAntiPts'){
+    } else if(k === 'showVals' || k === 'showIds' || k === 'showPDelta' || k === 'showAntiPts'){
       if(typeof v === 'boolean') S[k] = v;
     } else if(k === 'braceMap'){
       /* 白名单过滤：只接受 "层-跨" 键 + X / ╱ / ╲ 值，防止 __proto__ 原型污染 */
@@ -306,7 +391,48 @@ function applyStateFromObj(obj){
         const clean = {};
         for(const kk of Object.keys(v)){
           if(/^\d+-\d+$/.test(kk) && (v[kk] === 'X' || v[kk] === '/' || v[kk] === '\\')){
-            clean[kk] = v[kk];
+            const parts = kk.split('-');
+            const lv = parseInt(parts[0]), c = parseInt(parts[1]);
+            if(lv >= 1 && lv <= S.nLev && c >= 1 && c <= S.nBay){
+              clean[kk] = v[kk];
+            }
+          }
+        }
+        S[k] = clean;
+      }
+    } else if(k === 'qSpanMap'){
+      /* 逐跨荷载白名单：键 "层-跨"，值 0–100 的数字，防止原型污染 */
+      if(v && typeof v === 'object' && !Array.isArray(v)){
+        const clean = {};
+        for(const kk of Object.keys(v)){
+          if(/^\d+-\d+$/.test(kk)){
+            const parts = kk.split('-');
+            const lv = parseInt(parts[0]), c = parseInt(parts[1]);
+            const n = parseFloat(v[kk]);
+            if(lv >= 1 && lv <= S.nLev && c >= 1 && c <= S.nBay && isFinite(n) && n >= 0 && n <= 100){
+              clean[kk] = n;
+            }
+          }
+        }
+        S[k] = clean;
+      }
+    } else if(k === 'pLoadMap'){
+      /* 集中力逐跨白名单：键 "层-跨"，值 { P, a } */
+      if(v && typeof v === 'object' && !Array.isArray(v)){
+        const clean = {};
+        for(const kk of Object.keys(v)){
+          if(/^\d+-\d+$/.test(kk)){
+            const parts = kk.split('-');
+            const lv = parseInt(parts[0]), c = parseInt(parts[1]);
+            const src = v[kk] || {};
+            const P = parseFloat(src.P);
+            const a = parseFloat(src.a);
+            const Lmax = S['L' + c] || 12;
+            if(lv >= 1 && lv <= S.nLev && c >= 1 && c <= S.nBay &&
+               isFinite(P) && P >= 0 && P <= 200 &&
+               isFinite(a) && a > 0 && a < Lmax){
+              clean[kk] = { P, a };
+            }
           }
         }
         S[k] = clean;
@@ -316,7 +442,11 @@ function applyStateFromObj(obj){
         const clean = {};
         for(const kk of Object.keys(v)){
           if(/^\d+-\d+$/.test(kk) && v[kk] === true){
-            clean[kk] = true;
+            const parts = kk.split('-');
+            const lv = parseInt(parts[0]), c = parseInt(parts[1]);
+            if(lv >= 1 && lv <= S.nLev && c >= 1 && c <= S.nBay){
+              clean[kk] = true;
+            }
           }
         }
         S[k] = clean;
@@ -425,7 +555,11 @@ function applyStateFromObj(obj){
   }
 
   applyTopoState();
-  
+
+  // 逐跨滑块重渲染（分享链接可能携带 qSpanMap / pLoadMap）
+  if(typeof renderSpanEditors === 'function') renderSpanEditors();
+  if(typeof renderPSpanEditors === 'function') renderPSpanEditors();
+
   // 清理可能残留的扫掠慢放倍率和高亮状态（防止分享链接或自检后污染普通扫掠）
   S.sweep.durMul = 1;
   S.highlight = null;
@@ -466,7 +600,7 @@ function renderQRCode(container, url){
   }
 
   try{
-    const qr = qrcode(0, 'M');
+    const qr = qrcode(0, 1); // 1 代表 ErrorCorrectLevel.L，容量更大，防止超长崩溃
     qr.addData(url);
     qr.make();
 
@@ -508,7 +642,7 @@ function downloadQRCode(){
     return;
   }
   try{
-    const qr = qrcode(0, 'M');
+    const qr = qrcode(0, 1);
     qr.addData(currentShareURL);
     qr.make();
     const n      = qr.getModuleCount();
@@ -560,7 +694,12 @@ function shareURL(){
   const warnEl    = document.getElementById('shareLocalWarn');
 
   if(modal){
-    renderQRCode(qrBox, url);
+    try {
+      renderQRCode(qrBox, url);
+    } catch(e) {
+      console.error('QR生成失败', e);
+      if (qrBox) qrBox.innerHTML = '<div class="shareQRLoading">生成二维码失败，请复制下方链接</div>';
+    }
     if(urlField){
       urlField.value = url;
       requestAnimationFrame(()=>{
@@ -639,10 +778,52 @@ function shareURL(){
   }
 })();
 
-document.getElementById('btn-reset').addEventListener('click', ()=>{
+/* =====================================================================
+   游戏入口（彩蛋）：左侧悬浮侧边按钮，独立标签页打开 game.html
+   - 默认半隐藏，hover 滑出；录制中锁定（is-locked + click 拦截）
+   - 扫掠播放中点击先 sweepStop()，避免后台 rAF 空转
+   - 相对路径，file:// / https:// 均可用；rel=noopener 防 opener 污染
+   - showToast 定义在 10-boot.js，但此处仅在 click 回调内引用（运行时），
+     那时 10-boot.js 已加载完毕，不存在 undefined 风险
+   ===================================================================== */
+(function bindGameSideBtn(){
+  const a = document.createElement('a');
+  a.id = 'gameSideBtn';
+  a.href = 'game.html';
+  a.target = '_blank';
+  a.rel = 'noopener noreferrer';
+  a.title = '应力释放 · 摸鱼彩蛋';
+
+  const icon = document.createElement('span');
+  icon.className = 'gsbIcon';
+  icon.textContent = '🎮';
+  const txt = document.createElement('span');
+  txt.className = 'gsbText';
+  txt.textContent = '摸鱼';
+  a.appendChild(icon);
+  a.appendChild(txt);
+
+  a.addEventListener('click', (e) => {
+    if (S.rec.active) {
+      e.preventDefault();
+      if (typeof showToast === 'function') {
+        showToast('录制进行中，游戏入口已锁定。请先停止录制。');
+      }
+      return;
+    }
+    if (S.sweep.playing) sweepStop();
+    // target="_blank" 默认行为放行，由浏览器开新标签
+  });
+
+  document.body.appendChild(a);
+})();
+
+const btnReset = document.getElementById('btn-reset');
+if(btnReset) btnReset.addEventListener('click', ()=>{
   if(S.sweep.playing) sweepStop();
   S.highlight = null;
   S._uPureCache = null;
+  S._stiffDecompCache = null;
   S.sweep.param = 'bc';
   S.sweep.durMul = 1;
   const _bar = document.getElementById('sweepBar');
@@ -654,23 +835,27 @@ document.getElementById('btn-reset').addEventListener('click', ()=>{
   document.querySelectorAll('input[type=range]').forEach(el=>{
     el.value = el.defaultValue;
     const v = parseFloat(el.value);
-    // 过滤掉 _d 后缀的镜像滑块，防止污染 S 状态对象
-    if(!el.id.endsWith('_d')) S[el.id] = v;
+    // 仅写入 fmtMap 白名单中的真实参数，排除 _d 镜像滑块与 sweepProgress 等动态滑块，
+    // 防止无关键污染 S 状态对象（影响分享 / 自检深拷贝）
+    if(!el.id.endsWith('_d') && fmtMap[el.id]) S[el.id] = v;
     const out = document.getElementById('v-'+el.id);
     if(out && fmtMap[el.id]) out.textContent = fmtMap[el.id](v);
     updateRangeProgress(el);
   });
-  S.nBay = 2;
-  S.nLev = 2;
-  S.hasCant = true;
+  S.nBay = 1;
+  S.nLev = 1;
+  S.hasCant = false;
   S.Hmode = 'none';
   S.frameMat = 'conc';
   S.braceMat = 'steel';
   S.axialMode = 'real';
   S.As = 2000;
-  S.braceOnlyTension = false;
   S.braceTensionMap = {};
   S.braceMap = {};
+  S.qSpanMap = {};
+  S.pLoadMap = {};
+  S.P1 = 0; S.P2 = 0; S.P3 = 0;
+  S.tempAll = 0; S.tempGrad = 0; S.tempT0 = 20;
   S.brushBrace = 'none';
   S.settleDy = 0;
   S.settleCol = 0;
@@ -685,21 +870,34 @@ document.getElementById('btn-reset').addEventListener('click', ()=>{
   const segBraceTopo = document.getElementById('segBraceTopo');
   if(segBraceTopo) segBraceTopo.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.brace === 'none'));
   if(typeof renderBraceGrid === 'function') renderBraceGrid();
+  if(typeof renderSpanEditors === 'function') renderSpanEditors();
+  if(typeof renderPSpanEditors === 'function') renderPSpanEditors();
   try{ window.dispatchEvent(new CustomEvent('structura-topo-change')); }catch(e){}
+  
+  // 重置所有新注入的滑块 UI
+  ['P1','P2','P3','tempAll','tempGrad'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) {
+      el.value = 0;
+      const out = document.getElementById('v-'+id);
+      if(out) out.textContent = id.startsWith('P') ? '0 kN' : '0 ℃';
+      updateRangeProgress(el);
+    }
+  });
   S.forceType = 'M';
   S.elFilter = 'all';
   S.showVals = false;
   S.showIds = false;
   S.showAntiPts = true;
-  S.showPDelta = false;
+  S.showPDelta = true;
   S.displayMode = 'all';
   BASE = null;
   const segBayR = document.getElementById('segBay');
-  if(segBayR) segBayR.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.bay === '2'));
+  if(segBayR) segBayR.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.bay === '1'));
   const segLevR = document.getElementById('segLev');
-  if(segLevR) segLevR.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.lev === '2'));
+  if(segLevR) segLevR.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.lev === '1'));
   const segCantR = document.getElementById('segCant');
-  if(segCantR) segCantR.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.cant === '1'));
+  if(segCantR) segCantR.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.cant === '0'));
   const btnV = document.getElementById('btnVals');
   if(btnV) btnV.classList.remove('on');
   const btnIds = document.getElementById('btnIds');
@@ -711,7 +909,7 @@ document.getElementById('btn-reset').addEventListener('click', ()=>{
   const btnFzD = document.getElementById('btnFreezeDeform');
   if(btnFzD) btnFzD.classList.remove('on');
   const btnPD = document.getElementById('btnPDelta');
-  if(btnPD) btnPD.classList.remove('on');
+  if(btnPD) btnPD.classList.add('on');
   const stageEl = document.getElementById('stage');
   if(stageEl) stageEl.classList.remove('mode-force','mode-deform');
   const segD = document.getElementById('segDisp');
@@ -723,6 +921,14 @@ document.getElementById('btn-reset').addEventListener('click', ()=>{
   const segE = document.getElementById('segElem');
   if(segE) segE.querySelectorAll('button[data-filter]').forEach(b=>b.classList.toggle('on', b.dataset.filter === 'all'));
   applyTopoState();
+  /* 重置后扫掠进度条需要与当前参数同步（因为 btn-reset 把 sweepProgress 重置为 0，
+     但主参数比如 bc 的默认值是 400，进度条会与主滑块不一致） */
+  if(typeof sweepSetValue === 'function'){
+    const selEl = document.getElementById('sweepParam');
+    if(selEl) S.sweep.param = selEl.value;
+    const paramEl = document.getElementById(S.sweep.param);
+    if(paramEl) sweepSetValue(S.sweep.param, parseFloat(paramEl.value));
+  }
   if(location.hash){
     history.replaceState(null, '', location.pathname + location.search);
   }

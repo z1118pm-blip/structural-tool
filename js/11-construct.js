@@ -82,12 +82,12 @@ function renderBraceGrid() {
 
   // 监听拓扑变化，清理越界数据并重绘
   window.addEventListener('structura-topo-change', () => {
-    for(let k in S.braceMap) {
+    for(const k of Object.keys(S.braceMap)) {
       const [lv, c] = k.split('-').map(Number);
       if(lv > S.nLev || c > S.nBay) delete S.braceMap[k];
     }
     // 同步清理越界 / 已无支撑格的仅受拉标记
-    for(let k in S.braceTensionMap) {
+    for(const k of Object.keys(S.braceTensionMap)) {
       const [lv, c] = k.split('-').map(Number);
       const hasBrace = S.braceMap[k] && S.braceMap[k] !== 'none';
       if(lv > S.nLev || c > S.nBay || !hasBrace) delete S.braceTensionMap[k];

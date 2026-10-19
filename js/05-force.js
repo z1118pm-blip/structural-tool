@@ -5,9 +5,9 @@
    ===================================================================== */
 const THEME = {
   dark: {
-    bg:'#0b1220', frame:'#cbd5e1', frameThin:'#94a3b8', frameGhost:'#475569',
-    node:'#e2e8f0', nodeBlue:'#7dd3fc', support:'#94a3b8', supportFill:'#0b1220',
-    udl:'#f87171', udlLabel:'#fca5a5', udlLabelBg:'rgba(11,18,32,0.78)',
+    bg:'#1e293b', frame:'#cbd5e1', frameThin:'#94a3b8', frameGhost:'#475569',
+    node:'#e2e8f0', nodeBlue:'#7dd3fc', support:'#94a3b8', supportFill:'#1e293b',
+    udl:'#f87171', udlLabel:'#fca5a5', udlLabelBg:'rgba(17,24,39,0.8)',
     hArrow:'#38bdf8', hLabel:'#7dd3fc', deformCurve:'#38bdf8',
     freezeLine:'rgba(148,163,184,0.55)', antiCurve:'#f8fafc'
   },
@@ -72,6 +72,14 @@ function drawInternal(canvas, model, dprOverride){
 
   /* ======== 反力图专属渲染 ======== */
   if(type === 'R'){
+    if(BASE){
+      ctx.save();
+      ctx.font = '10px ui-sans-serif,system-ui,sans-serif';
+      ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+      ctx.fillStyle = S.lightBg ? 'rgba(100,116,139,0.75)' : 'rgba(148,163,184,0.75)';
+      ctx.fillText('注：R 图不支持冻结对比', 14, 76);
+      ctx.restore();
+    }
     ctx.font = 'bold 11px ui-sans-serif,system-ui,sans-serif';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     
@@ -185,10 +193,16 @@ function drawInternal(canvas, model, dprOverride){
       ctx.fillRect(sx-1.5, sy-1.5, 3, 3);
     }
     if(model.p.showIds) drawIds(ctx, model, toS);
+    /* 恢复 textAlign / textBaseline，避免状态泄漏到下一次绘制 */
+    ctx.textAlign = 'start';
+    ctx.textBaseline = 'alphabetic';
     return; 
   }
   /* ======== 反力图结束 ======== */
 
+  /* 冻结基线用当前 type 重画：对比的是"同一内力分量在参数变化前后的差异"，
+     而不是"冻结那一刻的图"。若需固定为冻结时的 type，应在 BASE 中存 forceType
+     并在此处判断——当前保持结果集语义，不改行为。 */
   if(BASE){
     ctx.save();
     ctx.strokeStyle = T.freezeLine;
@@ -363,9 +377,10 @@ function drawInternal(canvas, model, dprOverride){
       let prevV = internalAt(res, el.L*kStart/N, 'M'), prevX = el.L*kStart/N;
       for(let k=kStart+1;k<=kEnd;k++){
         const x = el.L*k/N, v = internalAt(res, x, 'M');
-        let isCross = false;
+                let isCross = false;
         if ((prevV > 0 && v <= 0) || (prevV < 0 && v >= 0)) isCross = true;
-        else if (v === 0) isCross = true;
+        /* 删除 `else if (v === 0)`：v===0 且 prevV!==0 已被上面条件覆盖；
+           prevV===0 && v===0 不应算穿越，否则后面插值除零产生 NaN。 */
         if (k > kStart && isCross) {
           const xz = prevX + (x-prevX) * (-prevV)/(v-prevV);
           const xi = xz/el.L;
@@ -429,11 +444,12 @@ function drawInternal(canvas, model, dprOverride){
       drawBeamEndConn(ctx, bx, by, ax, ay, 'hinge', T);
       continue;
     }
-    if(el.kind === 'beam' && !el.isCant && model.p.betaJ < BETA_FIXED){
-      /* 纯铰（βj ≤ 0.01）画空心圆；半刚接（0.01 < βj < 0.99）画弹簧折线 */
+        if(el.kind === 'beam' && !el.isCant && model.p.betaJ < BETA_FIXED){
+      /* 纯铰（βj ≤ 0.01）画空心圆；半刚接（0.01 < βj < 0.99）画弹簧折线。
+         集中力打断点（isSub 节点）是梁内部节点，不是梁端，跳过该端符号。 */
       const sym = (model.p.betaJ <= BETA_HINGE) ? 'hinge' : 'spring';
-      drawBeamEndConn(ctx, ax, ay, bx, by, sym, T);
-      drawBeamEndConn(ctx, bx, by, ax, ay, sym, T);
+      if(!a.isSub) drawBeamEndConn(ctx, ax, ay, bx, by, sym, T);
+      if(!b.isSub) drawBeamEndConn(ctx, bx, by, ax, ay, sym, T);
     }
   }
   if(model.p.showIds) drawIds(ctx, model, toS);

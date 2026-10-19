@@ -21,7 +21,7 @@ function setupCanvas(canvas, overrideDPR){
 function drawGrid(ctx, W, H){
   ctx.save();
   const step = 24;
-  ctx.strokeStyle = S.lightBg ? 'rgba(100,116,139,0.10)' : 'rgba(56,189,248,0.045)';
+  ctx.strokeStyle = 'rgba(56,189,248,0.045)';
   ctx.lineWidth = 0.5;
   for(let x=0; x<=W; x+=step){
     ctx.beginPath(); ctx.moveTo(x+0.5, 0); ctx.lineTo(x+0.5, H); ctx.stroke();
@@ -29,7 +29,7 @@ function drawGrid(ctx, W, H){
   for(let y=0; y<=H; y+=step){
     ctx.beginPath(); ctx.moveTo(0, y+0.5); ctx.lineTo(W, y+0.5); ctx.stroke();
   }
-  ctx.strokeStyle = S.lightBg ? 'rgba(100,116,139,0.18)' : 'rgba(56,189,248,0.09)';
+  ctx.strokeStyle = 'rgba(56,189,248,0.09)';
   for(let x=0; x<=W; x+=step*5){
     ctx.beginPath(); ctx.moveTo(x+0.5, 0); ctx.lineTo(x+0.5, H); ctx.stroke();
   }
@@ -39,9 +39,9 @@ function drawGrid(ctx, W, H){
   ctx.restore();
 }
 
-function drawHUD(ctx, W, H, label, showSolver, topOffset){
+function drawHUD(ctx, W, H, label, topOffset){
   ctx.save();
-  ctx.strokeStyle = S.lightBg ? 'rgba(71,85,105,0.55)' : 'rgba(56,189,248,0.55)';
+  ctx.strokeStyle = 'rgba(56,189,248,0.55)';
   ctx.lineWidth = 1.2;
   const L = 14, M = 10;
   const corners = [
@@ -55,13 +55,10 @@ function drawHUD(ctx, W, H, label, showSolver, topOffset){
   }
   const ty = M + 4 + (topOffset || 0);
   ctx.font = '9.5px "JetBrains Mono", ui-monospace, monospace';
-  ctx.fillStyle = S.lightBg ? 'rgba(51,65,85,0.85)' : 'rgba(125,211,252,0.70)';
+  ctx.fillStyle = 'rgba(125,211,252,0.7)';
   ctx.textAlign = 'left'; ctx.textBaseline = 'top';
   ctx.fillText('◆ ' + (label||'STATIC / LINEAR-ELASTIC'), M+4, ty);
-  if(showSolver !== false){
-    ctx.textAlign = 'right';
-    ctx.fillText('SOLVER: MDOF-DIRECT · CONVERGED', W-M-4, ty);
-  }
+  /* 已删除：SOLVER 文字与右上角 DOM 按钮冲突，且底部状态栏已包含求解耗时，此处不再冗余绘制 */
   ctx.restore();
 }
 
@@ -154,6 +151,8 @@ function elemLineWidth(el, model){
   if(!model.p) return 3;
   if(el.kind === 'col'){
     return Math.max(3.5, Math.min(9, 2.5 + model.p.hc/130));
+  } else if(el.kind === 'brace'){
+    return 2.5;
   } else {
     return Math.max(3.5, Math.min(9, 2.5 + model.p.hb/130));
   }
@@ -228,7 +227,7 @@ function drawSupports(ctx, model, toS, base, isDeform, deformF){
   const nLev = model.nLev || 2;
   const colW = 2.5;
 
-  const hasSettle = (model.p.settleDy > 0);
+  const hasSettle = (parseFloat(model.p.settleDy) > 1e-6);
   const settleCol = hasSettle ? Math.max(0, Math.min(nCol - 1, model.p.settleCol | 0)) : -1;
 
   for(let c=0;c<nCol;c++){
@@ -256,7 +255,8 @@ function drawSupports(ctx, model, toS, base, isDeform, deformF){
       ctx.restore();
       
       // 2. 计算下沉后的支座位置（向下偏移 20px）
-      const dropPx = 20;
+      /* 下沉距离与沉降量成比例（1mm→0.6px，上限 60px），便于直观对比 */
+      const dropPx = Math.min(60, Math.max(6, (model.p.settleDy || 0) * 0.6));
       const syDrop = sy + dropPx;
       
       // 3. 画红色虚线和箭头连接
@@ -303,14 +303,63 @@ function drawLoadDiagram(canvas, model, dprOverride){
   const {toS} = makeTransform(model, W, H, {
     padL: showDim ? (hasH ? 82 : 74) : (hasH ? 60 : 44),
     padR: showDim ? 60 : 44,
-    padT: 52,
+    padT: 110, // 加大顶部留白，强制图形下移，避免与右上角文字重叠
     padB: showDim ? 62 : 32
   });
   const T = theme();
   ctx.fillStyle=T.bg; ctx.fillRect(0,0,W,H);
   drawGrid(ctx, W, H);
-  drawHUD(ctx, W, H, 'LOAD DIAGRAM', false);
+  drawHUD(ctx, W, H, 'LOAD DIAGRAM');
+
+  // ===== 标注温度（极简排版，仅显示最终温度状态） =====
+  const t0 = pH.tempT0 != null ? pH.tempT0 : 20;
+  const tAll = pH.tempAll || 0;
+  const tGrad = pH.tempGrad || 0;
+  
+  if (Math.abs(tAll) > 1e-3 || Math.abs(tGrad) > 1e-3) {
+    const tOut = t0 + tAll + tGrad / 2;
+    const tIn  = t0 + tAll - tGrad / 2;
+
+    ctx.save();
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'top';
+    const rightX = W - 14;
+    // 判断是否有支撑，如果有支撑，则温度文本下移避让“撑 As”那一行
+    const hasBraceInLoad = Object.keys(pH.braceMap || {}).some(k => pH.braceMap[k] && pH.braceMap[k] !== 'none');
+    let ty = hasBraceInLoad ? 64 : 50;
+
+    // 若无截面温差，直接用一行显示整体温升
+    if (Math.abs(tGrad) < 1e-3) {
+      ctx.font = 'bold 11px ui-sans-serif,system-ui,sans-serif';
+      ctx.fillStyle = tAll > 0 ? T.udl : T.hArrow;
+      const sign = tAll > 0 ? '+' : '';
+      ctx.fillText(`均匀温升: ${sign}${tAll.toFixed(1)} ℃`, rightX, ty);
+    } else {
+      // 有截面温差，显示室外/室内绝对温度
+      ctx.font = 'bold 11px ui-sans-serif,system-ui,sans-serif';
+      ctx.fillStyle = tOut > t0 ? T.udl : T.hArrow;
+      ctx.fillText(`室外温度: ${tOut.toFixed(1)} ℃`, rightX, ty);
+      
+      ty += 18;
+      ctx.fillStyle = tIn > t0 ? T.udl : T.hArrow;
+      ctx.fillText(`室内温度: ${tIn.toFixed(1)} ℃`, rightX, ty);
+    }
+    ctx.restore();
+  }
+  // ========================================================
+
   drawFrameLines(ctx, model, toS, T.frame, 2.5, false, false);
+  
+  // 支撑用青色画出，与内力图保持一致
+  for(const el of model.els){
+    if(el.kind === 'brace'){
+      const a = model.nodes[el.i], b = model.nodes[el.j];
+      const [ax,ay] = toS(a.x,a.y);
+      const [bx,by] = toS(b.x,b.y);
+      ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(bx,by);
+      ctx.strokeStyle = '#22d3ee'; ctx.lineWidth = 1.5; ctx.setLineDash([]); ctx.stroke();
+    }
+  }
   drawSupports(ctx, model, toS, model.p.betaF, false);
   ctx.fillStyle=T.node;
   for(const n of model.nodes){
@@ -330,10 +379,11 @@ function drawLoadDiagram(canvas, model, dprOverride){
       continue;
     }
     if(el.kind === 'beam' && !el.isCant && model.p.betaJ < BETA_FIXED){
-      /* 纯铰（βj ≤ 0.01）画空心圆；半刚接（0.01 < βj < 0.99）画弹簧折线 */
+      /* 纯铰（βj ≤ 0.01）画空心圆；半刚接（0.01 < βj < 0.99）画弹簧折线。
+         集中力打断点（isSub 节点）是梁内部节点，不是梁端，跳过该端符号。 */
       const sym = (model.p.betaJ <= BETA_HINGE) ? 'hinge' : 'spring';
-      drawBeamEndConn(ctx, ax, ay, bx, by, sym, T);
-      drawBeamEndConn(ctx, bx, by, ax, ay, sym, T);
+      if(!a.isSub) drawBeamEndConn(ctx, ax, ay, bx, by, sym, T);
+      if(!b.isSub) drawBeamEndConn(ctx, bx, by, ax, ay, sym, T);
     }
   }
   const p = model.p;
@@ -341,21 +391,52 @@ function drawLoadDiagram(canvas, model, dprOverride){
     if(el.kind !== 'beam') continue;
     const lv = el.lev;
     let q = 0, showLabel = false, labelTxt = '';
+    
+    // 集中力打断梁后，右子单元的起点是集中力节点，只在左段画标签
+    const isLeftSub = model.nodes[el.i] && model.nodes[el.i].pLoad;
+    const skipLabel = isLeftSub;
+
     if(el.isCant){
       q = p['qc'+lv]; labelTxt = q.toFixed(1); showLabel = true;
     } else {
-      q = p['q'+lv]; showLabel = (el.bay === 1);
+      q = (el.qSpan != null) ? el.qSpan : p['q'+lv];
+      labelTxt = q.toFixed(1);
+      showLabel = !skipLabel; // 只在一段的中间标注
     }
     if(q <= 0) continue;
     const placeAbove = true;
     let labelMidY = null;
-    if(lv < model.nLev){
+    {
       const [ , yBeam ] = toS(model.nodes[el.i].x, model.nodes[el.i].y);
-      const [ , yUp   ] = toS(model.nodes[el.i].x, model.nodes[el.i].y + p['h'+(lv+1)]);
+      let yUp;
+      if(lv < model.nLev){
+        yUp = toS(model.nodes[el.i].x, model.nodes[el.i].y + p['h'+(lv+1)])[1];
+      } else {
+        yUp = yBeam - 40;
+      }
       labelMidY = (yBeam + yUp) / 2;
     }
     drawUDL(ctx, toS, model.nodes[el.i], model.nodes[el.j], q, showLabel, labelTxt, placeAbove, labelMidY);
   }
+  /* 绘制集中力（求解器中已将其所在梁打断为子节点） */
+  for(let i=0; i<model.nodes.length; i++){
+    const n = model.nodes[i];
+    if(n.pLoad) {
+      const [sx, sy] = toS(n.x, n.y);
+      const len = 20 + Math.min(30, n.pLoad / 10);
+      ctx.strokeStyle = T.udl; ctx.fillStyle = T.udl; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(sx, sy - len); ctx.lineTo(sx, sy - 2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx-5, sy-10); ctx.lineTo(sx+5, sy-10); ctx.closePath(); ctx.fill();
+      
+      const txt = n.pLoad.toFixed(1);
+      ctx.font = 'bold 11px ui-sans-serif,system-ui,sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+      const tw = ctx.measureText(txt).width;
+      ctx.fillStyle = T.udlLabelBg; ctx.fillRect(sx - tw/2 - 4, sy - len - 18, tw + 8, 16);
+      ctx.fillStyle = T.udlLabel; ctx.fillText(txt, sx, sy - len - 4);
+    }
+  }
+
   function drawFloorH(level, H){
     if(H <= 0) return;
     /* 力统一加在左柱顶，刚性楼板分配不改变力的作用点 */
@@ -468,6 +549,7 @@ function drawSectionInfo(ctx, model, W, T){
   /* 有支撑时，第三行显示支撑截面积 */
   const hasBrace = Object.keys(p.braceMap || {}).some(k => p.braceMap[k] && p.braceMap[k] !== 'none');
   if(hasBrace){
+    // 与前两行（y=14 / y=30）保持 16px 等距
     ctx.fillText(`撑 Aₛ ${Math.round(p.As)} mm²`, W - 14, 46);
   }
   ctx.restore();

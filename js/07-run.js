@@ -62,18 +62,19 @@ function updateReadout(model){
     }
   }
 
-  let maxD = 0;
+  let maxDx = 0, maxDy = 0;
   for(const res of model.results){
     const el = res.el;
     const N = 26;
     for(let k=0;k<=N;k++){
       const x = el.L * k / N;
       const [dx, dy] = elemDisp(res, x);
-      const d = Math.hypot(dx, dy);
-      if(d > maxD) maxD = d;
+      if(Math.abs(dx) > Math.abs(maxDx)) maxDx = dx;
+      if(Math.abs(dy) > Math.abs(maxDy)) maxDy = dy;
     }
   }
-  setTxt('r-maxD', (maxD * 1000).toFixed(3) + ' mm');
+  setTxt('r-maxDx', (Math.abs(maxDx) * 1000).toFixed(2) + ' mm');
+  setTxt('r-maxDy', (Math.abs(maxDy) * 1000).toFixed(2) + ' mm');
 
   /* 逐层收集层间位移角最大值（与 maxDrift 口径一致），挂到 model 上供变形图小图使用 */
   const floorDrifts = new Float64Array(model.nLev + 1);
@@ -88,7 +89,7 @@ function updateReadout(model){
       if(d > maxDrift){ maxDrift = d; driftFloor = lv; }
     }
   }
-  model.floorDrifts = floorDrifts;
+  /* model.floorDrifts 已删除：无下游读取，本地 floorDrifts 仅供下方 DOM 列表使用 */
   {
     // 生成带虚线引导和对齐的动态逐层列表
     const listEl = document.getElementById('r-drift-list');
@@ -98,12 +99,14 @@ function updateReadout(model){
       for(let lv=1; lv<=model.nLev; lv++){
         const d = floorDrifts[lv];
         let vTxt = '≈0';
-        if (d > 1e-7) {
+        // 阈值提升至 1e-6：小于 1/1000000 的位移角视为无有效侧移
+        if (d > 1e-6) {
            const denom = Math.round(1 / d);
-           vTxt = denom > 99999 ? '1/∞' : `1/${denom}`;
+           vTxt = denom > 999999 ? '≈0' : `1/${denom}`;
         }
         
-        const isWorst = (lv === driftFloor && maxDrift > 1e-7);
+        // 同样提升阈值，只有真正发生宏观侧移时才寻找并高亮“最大”
+        const isWorst = (lv === driftFloor && maxDrift > 1e-6);
         const color = isWorst ? '#f97316' : '#e2e8f0';
         const dotColor = isWorst ? '#f97316' : '#475569';
         
@@ -126,6 +129,111 @@ function updateReadout(model){
   setTxt('r-K', (totalH > 0 && Math.abs(uTopAvg) > 1e-12)
     ? (totalH / Math.abs(uTopAvg)).toFixed(1) + ' kN/m'
     : '—（无水平力）');
+
+  /* ============ 刚度贡献分解 ============ */
+  /* 口径与 r-K 一致：三个 K 均用当前工况 uTopAvg 反算。
+     去支撑 / 去梁 = 浅覆盖参数临时重算，不碰主求解器。
+     扫掠中跳过（额外 2 次 analyze 会拖慢帧率），sweepStop 后自动补算。 */
+  {
+    const kAllEl = document.getElementById('r-Kall');
+    const kNbEl  = document.getElementById('r-Knobrace');
+    const kNmEl  = document.getElementById('r-Knobeam');
+    if(kAllEl && kNbEl && kNmEl){
+      if(!(totalH > 0) || Math.abs(uTopAvg) <= 1e-12){
+        setTxt('r-Kall', '—（无水平力）');
+        setTxt('r-Knobrace', '—');
+        setTxt('r-Knobeam', '—');
+      } else if(S.sweep && S.sweep.playing){
+        setTxt('r-Kall', '—（扫掠中）');
+        setTxt('r-Knobrace', '—');
+        setTxt('r-Knobeam', '—');
+      } else if(S._lastSliderInput && performance.now() - S._lastSliderInput < 200){
+        /* 滑块拖动中：跳过刚度分解（额外 2 次 analyze 会拖慢帧率），
+           拖动停止 200ms 后的 run() 会自动补算。 */
+        setTxt('r-Kall', '—（拖动中）');
+        setTxt('r-Knobrace', '—');
+        setTxt('r-Knobeam', '—');
+      } else {
+        const K_all = totalH / Math.abs(uTopAvg);
+        setTxt('r-Kall', K_all.toFixed(1) + ' kN/m');
+
+        /* hasBrace 已在函数顶部计算，直接复用，避免重复遍历 */
+        const cacheKey = [
+          p.nBay, p.nLev, p.hasCant,
+          p.L1, p.L2, p.L3, p.h1, p.h2, p.h3, p.Lc,
+          p.bc, p.hc, p.bb, p.hb, p.r, p.betaF, p.betaJ,
+          p.H1, p.H2, p.H3, p.Hmode,
+          p.q1, p.q2, p.q3, p.qc1, p.qc2, p.qc3,
+          p.P1, p.P2, p.P3,
+          JSON.stringify(p.qSpanMap || {}),
+          JSON.stringify(p.pLoadMap || {}),
+          p.tempAll, p.tempGrad,
+          p.settleDy, p.settleCol,
+          p.frameMat, p.braceMat, p.As, p.axialMode,
+          JSON.stringify(p.braceMap || {}),
+          JSON.stringify(p.braceTensionMap || {})
+        ].join('|');
+
+        let K_nobrace, K_nobeam, errNB = null, errNM = null;
+        const cached = S._stiffDecompCache;
+        if(cached && cached.key === cacheKey){
+          K_nobrace = cached.K_nobrace;
+          K_nobeam  = cached.K_nobeam;
+          errNB     = cached.errNB;
+          errNM     = cached.errNM;
+        } else {
+          if(hasBrace){
+            try{
+              const mNB = analyze({ ...p, braceMap: {}, braceTensionMap: {} });
+              let uAvg = 0;
+              for(let c=0;c<mNB.nCol;c++) uAvg += mNB.U[mNB.nid(c, mNB.nLev)*3];
+              uAvg /= mNB.nCol;
+              K_nobrace = Math.abs(uAvg) > 1e-12 ? totalH / Math.abs(uAvg) : null;
+            }catch(e){ K_nobrace = null; errNB = e.message; }
+          } else {
+            K_nobrace = null;
+          }
+          try{
+            let anyTension = false;
+            for(const k of Object.keys(p.braceMap)){
+              if(p.braceMap[k] && p.braceMap[k] !== 'none' && p.braceTensionMap[k]){
+                anyTension = true; break;
+              }
+            }
+            const mNM = anyTension ? analyzeTensionOnly({ ...p, betaJ: 0 }) : analyze({ ...p, betaJ: 0 });
+            let uAvg = 0;
+            for(let c=0;c<mNM.nCol;c++) uAvg += mNM.U[mNM.nid(c, mNM.nLev)*3];
+            uAvg /= mNM.nCol;
+            K_nobeam = Math.abs(uAvg) > 1e-12 ? totalH / Math.abs(uAvg) : null;
+          }catch(e){ K_nobeam = null; errNM = e.message; }
+
+          S._stiffDecompCache = { key: cacheKey, K_nobrace, K_nobeam, errNB, errNM };
+        }
+
+        if(!hasBrace){
+          setTxt('r-Knobrace', '—（无支撑）');
+        } else if(errNB){
+          const isInst = errNB.includes('奇异') || errNB.includes('失稳') || errNB.includes('回代失败');
+          setTxt('r-Knobrace', isInst ? '失稳' : '异常');
+        } else if(K_nobrace === null){
+          setTxt('r-Knobrace', '—');
+        } else {
+          const drop = (K_all - K_nobrace) / K_all * 100;
+          setTxt('r-Knobrace', `${K_nobrace.toFixed(1)} kN/m  (↓${drop.toFixed(0)}%)`);
+        }
+
+        if(errNM){
+          const isInst = errNM.includes('奇异') || errNM.includes('失稳') || errNM.includes('回代失败');
+          setTxt('r-Knobeam', isInst ? '失稳' : '异常');
+        } else if(K_nobeam === null){
+          setTxt('r-Knobeam', '—');
+        } else {
+          const drop = (K_all - K_nobeam) / K_all * 100;
+          setTxt('r-Knobeam', `${K_nobeam.toFixed(1)} kN/m  (↓${drop.toFixed(0)}%)`);
+        }
+      }
+    }
+  }
 
   const rowPD = document.getElementById('rowPD');
   if(p.showPDelta && rowPD){
@@ -152,9 +260,18 @@ function updateReadout(model){
       if (S._uPureCache && S._uPureCache.key === pPureKey) {
         uPure = S._uPureCache.value;
       } else {
-        const pPure = { ...p, q1:0, q2:0, q3:0, qc1:0, qc2:0, qc3:0, settleDy:0, settleCol:0 };
+        const pPure = { ...p, q1:0, q2:0, q3:0, qc1:0, qc2:0, qc3:0,
+                        qSpanMap:{}, P1:0, P2:0, P3:0, pLoadMap:{},
+                        tempAll:0, tempGrad:0,
+                        settleDy:0, settleCol:0 };
         try {
-          const mPure = analyze(pPure);
+          let anyTension = false;
+          for(const k of Object.keys(pPure.braceMap)){
+            if(pPure.braceMap[k] && pPure.braceMap[k] !== 'none' && pPure.braceTensionMap[k]){
+              anyTension = true; break;
+            }
+          }
+          const mPure = anyTension ? analyzeTensionOnly(pPure) : analyze(pPure);
           let uMax = 0;
           for(let c=0; c<model.nCol; c++){
             const u = Math.abs(mPure.U[model.nid(c, model.nLev)*3]);
@@ -217,13 +334,21 @@ function updateReadout(model){
 
   /* 支座反力已移至内力图 R 标签，此处不再更新 DOM */
 
+  /* ΣV 按实际跨荷载累加（el.qSpan 由 02-solver.js 写入，含 qSpanMap 覆盖回退），
+     逐跨指定后不再按标量 × 总跨长估算。 */
   let sumV = 0, sumH = 0;
-  let baySum = 0;
-  for(let c=0;c<model.nBay;c++) baySum += p['L'+(c+1)];
   for(let lv=1; lv<=model.nLev; lv++){
-    sumV += p['q'+lv] * baySum;
+    for(const el of model.els){
+      if(el.kind === 'beam' && !el.isCant && el.lev === lv){
+        sumV += (el.qSpan != null ? el.qSpan : p['q'+lv]) * el.L;
+      }
+    }
     if(p.hasCant) sumV += p['qc'+lv] * p.Lc;
     sumH += p['H'+lv];
+  }
+  // 补充累加集中力（只累加一次，避免 ΣV 翻倍）
+  for(let i=0; i<model.nodes.length; i++){
+    if(model.nodes[i].pLoad) sumV += model.nodes[i].pLoad;
   }
   setTxt('loadSum', `ΣV = ${sumV.toFixed(1)} kN · ΣH = ${sumH.toFixed(1)} kN`);
 
@@ -248,13 +373,14 @@ function run(){
     }
   }
   const _badge = document.getElementById('solveBadge');
-  if(_badge) _badge.classList.add('on');
+  // 扫掠播放时不显示求解徽章，避免高频闪烁，且此时控制条已有耗时显示
+  if(_badge && !(S.sweep && S.sweep.playing)) _badge.classList.add('on');
   try{
     const _solveT0 = performance.now();
     /* 只要有任意一格支撑开启了「仅受拉」，就走非线性迭代；
        solver 内部只对 tensionOnly 的支撑做失效判定，普通支撑照常受压工作。 */
     let anyTension = false;
-    for(const k in S.braceMap){
+    for(const k of Object.keys(S.braceMap)){
       if(S.braceMap[k] && S.braceMap[k] !== 'none' && S.braceTensionMap[k]){
         anyTension = true;
         break;
@@ -282,7 +408,7 @@ function run(){
       ctx.textAlign = 'start';
       ctx.textBaseline = 'alphabetic';
     }
-    for(const id of ['r-colsec','r-bracesec','r-kmid','r-maxD','r-K','r-alloc1','r-alloc2','r-alloc3','r-pd']){
+    for(const id of ['r-colsec','r-bracesec','r-kmid','r-maxDx','r-maxDy','r-K','r-alloc1','r-alloc2','r-alloc3','r-pd']){
       const el = document.getElementById(id);
       if(el) el.textContent = '—';
     }
@@ -302,10 +428,10 @@ function run(){
     return;
   }
 
-  MODEL.maxF = getMaxInternal(MODEL, S.forceType, S.elFilter);
+  MODEL.maxF = getMaxInternal(MODEL, MODEL.p.forceType, MODEL.p.elFilter);
 
   {
-    const style = FORCE_STYLE[S.forceType];
+    const style = FORCE_STYLE[MODEL.p.forceType];
     const tagEl = document.getElementById('tagForce');
     if(tagEl){
       if(MODEL.maxF > 1e-6){
@@ -353,7 +479,7 @@ function updateStatusBar(m){
     if(m.tensionConverged === false){
       statusEl.textContent = 'NC·未收敛';
       statusEl.classList.remove('ok');
-      statusEl.title = '仅受拉支撑迭代 10 次仍未收敛，当前结果可能不是稳定平衡解';
+      statusEl.title = '仅受拉支撑迭代 15 次仍未收敛，当前结果可能不是稳定平衡解';
     } else {
       statusEl.textContent = ok ? 'OK' : 'CHECK';
       statusEl.classList.toggle('ok', ok);
@@ -379,19 +505,21 @@ function applyTopoState(){
   dis('qc3', !S.hasCant || S.nLev < 3);
   dis('H2', S.nLev < 2);
   dis('H3', S.nLev < 3);
+  dis('P2', S.nLev < 2);
+  dis('P3', S.nLev < 3);
   const hide = (id, on) => {
     const el = document.getElementById(id);
     if(el) el.style.display = on ? 'none' : '';
   };
   hide('row-alloc2', S.nLev < 2);
   hide('row-alloc3', S.nLev < 3);
-  hide('row-R2', S.nBay < 2);
-  hide('row-R3', S.nBay < 3);
+  hide('row-P2', S.nLev < 2);
+  hide('row-P3', S.nLev < 3);
 
-  updateSweepOptions();
   updateSettleColOptions();
   
   try{ window.dispatchEvent(new CustomEvent('structura-topo-change')); } catch(e){}
+  updateSweepOptions();
 }
 
 function updateSweepOptions(){
@@ -411,6 +539,8 @@ function updateSweepOptions(){
     qc3:()=>S.hasCant && S.nLev >= 3,
     H2: ()=>S.nLev  >= 2,
     H3: ()=>S.nLev  >= 3,
+    P2: ()=>S.nLev >= 2,
+    P3: ()=>S.nLev >= 3,
     As: ()=>Object.keys(S.braceMap || {}).some(k => S.braceMap[k] && S.braceMap[k] !== 'none')
   };
 
@@ -569,6 +699,8 @@ const fmtMap = {
   betaJ_d: v=>v.toFixed(2),
   mScale: v=>v.toFixed(2), dScale: v=>v.toFixed(0),
   As: v=>v.toFixed(0)+' mm²',
+  P1: v=>v.toFixed(0)+' kN', P2: v=>v.toFixed(0)+' kN', P3: v=>v.toFixed(0)+' kN',
+  tempAll: v=>v.toFixed(0)+' ℃', tempGrad: v=>v.toFixed(0)+' ℃', tempT0: v=>v.toFixed(0)+' ℃',
   settleDy: v=>v.toFixed(0)+' mm'
 };
 
@@ -603,6 +735,7 @@ function bindRange(id, key, fmt){
   updateRangeProgress(el);
   el.addEventListener('input', ()=>{
     if(S.sweep && S.sweep.playing) sweepStop();
+    S._lastSliderInput = performance.now();
     S[key] = parseFloat(el.value);
     out.textContent = fmt(S[key]);
     updateRangeProgress(el);
@@ -659,6 +792,295 @@ bindRange('betaF_d','betaF', v=>v.toFixed(2));
 bindRange('betaJ_d','betaJ', v=>v.toFixed(2));
 bindRange('As','As', v=>v.toFixed(0)+' mm²');
 bindRange('settleDy','settleDy', v=>v.toFixed(0)+' mm');
+
+/* =====================================================================
+   动态注入集中荷载 UI（避免修改 index.html 大段结构）
+   ===================================================================== */
+(function injectPLoadUI(){
+  const rowQ1 = document.getElementById('row-q1');
+  if(!rowQ1) return;
+  
+  let html = '';
+  for(let lv=1; lv<=3; lv++){
+    html += `<div class="ctrl" id="row-P${lv}">
+      <div class="head"><span>${lv}层集中力 P<sub>${lv}</sub>（跨中）</span><b id="v-P${lv}">0 kN</b></div>
+      <input type="range" id="P${lv}" min="0" max="200" step="5" value="0">
+      <div class="spanEditRow">
+        <button type="button" class="spanEditToggle" data-lev="${lv}" data-type="P">按跨指定 ▾</button>
+      </div>
+      <div class="spanEditBox" id="pSpanBox${lv}" hidden></div>
+    </div>`;
+  }
+  
+  // 插入到“右侧悬挑均布”组的前面
+  const targetGroup = [...document.querySelectorAll('.tabPanel[data-tab="load"] .group')].find(g => g.querySelector('.gtitle') && g.querySelector('.gtitle').textContent.includes('右侧悬挑均布'));
+  if(targetGroup) targetGroup.insertAdjacentHTML('beforebegin', html);
+})();
+
+/* 动态注入温度荷载 UI */
+(function injectTempUI(){
+  const rowQ3 = document.getElementById('row-q3');
+  if(!rowQ3) return;
+  
+  const html = `
+    <div class="group" id="group-temp">
+      <div class="gtitle">非荷载作用 · 温度</div>
+      <div class="ctrl" id="row-tempT0">
+        <div class="head"><span>合拢/安装温度 T₀</span><b id="v-tempT0">20 ℃</b></div>
+        <input type="range" id="tempT0" min="-20" max="50" step="1" value="20">
+      </div>
+      <div class="ctrl" id="row-tempAll">
+        <div class="head"><span>构件整体温升 ΔT</span><b id="v-tempAll">0 ℃</b></div>
+        <input type="range" id="tempAll" min="-30" max="50" step="1" value="0">
+      </div>
+      <div class="ctrl" id="row-tempGrad">
+        <div class="head"><span>结构内外温差 ΔT (室外-室内)</span><b id="v-tempGrad">0 ℃</b></div>
+        <input type="range" id="tempGrad" min="-30" max="30" step="1" value="0">
+      </div>
+      <div class="hint">整体温升使框架产生轴力重分布；结构内外温差仅作用于边柱及顶层边梁（产生弯曲）。内部构件及悬挑梁不受截面温差影响。</div>
+    </div>`;
+  
+  // 插入到「荷载」Tab 的最底部（即“支座沉降”组之后），符合从“荷载”到“非荷载作用”的工程习惯
+  const loadPanel = document.querySelector('.tabPanel[data-tab="load"]');
+  if(loadPanel) {
+    loadPanel.insertAdjacentHTML('beforeend', html);
+    
+    // 顺带把原有的“二阶效应”组也移动到最后（放在温度下方）
+    const pDeltaGroup = [...loadPanel.querySelectorAll('.group')].find(g => g.querySelector('.gtitle') && g.querySelector('.gtitle').textContent.includes('二阶效应'));
+    if (pDeltaGroup) loadPanel.appendChild(pDeltaGroup);
+  }
+  
+  const bindT = (id, fmt) => {
+    const el = document.getElementById(id);
+    const out = document.getElementById('v-'+id);
+    if(!el || !out) return;
+    updateRangeProgress(el);
+    el.addEventListener('input', ()=>{
+      if(S.sweep && S.sweep.playing) sweepStop();
+      S[id] = parseFloat(el.value);
+      out.textContent = fmt(S[id]);
+      updateRangeProgress(el);
+      if(dragRaf) return;
+      dragRaf = requestAnimationFrame(()=>{ dragRaf = null; run(); });
+    });
+    S[id] = parseFloat(el.value);
+    out.textContent = fmt(S[id]);
+    updateRangeProgress(el);
+  };
+  
+  bindT('tempT0', v=>v.toFixed(0)+' ℃');
+  bindT('tempAll', v=>v.toFixed(0)+' ℃');
+  bindT('tempGrad', v=>v.toFixed(0)+' ℃');
+
+  // 绑定 P 滑块
+  for(let lv=1; lv<=3; lv++){
+    const el = document.getElementById('P'+lv);
+    const out = document.getElementById('v-P'+lv);
+    if(!el || !out) continue;
+    
+    el.addEventListener('input', ()=>{
+      if(S.sweep && S.sweep.playing) sweepStop();
+      S['P'+lv] = parseFloat(el.value);
+      out.textContent = S['P'+lv].toFixed(0) + ' kN';
+      updateRangeProgress(el);
+      
+      // 拖动统一 P 时，清除本层逐跨覆盖
+      let changed = false;
+      for(const k in S.pLoadMap){
+        if(k.startsWith(lv + '-')){ delete S.pLoadMap[k]; changed = true; }
+      }
+      if(changed) renderPSpanEditors(lv);
+      
+      if(dragRaf) return;
+      dragRaf = requestAnimationFrame(()=>{ dragRaf = null; run(); });
+    });
+    S['P'+lv] = parseFloat(el.value);
+    out.textContent = S['P'+lv].toFixed(0) + ' kN';
+    updateRangeProgress(el);
+  }
+})();
+
+function renderPSpanEditors(onlyLev){
+  for(let lv=1; lv<=S.nLev; lv++){
+    if(onlyLev && lv !== onlyLev) continue;
+    const box = document.getElementById('pSpanBox' + lv);
+    if(!box || box.hidden) continue;
+    let html = '';
+    for(let c=1; c<=S.nBay; c++){
+      const key = lv + '-' + c;
+      const mapObj = S.pLoadMap[key] || {};
+      const P = mapObj.P != null ? mapObj.P : (S['P'+lv] || 0);
+      let a = mapObj.a != null ? mapObj.a : (S['L'+c] / 2);
+      a = Math.max(0.5, Math.min(S['L'+c] - 0.5, a));
+      // 同步修正内存中的非法状态，避免后续分享或重算时使用错误值
+      if (mapObj.a != null && mapObj.a !== a) {
+        S.pLoadMap[key].a = a;
+      }
+      const dot = mapObj.P != null ? ' <span style="color:#f97316">●</span>' : '';
+      
+      html += `<div class="ctrl spanEditItem">
+        <div class="head"><span>第 ${c} 跨 P (位置 a)${dot}</span><b id="v-P-${key}">${P.toFixed(0)} kN / ${a.toFixed(1)} m</b></div>
+        <input type="range" class="pSpanEditRangeP" min="0" max="200" step="5" value="${P}" data-spankey="${key}" data-sub="P">
+        <div style="height:4px"></div>
+        <input type="range" class="pSpanEditRangeA" min="0.5" max="${S['L'+c]-0.5}" step="0.1" value="${a}" data-spankey="${key}" data-sub="a">
+      </div>`;
+    }
+    html += `<button type="button" class="spanEditClear" data-lev="${lv}" data-type="P">清除本层覆盖</button>`;
+    box.innerHTML = html;
+
+    box.querySelectorAll('input[type=range]').forEach(inp=>{
+      const key = inp.dataset.spankey;
+      const sub = inp.dataset.sub;
+      updateRangeProgress(inp);
+      
+      inp.addEventListener('input', ()=>{
+        if(S.sweep && S.sweep.playing) sweepStop();
+        const v = parseFloat(inp.value);
+        if(!S.pLoadMap[key]) S.pLoadMap[key] = { P: S['P'+parseInt(key.split('-')[0])] || 0, a: S['L'+parseInt(key.split('-')[1])]/2 };
+        S.pLoadMap[key][sub] = v;
+        
+        const out = document.getElementById('v-P-' + key);
+        if(out) out.textContent = S.pLoadMap[key].P.toFixed(0) + ' kN / ' + S.pLoadMap[key].a.toFixed(1) + ' m';
+        updateRangeProgress(inp);
+        
+        if(dragRaf) return;
+        dragRaf = requestAnimationFrame(()=>{ dragRaf = null; run(); });
+      });
+    });
+
+    const clr = box.querySelector('.spanEditClear');
+    if(clr) clr.addEventListener('click', ()=>{
+      const lv2 = parseInt(clr.dataset.lev);
+      for(const k in S.pLoadMap){
+        if(k.startsWith(lv2 + '-')) delete S.pLoadMap[k];
+      }
+      renderPSpanEditors(lv2);
+      run();
+    });
+  }
+}
+
+/* 重写 bindSpanEditors 的绑定逻辑以兼容 P 和 q */
+(function bindSpanEditors2(){
+  document.querySelectorAll('.spanEditToggle[data-type="P"]').forEach(btn=>{
+    const lev = parseInt(btn.dataset.lev);
+    const type = btn.dataset.type || 'q';
+    const boxId = type === 'P' ? 'pSpanBox' + lev : 'qSpanBox' + lev;
+    const box = document.getElementById(boxId);
+    if(!box) return;
+    btn.addEventListener('click', ()=>{
+      const open = box.hidden;
+      box.hidden = !open;
+      btn.classList.toggle('on', open);
+      btn.textContent = open ? '收起 ▴' : '按跨指定 ▾';
+      if(open) {
+        if(type === 'P') renderPSpanEditors(lev);
+        else renderSpanEditors(lev);
+      }
+    });
+  });
+})();
+
+/* =====================================================================
+   逐跨竖向荷载编辑（qSpanMap）
+   - 每层「按跨指定」按钮展开 nBay 个滑块；
+   - 拖动逐跨滑块 → 写入 S.qSpanMap["层-跨"]，求解器优先使用；
+   - 拖动统一值滑块 q1/q2/q3 → 清除该层所有覆盖，回到统一模式；
+   - 扫掠 q1/q2/q3 时不清除覆盖（覆盖跨保持其值），hint 已说明。
+   ===================================================================== */
+function renderSpanEditors(onlyLev){
+  for(let lv=1; lv<=S.nLev; lv++){
+    if(onlyLev && lv !== onlyLev) continue;
+    const box = document.getElementById('qSpanBox' + lv);
+    if(!box || box.hidden) continue;
+    let html = '';
+    for(let c=1; c<=S.nBay; c++){
+      const key = lv + '-' + c;
+      const has = Object.prototype.hasOwnProperty.call(S.qSpanMap, key);
+      const v = has ? S.qSpanMap[key] : (S['q'+lv] || 0);
+      const dot = has ? ' <span style="color:#f97316">●</span>' : '';
+      html += `<div class="ctrl spanEditItem">
+        <div class="head"><span>第 ${c} 跨${dot}</span><b id="v-${key}">${v.toFixed(1)} kN/m</b></div>
+        <input type="range" class="spanEditRange" min="0" max="100" step="0.5" value="${v}" data-spankey="${key}">
+      </div>`;
+    }
+    html += `<button type="button" class="spanEditClear" data-lev="${lv}">清除本层覆盖</button>`;
+    box.innerHTML = html;
+
+    box.querySelectorAll('.spanEditRange').forEach(inp=>{
+      const spanKey = inp.dataset.spankey;
+      updateRangeProgress(inp);
+      inp.addEventListener('input', ()=>{
+        if(S.sweep && S.sweep.playing) sweepStop();
+        const v = parseFloat(inp.value);
+        S.qSpanMap[spanKey] = v;
+        const out = document.getElementById('v-' + spanKey);
+        if(out) out.textContent = v.toFixed(1) + ' kN/m';
+        updateRangeProgress(inp);
+        if(dragRaf) return;
+        dragRaf = requestAnimationFrame(()=>{
+          dragRaf = null;
+          run();
+        });
+      });
+    });
+
+    const clr = box.querySelector('.spanEditClear');
+    if(clr) clr.addEventListener('click', ()=>{
+      const lv2 = parseInt(clr.dataset.lev);
+      for(const k in S.qSpanMap){
+        if(k.startsWith(lv2 + '-')) delete S.qSpanMap[k];
+      }
+      renderSpanEditors(lv2);
+      run();
+    });
+  }
+}
+
+(function bindSpanEditors(){
+  document.querySelectorAll('.spanEditToggle:not([data-type="P"])').forEach(btn=>{
+    const lev = parseInt(btn.dataset.lev);
+    const box = document.getElementById('qSpanBox' + lev);
+    if(!box) return;
+    btn.addEventListener('click', ()=>{
+      const open = box.hidden;
+      box.hidden = !open;
+      btn.classList.toggle('on', open);
+      btn.textContent = open ? '收起 ▴' : '按跨指定 ▾';
+      if(open) renderSpanEditors(lev);
+    });
+  });
+
+  /* 拖动统一值滑块 → 清除该层所有覆盖（语义：统一值与逐跨互斥） */
+  ['q1','q2','q3'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.addEventListener('input', ()=>{
+      const lev = parseInt(id[1]);
+      let changed = false;
+      for(const k in S.qSpanMap){
+        if(k.startsWith(lev + '-')){ delete S.qSpanMap[k]; changed = true; }
+      }
+      if(changed && typeof renderSpanEditors === 'function') renderSpanEditors(lev);
+    });
+  });
+
+  /* 拓扑变化：清理越界键，重渲染已展开的层 */
+  window.addEventListener('structura-topo-change', ()=>{
+    for(const k of Object.keys(S.qSpanMap)){
+      const parts = k.split('-');
+      const lv = parseInt(parts[0]), c = parseInt(parts[1]);
+      if(lv > S.nLev || c > S.nBay) delete S.qSpanMap[k];
+    }
+    for(const k of Object.keys(S.pLoadMap)){
+      const parts = k.split('-');
+      const lv = parseInt(parts[0]), c = parseInt(parts[1]);
+      if(lv > S.nLev || c > S.nBay) delete S.pLoadMap[k];
+    }
+    if(typeof renderSpanEditors === 'function') renderSpanEditors();
+    if(typeof renderPSpanEditors === 'function') renderPSpanEditors();
+  });
+})();
 
 (function bindSettleCol(){
   const sel = document.getElementById('settleCol');

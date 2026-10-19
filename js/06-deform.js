@@ -60,12 +60,26 @@ function drawDeform(canvas, model, dprOverride){
   }
 
   // 绘制当前变形图（实线）
-  ctx.strokeStyle = T.deformCurve;
   ctx.lineJoin = 'round'; ctx.lineCap  = 'round';
   for(let e=0;e<curves.length;e++){
     const pts = curves[e];
-    const el  = model.results[e].el;
-    ctx.lineWidth = elemLineWidth(el, model) * 0.6;
+    const res = model.results[e];
+    const el  = res.el;
+
+    // 检查支撑是否失效：显式读取求解器的 inactiveBraces，
+    // 避免普通支撑轴力恰好为 0 时被误判为「已失效」而画成灰色虚线
+    const isDeadBrace = (el.kind === 'brace') && !!(model.inactiveBraces && model.inactiveBraces.has(el.braceUid));
+    
+    if(isDeadBrace) {
+      ctx.strokeStyle = T.frameGhost;
+      ctx.setLineDash([3, 3]);
+      ctx.lineWidth = 1.5;
+    } else {
+      ctx.strokeStyle = T.deformCurve;
+      ctx.setLineDash([]);
+      ctx.lineWidth = elemLineWidth(el, model) * 0.6;
+    }
+
     ctx.beginPath();
     for(let k=0;k<pts.length;k++){
       const p = pts[k];
@@ -74,6 +88,7 @@ function drawDeform(canvas, model, dprOverride){
     }
     ctx.stroke();
   }
+  ctx.setLineDash([]);
 
   ctx.fillStyle=T.nodeBlue;
   for(let idx=0; idx<model.nodes.length; idx++){
@@ -99,21 +114,25 @@ function drawDeform(canvas, model, dprOverride){
     ctx.fillStyle = T.nodeBlue;
     ctx.fillRect(sx-2, sy-2, 4, 4);
   }
-  /* 与荷载简图 / 内力图保持一致：支撑画铰，半刚接梁画弹簧 */
+  /* 与荷载简图 / 内力图保持一致：支撑画铰，半刚接梁画弹簧；端点跟随变形后位置，
+     避免 dScale 放大时符号悬空、与变形后梁脱离 */
   for(const el of model.els){
     const isBrace = (el.kind === 'brace');
     const a = model.nodes[el.i], b = model.nodes[el.j];
-    const [ax, ay] = toS(a.x, a.y);
-    const [bx, by] = toS(b.x, b.y);
+    const uax = model.U[el.i*3], uay = model.U[el.i*3+1];
+    const ubx = model.U[el.j*3], uby = model.U[el.j*3+1];
+    const [ax, ay] = toS(a.x + F*uax, a.y + F*uay);
+    const [bx, by] = toS(b.x + F*ubx, b.y + F*uby);
     if(isBrace){
       drawBeamEndConn(ctx, ax, ay, bx, by, 'hinge', T);
       drawBeamEndConn(ctx, bx, by, ax, ay, 'hinge', T);
       continue;
     }
     if(el.kind === 'beam' && !el.isCant && model.p.betaJ < BETA_FIXED){
+      /* 集中力打断点（isSub 节点）是梁内部节点，不是梁端，跳过该端符号 */
       const sym = (model.p.betaJ <= BETA_HINGE) ? 'hinge' : 'spring';
-      drawBeamEndConn(ctx, ax, ay, bx, by, sym, T);
-      drawBeamEndConn(ctx, bx, by, ax, ay, sym, T);
+      if(!a.isSub) drawBeamEndConn(ctx, ax, ay, bx, by, sym, T);
+      if(!b.isSub) drawBeamEndConn(ctx, bx, by, ax, ay, sym, T);
     }
   }
 

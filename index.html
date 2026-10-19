@@ -27,9 +27,202 @@ var _hmt = _hmt || [];
 })();
 </script>
 
-<!-- 二维码生成（Kazuhiko Arase, MIT License）。加载失败时，
-     分享模态框自动退化为「仅复制链接」。 -->
-<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js" defer></script>
+<!-- 内嵌微型二维码生成库（兼容原 qrcode API），避免浏览器跟踪防护拦截外部 CDN -->
+<script>
+(function(){
+  function QR8bitByte(data){this.mode=4;this.data=data;this.parsedData=[];for(var i=0,l=this.data.length;i<l;i++){var byte=this.data.charCodeAt(i);if(byte>255){this.parsedData.push(byte>>8&255,byte&255);}else{this.parsedData.push(byte);}}}
+  QR8bitByte.prototype={getLength:function(){return this.parsedData.length;},write:function(buffer){for(var i=0,l=this.parsedData.length;i<l;i++){buffer.put(this.parsedData[i],8);}}};
+  var QRMode={MODE_8BIT_BYTE:4};
+  var QRErrorCorrectLevel={L:1,M:0,Q:3,H:2};
+  var QRMaskPattern={PATTERN000:0,PATTERN001:1,PATTERN010:2,PATTERN011:3,PATTERN100:4,PATTERN101:5,PATTERN110:6,PATTERN111:7};
+  var QRUtil={
+    PATTERN_POSITION_TABLE:[
+      [],
+      [6,18],
+      [6,22],
+      [6,26],
+      [6,30],
+      [6,34],
+      [6,22,38],
+      [6,24,42],
+      [6,26,46],
+      [6,28,50],
+      [6,30,54],
+      [6,32,58],
+      [6,34,62],
+      [6,26,46,66],
+      [6,26,48,70],
+      [6,26,50,74],
+      [6,30,54,78],
+      [6,30,56,82],
+      [6,30,58,86],
+      [6,34,62,90],
+      [6,28,50,72,94],
+      [6,26,50,74,98],
+      [6,30,54,78,102],
+      [6,28,54,80,106],
+      [6,32,58,84,110],
+      [6,30,58,86,114],
+      [6,34,62,90,118],
+      [6,26,50,74,98,122],
+      [6,30,54,78,102,126],
+      [6,26,52,78,104,130],
+      [6,30,56,82,108,134],
+      [6,34,60,86,112,138],
+      [6,30,58,86,114,142],
+      [6,34,62,90,118,146],
+      [6,30,54,78,102,126,150],
+      [6,24,50,76,102,128,154],
+      [6,28,54,80,106,132,158],
+      [6,32,58,84,110,136,162],
+      [6,26,54,82,110,138,166],
+      [6,30,58,86,114,142,170]
+    ],
+    G15:0x537,
+    G18:0x1F25,
+    G15_MASK:0x5412,
+    getBCHTypeInfo:function(data){var d=data<<10;while(QRUtil.getBCHDigit(d)-QRUtil.getBCHDigit(QRUtil.G15)>=0){d^=(QRUtil.G15<<(QRUtil.getBCHDigit(d)-QRUtil.getBCHDigit(QRUtil.G15)));}return((data<<10)|d)^QRUtil.G15_MASK;},
+    getBCHDigit:function(data){var digit=0;while(data!=0){digit++;data>>>=1;}return digit;}
+  };
+  var QRMath={expTable:[],logTable:[]};
+  for(var i=0;i<8;i++)QRMath.expTable[i]=1<<i;
+  for(var i=8;i<256;i++)QRMath.expTable[i]=QRMath.expTable[i-4]^QRMath.expTable[i-5]^QRMath.expTable[i-6]^QRMath.expTable[i-8];
+  for(var i=0;i<255;i++)QRMath.logTable[QRMath.expTable[i]]=i;
+  var QRPolynomial=function(num,shift){var offset=0;while(offset<num.length&&num[offset]==0){offset++;}this.num=new Array(num.length-offset+shift);for(var i=0;i<num.length-offset;i++){this.num[i]=num[i+offset];}};
+  QRPolynomial.prototype={get:function(index){return this.num[index];},getLength:function(){return this.num.length;},multiply:function(e){var num=new Array(this.getLength()+e.getLength()-1);for(var i=0;i<this.getLength();i++){for(var j=0;j<e.getLength();j++){num[i+j]^=QRMath.expTable[(QRMath.logTable[this.get(i)]+QRMath.logTable[e.get(j)])%255];}}return new QRPolynomial(num,0);},mod:function(e){if(this.getLength()-e.getLength()<0){return this;}var ratio=QRMath.logTable[this.get(0)]-QRMath.logTable[e.get(0)];var num=new Array(this.getLength());for(var i=0;i<this.getLength();i++){num[i]=this.get(i);}for(var i=0;i<e.getLength();i++){num[i]^=QRMath.expTable[(QRMath.logTable[e.get(i)]+ratio)%255];}return new QRPolynomial(num,0).mod(e);}};
+  var QRRSBlock={};
+  QRRSBlock.getRSBlocks=function(typeNumber,errorCorrectLevel){
+    var rsBlock=[
+      [1,26,19],[1,26,16],[1,26,13],[1,26,9],
+      [1,44,34],[1,44,28],[1,44,22],[1,44,16],
+      [1,70,55],[1,70,44],[2,35,17],[2,35,13],
+      [1,100,80],[2,50,32],[2,50,24],[4,25,9],
+      [1,134,108],[2,67,43],[2,33,15],[2,33,11],
+      [2,86,68],[4,43,27],[4,43,19],[4,43,15],
+      [2,98,78],[4,49,31],[2,32,14],[4,39,13],
+      [2,121,97],[2,60,38],[4,40,18],[4,40,14],
+      [2,146,116],[3,58,36],[4,36,16],[4,36,12],
+      [2,86,68],[4,69,43],[6,43,19],[6,43,15],
+      [4,101,81],[1,80,50],[4,50,22],[3,36,12],
+      [2,116,92],[6,58,36],[4,46,20],[7,42,14],
+      [4,133,107],[8,59,37],[8,44,20],[12,33,11],
+      [3,145,115],[4,64,40],[11,36,16],[11,36,12],
+      [5,109,87],[5,65,41],[5,54,24],[11,36,12],
+      [5,122,98],[7,73,45],[15,43,19],[3,45,15],
+      [1,135,107],[10,74,46],[1,50,22],[2,42,14],
+      [5,150,120],[9,69,43],[17,50,22],[2,42,14],
+      [3,141,113],[3,70,44],[17,47,21],[9,39,13],
+      [3,135,107],[3,67,41],[15,54,24],[15,43,15],
+      [4,144,116],[3,73,45],[17,50,22],[19,46,16],
+      [2,139,111],[7,73,45],[7,50,22],[34,37,13],
+      [4,151,121],[5,75,47],[11,50,22],[16,45,15],
+      [6,147,117],[13,75,47],[11,50,22],[30,45,15],
+      [8,132,106],[17,74,46],[7,54,24],[22,45,15],
+      [10,142,114],[28,73,45],[21,50,22],[16,45,15],
+      [8,152,122],[8,75,47],[23,50,22],[30,45,15],
+      [3,147,117],[4,74,46],[11,54,24],[21,46,16],
+      [7,153,123],[12,75,47],[19,50,22],[26,45,15],
+      [5,148,118],[11,74,46],[15,54,24],[23,46,16],
+      [13,158,128],[13,75,47],[35,50,22],[25,45,15],
+      [17,158,128],[16,75,47],[23,54,24],[25,45,15],
+      [17,158,128],[20,75,47],[15,54,24],[31,45,15],
+      [13,160,128],[35,75,47],[19,54,24],[29,45,15],
+      [12,162,128],[29,75,47],[37,54,24],[28,45,15],
+      [6,164,128],[42,75,47],[49,54,24],[31,45,15],
+      [17,165,128],[31,75,47],[25,54,24],[34,45,15],
+      [4,167,128],[42,75,47],[16,54,24],[26,45,15],
+      [20,167,128],[50,75,47],[23,54,24],[37,45,15],
+      [6,173,128],[67,75,47],[45,54,24],[44,45,15]
+    ];
+    var offset=(typeNumber-1)*4+errorCorrectLevel;
+    var r=rsBlock[offset];
+    var list=[];
+    for(var i=0; i<r[0]; i++) {
+      list.push({totalCount: r[1], dataCount: r[2]});
+    }
+    return list;
+  };
+  function QRCodeModel(typeNumber,errorCorrectLevel){this.typeNumber=typeNumber;this.errorCorrectLevel=errorCorrectLevel;this.modules=null;this.moduleCount=0;this.dataCache=null;this.dataList=[];}
+  QRCodeModel.prototype={
+    addData:function(data){this.dataList.push(new QR8bitByte(data));this.dataCache=null;},
+    isDark:function(row,col){if(row<0||this.moduleCount<=row||col<0||this.moduleCount<=col){throw new Error(row+","+col);}return this.modules[row][col];},
+    getModuleCount:function(){return this.moduleCount;},
+    make:function(){
+      if(this.typeNumber<1){
+        var typeNumber=1;
+        for(typeNumber=1;typeNumber<40;typeNumber++){
+          var rsBlocks=QRRSBlock.getRSBlocks(typeNumber,this.errorCorrectLevel);
+          var buffer=new QRBitBuffer();var totalDataCount=0;
+          for(var i=0;i<rsBlocks.length;i++)totalDataCount+=rsBlocks[i].dataCount;
+          for(var i=0;i<this.dataList.length;i++){var data=this.dataList[i];buffer.put(data.mode,4);buffer.put(data.getLength(),QRUtil.getLengthInBits(data.mode,typeNumber));data.write(buffer);}
+          if(buffer.getLengthInBits()<=totalDataCount*8)break;
+        }
+        this.typeNumber=typeNumber;
+      }
+      this.makeImpl(false,this.getBestMaskPattern());
+    },
+    makeImpl:function(test,maskPattern){
+      this.moduleCount=this.typeNumber*4+17;this.modules=new Array(this.moduleCount);
+      for(var row=0;row<this.moduleCount;row++){this.modules[row]=new Array(this.moduleCount);for(var col=0;col<this.moduleCount;col++){this.modules[row][col]=null;}}
+      this.setupPositionProbePattern(0,0);this.setupPositionProbePattern(this.moduleCount-7,0);this.setupPositionProbePattern(0,this.moduleCount-7);this.setupPositionAdjustPattern();this.setupTimingPattern();this.setupTypeInfo(test,maskPattern);this.setupTypeNumber(test);if(this.dataCache==null){this.dataCache=QRCodeModel.createData(this.typeNumber,this.errorCorrectLevel,this.dataList);}this.mapData(this.dataCache,maskPattern);
+    },
+    setupPositionProbePattern:function(row,col){
+      for(var r=-1;r<=7;r++){if(row+r<=-1||this.moduleCount<=row+r)continue;for(var c=-1;c<=7;c++){if(col+c<=-1||this.moduleCount<=col+c)continue;if((0<=r&&r<=6&&(c==0||c==6))||(0<=c&&c<=6&&(r==0||r==6))||(2<=r&&r<=4&&2<=c&&c<=4)){this.modules[row+r][col+c]=true;}else{this.modules[row+r][col+c]=false;}}}
+    },
+    getBestMaskPattern:function(){var minLostPoint=0,pattern=0;for(var i=0;i<8;i++){this.makeImpl(true,i);var lostPoint=QRUtil.getLostPoint(this);if(i==0||minLostPoint>lostPoint){minLostPoint=lostPoint;pattern=i;}}return pattern;},
+    setupTimingPattern:function(){for(var r=8;r<this.moduleCount-8;r++){if(this.modules[r][6]!=null)continue;this.modules[r][6]=(r%2==0);}for(var c=8;c<this.moduleCount-8;c++){if(this.modules[6][c]!=null)continue;this.modules[6][c]=(c%2==0);}},
+    setupPositionAdjustPattern:function(){var pos=QRUtil.getPatternPosition(this.typeNumber);for(var i=0;i<pos.length;i++){for(var j=0;j<pos.length;j++){var row=pos[i],col=pos[j];if(this.modules[row][col]!=null)continue;for(var r=-2;r<=2;r++){for(var c=-2;c<=2;c++){if(r==-2||r==2||c==-2||c==2||(r==0&&c==0)){this.modules[row+r][col+c]=true;}else{this.modules[row+r][col+c]=false;}}}}}},
+    setupTypeNumber:function(test){var bits=QRUtil.getBCHTypeNumber(this.typeNumber);for(var i=0;i<18;i++){var mod=(!test&&((bits>>i)&1)==1);this.modules[Math.floor(i/3)][i%3+this.moduleCount-8-3]=mod;}for(var i=0;i<18;i++){var mod=(!test&&((bits>>i)&1)==1);this.modules[i%3+this.moduleCount-8-3][Math.floor(i/3)]=mod;}},
+    setupTypeInfo:function(test,maskPattern){var data=(this.errorCorrectLevel<<3)|maskPattern;var bits=QRUtil.getBCHTypeInfo(data);for(var i=0;i<15;i++){var mod=(!test&&((bits>>i)&1)==1);if(i<6){this.modules[i][8]=mod;}else if(i<8){this.modules[i+1][8]=mod;}else{this.modules[this.moduleCount-15+i][8]=mod;}}for(var i=0;i<15;i++){var mod=(!test&&((bits>>i)&1)==1);if(i<8){this.modules[8][this.moduleCount-i-1]=mod;}else if(i<9){this.modules[8][15-i-1+1]=mod;}else{this.modules[8][15-i-1]=mod;}}this.modules[this.moduleCount-8][8]=(!test);},
+    mapData:function(data,maskPattern){
+      var inc=-1,row=this.moduleCount-1,bitIndex=7,byteIndex=0;
+      for(var col=this.moduleCount-1;col>0;col-=2){if(col==6)col--;while(true){for(var c=0;c<2;c++){if(this.modules[row][col-c]==null){var dark=false;if(byteIndex<data.length){dark=(((data[byteIndex]>>>bitIndex)&1)==1);}var mask=QRUtil.getMask(maskPattern,row,col-c);if(mask)dark=!dark;this.modules[row][col-c]=dark;bitIndex--;if(bitIndex==-1){byteIndex++;bitIndex=7;}}}row+=inc;if(row<0||this.moduleCount<=row){row-=inc;inc=-inc;break;}}}
+    }
+  };
+  QRCodeModel.createData=function(typeNumber,errorCorrectLevel,dataList){
+    var rsBlocks=QRRSBlock.getRSBlocks(typeNumber,errorCorrectLevel);var buffer=new QRBitBuffer();
+    for(var i=0;i<dataList.length;i++){var data=dataList[i];buffer.put(data.mode,4);buffer.put(data.getLength(),QRUtil.getLengthInBits(data.mode,typeNumber));data.write(buffer);}
+    var totalDataCount=0;for(var i=0;i<rsBlocks.length;i++)totalDataCount+=rsBlocks[i].dataCount;
+    if(buffer.getLengthInBits()>totalDataCount*8){throw new Error("code length overflow. ("+buffer.getLengthInBits()+">"+totalDataCount*8+")");}
+    if(buffer.getLengthInBits()+4<=totalDataCount*8){buffer.put(0,4);}
+    while(buffer.getLengthInBits()%8!=0){buffer.putBit(false);}
+    while(true){if(buffer.getLengthInBits()>=totalDataCount*8)break;buffer.put(0xEC,8);if(buffer.getLengthInBits()>=totalDataCount*8)break;buffer.put(0x11,8);}
+    return QRCodeModel.createBytes(buffer,rsBlocks);
+  };
+  QRCodeModel.createBytes=function(buffer,rsBlocks){
+    var offset=0,maxDcCount=0,maxEcCount=0;var dcdata=new Array(rsBlocks.length);var ecdata=new Array(rsBlocks.length);
+    for(var r=0;r<rsBlocks.length;r++){var dcCount=rsBlocks[r].dataCount;var ecCount=rsBlocks[r].totalCount-dcCount;maxDcCount=Math.max(maxDcCount,dcCount);maxEcCount=Math.max(maxEcCount,ecCount);dcdata[r]=new Array(dcCount);for(var i=0;i<dcdata[r].length;i++){dcdata[r][i]=0xff&buffer.buffer[i+offset];}offset+=dcCount;var rsPoly=QRUtil.getErrorCorrectPolynomial(ecCount);var rawPoly=new QRPolynomial(dcdata[r],rsPoly.getLength()-1);var modPoly=rawPoly.mod(rsPoly);ecdata[r]=new Array(rsPoly.getLength()-1);for(var i=0;i<ecdata[r].length;i++){var modIndex=i+modPoly.getLength()-ecdata[r].length;ecdata[r][i]=(modIndex>=0)?modPoly.get(modIndex):0;}}
+    var totalCodeCount=0;for(var i=0;i<rsBlocks.length;i++){totalCodeCount+=rsBlocks[i].totalCount;}
+    var data=new Array(totalCodeCount);var index=0;
+    for(var i=0;i<maxDcCount;i++){for(var r=0;r<rsBlocks.length;r++){if(i<dcdata[r].length){data[index++]=dcdata[r][i];}}}
+    for(var i=0;i<maxEcCount;i++){for(var r=0;r<rsBlocks.length;r++){if(i<ecdata[r].length){data[index++]=ecdata[r][i];}}}
+    return data;
+  };
+  function QRBitBuffer(){this.buffer=[];this.length=0;}
+  QRBitBuffer.prototype={get:function(index){var bufIndex=Math.floor(index/8);return((this.buffer[bufIndex]>>>(7-index%8))&1)==1;},put:function(num,length){for(var i=0;i<length;i++){this.putBit(((num>>>(length-i-1))&1)==1);}},getLengthInBits:function(){return this.length;},putBit:function(bit){var bufIndex=Math.floor(this.length/8);if(this.buffer.length<=bufIndex){this.buffer.push(0);}if(bit){this.buffer[bufIndex]|=(0x80>>>(this.length%8));}this.length++;}};
+  QRUtil.getLengthInBits=function(mode,type){
+    if(type>=1 && type<10) return 8;
+    if(type>=10 && type<27) return 16;
+    if(type>=27 && type<41) return 16;
+    throw new Error("type:" + type);
+  };
+  QRUtil.getLostPoint=function(qrcode){
+    var moduleCount=qrcode.getModuleCount();var lostPoint=0;
+    for(var row=0;row<moduleCount;row++){for(var col=0;col<moduleCount;col++){var sameCount=0;var dark=qrcode.isDark(row,col);for(var r=-1;r<=1;r++){if(row+r<0||moduleCount<=row+r)continue;for(var c=-1;c<=1;c++){if(col+c<0||moduleCount<=col+c)continue;if(r==0&&c==0)continue;if(dark==qrcode.isDark(row+r,col+c))sameCount++;}}if(sameCount>5){lostPoint+=(3+sameCount-5);}}}
+    for(var row=0;row<moduleCount-1;row++){for(var col=0;col<moduleCount-1;col++){var count=0;if(qrcode.isDark(row,col))count++;if(qrcode.isDark(row+1,col))count++;if(qrcode.isDark(row,col+1))count++;if(qrcode.isDark(row+1,col+1))count++;if(count==0||count==4)lostPoint+=3;}}
+    for(var row=0;row<moduleCount;row++){for(var col=0;col<moduleCount-6;col++){if(qrcode.isDark(row,col)&&!qrcode.isDark(row,col+1)&&qrcode.isDark(row,col+2)&&qrcode.isDark(row,col+3)&&qrcode.isDark(row,col+4)&&!qrcode.isDark(row,col+5)&&qrcode.isDark(row,col+6)){lostPoint+=40;}}}
+    for(var col=0;col<moduleCount;col++){for(var row=0;row<moduleCount-6;row++){if(qrcode.isDark(row,col)&&!qrcode.isDark(row+1,col)&&qrcode.isDark(row+2,col)&&qrcode.isDark(row+3,col)&&qrcode.isDark(row+4,col)&&!qrcode.isDark(row+5,col)&&qrcode.isDark(row+6,col)){lostPoint+=40;}}}
+    var darkCount=0;for(var col=0;col<moduleCount;col++){for(var row=0;row<moduleCount;row++){if(qrcode.isDark(row,col)){darkCount++;}}}
+    var ratio=Math.abs(100*darkCount/moduleCount/moduleCount-50)/5;lostPoint+=ratio*10;
+    return lostPoint;
+  };
+  QRUtil.getErrorCorrectPolynomial=function(errorCorrectLength){var a=new QRPolynomial([1],0);for(var i=0;i<errorCorrectLength;i++){a=a.multiply(new QRPolynomial([1,QRMath.expTable[i]],0));}return a;};
+  QRUtil.getBCHTypeNumber=function(data){var d=data<<12;while(QRUtil.getBCHDigit(d)-QRUtil.getBCHDigit(0x1f25)>=0){d^=(0x1f25<<(QRUtil.getBCHDigit(d)-QRUtil.getBCHDigit(0x1f25)));}return(data<<12|d);};
+  QRUtil.getPatternPosition=function(typeNumber){return QRUtil.PATTERN_POSITION_TABLE[typeNumber-1];};
+  QRUtil.getMask=function(maskPattern,i,j){switch(maskPattern){case 0:return(i+j)%2==0;case 1:return i%2==0;case 2:return j%3==0;case 3:return(i+j)%3==0;case 4:return(Math.floor(i/2)+Math.floor(j/3))%2==0;case 5:return(i*j)%2+(i*j)%3==0;case 6:return((i*j)%2+(i*j)%3)%2==0;case 7:return((i*j)%3+(i+j)%2)%2==0;default:throw new Error("bad maskPattern:"+maskPattern);}};
+  window.qrcode = function(typeNumber, errorCorrectLevel){return new QRCodeModel(typeNumber, errorCorrectLevel);};
+})();
+</script>
 
 </head>
 <body>
@@ -43,7 +236,7 @@ var _hmt = _hmt || [];
       <div class="brandText">
         <div class="brandRow">
           <span class="brandName">Structura<span class="brandTest">测试版</span></span>
-          <span class="brandVer" id="ui-ver-brand">v0.1.5</span>
+          <span class="brandVer" id="ui-ver-brand"></span>
         </div>
         <div class="brandRule"></div>
         <div class="brandSub">基于矩阵位移法的平面刚架线弹性静力分析</div>
@@ -90,8 +283,13 @@ var _hmt = _hmt || [];
             <span class="stcAction">▶ 播放</span>
           </div>
           <div class="selfTestCard" data-selftest="strong-beam">
-            <div class="stcTitle">③ 强梁弱柱效应</div>
+            <div class="stcTitle">梁刚度与反弯点</div>
             <div class="stcDesc">单层单跨 · 水平力。扫掠梁高 h_b (50→900)，看梁刚度变大如何使柱反弯点下移。</div>
+            <span class="stcAction">▶ 播放</span>
+          </div>
+          <div class="selfTestCard" data-selftest="col-h3">
+            <div class="stcTitle">⑱ 柱截面三次方效应</div>
+            <div class="stcDesc">单层单跨 · 水平力。扫掠柱高 h_c (200→800)，看侧移随 h_c 增大急剧减小（I_c ∝ h_c³），柱端弯矩被吸引增大。</div>
             <span class="stcAction">▶ 播放</span>
           </div>
           <div class="selfTestCard" data-selftest="load-moment">
@@ -111,13 +309,19 @@ var _hmt = _hmt || [];
             <div class="stcDesc">单层单跨+悬挑 · 无水平力。扫掠悬挑荷载 q_c1 (0→100)，看悬挑倾覆力矩导致的柱拉力。</div>
             <span class="stcAction">▶ 播放</span>
           </div>
+          <div class="selfTestCard" data-selftest="cant-L2">
+            <div class="stcTitle">⑰ 悬挑长度平方效应</div>
+            <div class="stcDesc">单层单跨+悬挑 · 均布荷载。扫掠悬挑长度 L_c (0.5→4)，看悬挑根部弯矩呈平方级增长（M ∝ L_c²），以及悬挑端挠度呈四次方级剧增（Δ ∝ L_c⁴）。</div>
+            <span class="stcAction">▶ 播放</span>
+          </div>
 
           <div class="selfTestCategory">C. 变形与侧移</div>
           <div class="selfTestCard" data-selftest="weak-story">
-            <div class="stcTitle">⑦ 薄弱层转移</div>
-            <div class="stcDesc">两层两跨 · 水平力。扫掠二层层高 h_2 (2.5→7)，看层间位移角如何从一层转移到二层。</div>
+            <div class="stcTitle">⑦ 层刚度变化与变形集中</div>
+            <div class="stcDesc">两层两跨 · 水平力。扫掠二层层高 h_2 (2.5→7)，层高增大使二层线刚度降低，看层间位移角（变形）如何向该层集中。</div>
             <span class="stcAction">▶ 播放</span>
           </div>
+
           <div class="selfTestCard" data-selftest="asym-sway">
             <div class="stcTitle">⑧ 不对称侧移</div>
             <div class="stcDesc">单层两跨 · 竖向均布。扫掠左跨长 L_1 (3→12)，看单侧竖向荷载偏心引起的框架侧移。</div>
@@ -157,9 +361,15 @@ var _hmt = _hmt || [];
             <div class="stcDesc">单层单跨 · X 撑（该格开启仅受拉）· 水平力。扫掠 H₁ (0→100)，N 图上始终只有受拉那根斜杆有数值，受压杆自动退出。</div>
             <span class="stcAction">▶ 播放</span>
           </div>
+          <div class="selfTestCard" data-selftest="brace-dir-L">
+            <div class="stcTitle">㉑a ╱ 单撑仅受拉</div>
+            <div class="stcDesc">单层单跨 · ╱ 单撑 · 仅受拉 · 水平力。扫掠 H₁ (0→100)，观察该方向斜撑是受拉（N 有数值）还是受压（自动退出、N=0）。</div>
+            <span class="stcAction">▶ 播放</span>
+          </div>
+
           <div class="selfTestCard" data-selftest="brace-angle">
             <div class="stcTitle">⑮ 支撑角度与轴力分配</div>
-            <div class="stcDesc">单层单跨 · X 撑 · 水平力。扫掠左跨 L₁ (3→12)，看支撑变平后单根斜杆轴力反而减小（水平分量占比增大），但侧向刚度在 θ≈35° 附近最大。</div>
+            <div class="stcDesc">单层单跨 · X 撑 · 水平力。扫掠左跨 L₁ (3→12)，倾角变小使斜杆轴力减小；在截面积不变的纯线弹性假定下，整体侧向刚度的理论极值在 θ ≈ 35.3°（L₁ ≈ 5.7m），而非直觉上的 45°。</div>
             <span class="stcAction">▶ 播放</span>
           </div>
 
@@ -168,6 +378,24 @@ var _hmt = _hmt || [];
             <div class="stcTitle">⑯ 支座沉降的附加内力</div>
             <div class="stcDesc">两层两跨 · 无外荷载、无水平力。扫掠左柱沉降 (0→100mm)，看超静定结构在"什么都没加"的情况下，M 图从零逐渐出现、反力重新分配、结构整体倾斜。</div>
             <span class="stcAction">▶ 播放</span>
+          </div>
+
+          <div class="selfTestCategory">G. 概念提示与不利布置</div>
+          <!-- “强柱弱梁”卡片已移除 -->
+          <div class="selfTestCard" data-selftest="load-baseline">
+            <div class="stcTitle">㉔a 满跨布置基线</div>
+            <div class="stcDesc">单层三跨 · 满跨均布。加载满跨工况并自动冻结为灰色基线，供后续「中跨加载 / 相邻两跨加载」对比；也可单独查看满跨时的弯矩包络。</div>
+            <span class="stcAction">▶ 加载并冻结</span>
+          </div>
+          <div class="selfTestCard" data-selftest="load-mid-span">
+            <div class="stcTitle">㉔b 中跨加载（不利布置）</div>
+            <div class="stcDesc">单层三跨 · 仅中跨加载。自动冻结满跨基线后加载中跨工况，看中跨跨中正弯矩如何增大、边跨是否出现反号弯矩。</div>
+            <span class="stcAction">▶ 对比</span>
+          </div>
+          <div class="selfTestCard" data-selftest="load-adj-span">
+            <div class="stcTitle">㉔c 相邻两跨加载（不利布置）</div>
+            <div class="stcDesc">单层三跨 · 左+中两跨加载。自动冻结满跨基线后加载相邻工况，看中间支座负弯矩如何达到最大（支座配筋控制工况）。</div>
+            <span class="stcAction">▶ 对比</span>
           </div>
         </div>
       </div>
@@ -179,24 +407,24 @@ var _hmt = _hmt || [];
           <div class="ctrl">
             <div class="head"><span>跨数</span></div>
             <div class="seg" id="segBay">
-              <button type="button" data-bay="1">1 跨</button>
-              <button type="button" data-bay="2" class="on">2 跨</button>
+              <button type="button" data-bay="1" class="on">1 跨</button>
+              <button type="button" data-bay="2">2 跨</button>
               <button type="button" data-bay="3">3 跨</button>
             </div>
           </div>
           <div class="ctrl">
             <div class="head"><span>层数</span></div>
             <div class="seg" id="segLev">
-              <button type="button" data-lev="1">1 层</button>
-              <button type="button" data-lev="2" class="on">2 层</button>
+              <button type="button" data-lev="1" class="on">1 层</button>
+              <button type="button" data-lev="2">2 层</button>
               <button type="button" data-lev="3">3 层</button>
             </div>
           </div>
           <div class="ctrl">
             <div class="head"><span>右侧悬挑</span></div>
             <div class="seg" id="segCant">
-              <button type="button" data-cant="0">无</button>
-              <button type="button" data-cant="1" class="on">有</button>
+              <button type="button" data-cant="0" class="on">无</button>
+              <button type="button" data-cant="1">有</button>
             </div>
           </div>
           <div class="ctrl">
@@ -309,17 +537,30 @@ var _hmt = _hmt || [];
         <div class="group">
           <div class="gtitle">跨内梁均布</div>
           <div class="ctrl" id="row-q1">
-            <div class="head"><span>一层梁 q₁</span><b id="v-q1">0 kN/m</b></div>
+            <div class="head"><span>一层梁 q₁（统一值）</span><b id="v-q1">0 kN/m</b></div>
             <input type="range" id="q1" min="0" max="100" step="0.5" value="0">
+            <div class="spanEditRow">
+              <button type="button" class="spanEditToggle" data-lev="1">按跨指定 ▾</button>
+            </div>
+            <div class="spanEditBox" id="qSpanBox1" hidden></div>
           </div>
           <div class="ctrl" id="row-q2">
-            <div class="head"><span>二层梁 q₂</span><b id="v-q2">0 kN/m</b></div>
+            <div class="head"><span>二层梁 q₂（统一值）</span><b id="v-q2">0 kN/m</b></div>
             <input type="range" id="q2" min="0" max="100" step="0.5" value="0">
+            <div class="spanEditRow">
+              <button type="button" class="spanEditToggle" data-lev="2">按跨指定 ▾</button>
+            </div>
+            <div class="spanEditBox" id="qSpanBox2" hidden></div>
           </div>
           <div class="ctrl" id="row-q3">
-            <div class="head"><span>三层梁 q₃</span><b id="v-q3">0 kN/m</b></div>
+            <div class="head"><span>三层梁 q₃（统一值）</span><b id="v-q3">0 kN/m</b></div>
             <input type="range" id="q3" min="0" max="100" step="0.5" value="0">
+            <div class="spanEditRow">
+              <button type="button" class="spanEditToggle" data-lev="3">按跨指定 ▾</button>
+            </div>
+            <div class="spanEditBox" id="qSpanBox3" hidden></div>
           </div>
+          <div class="hint">「统一值」作用于本层所有跨。点「按跨指定」可对单跨单独赋值；此时拖动统一值滑块会清除本层逐跨覆盖。扫掠 q₁/q₂/q₃ 时，已单独指定的跨保持其值不变。</div>
         </div>
 
         <div class="group">
@@ -340,6 +581,13 @@ var _hmt = _hmt || [];
 
         <div class="group">
           <div class="gtitle">水平力</div>
+          <div class="ctrl">
+            <div class="head"><span>施加方式</span></div>
+            <div class="seg" id="segHmode">
+              <button type="button" data-mode="none" class="on">无楼板</button>
+              <button type="button" data-mode="rigid">刚性楼板</button>
+            </div>
+          </div>
           <div class="ctrl" id="row-H1">
             <div class="head"><span>一层 H₁</span><b id="v-H1">0 kN</b></div>
             <input type="range" id="H1" min="0" max="100" step="0.5" value="0">
@@ -352,13 +600,6 @@ var _hmt = _hmt || [];
             <div class="head"><span>三层 H₃</span><b id="v-H3">0 kN</b></div>
             <input type="range" id="H3" min="0" max="100" step="0.5" value="0">
           </div>
-          <div class="ctrl">
-            <div class="head"><span>施加方式</span></div>
-            <div class="seg" id="segHmode">
-              <button type="button" data-mode="none" class="on">无楼板</button>
-              <button type="button" data-mode="rigid">刚性楼板</button>
-            </div>
-          </div>
           <div class="hint">无楼板：同层柱顶自由，靠梁刚度耦合（风压偏心）；刚性楼板：强制同层水平位移相等，按刚度自动分配（现浇楼盖）</div>
         </div>
 
@@ -366,7 +607,7 @@ var _hmt = _hmt || [];
           <div class="gtitle">二阶效应</div>
           <div class="ctrl">
             <div class="seg">
-              <button type="button" id="btnPDelta">P-Δ 放大系数 B</button>
+              <button type="button" id="btnPDelta" class="on">P-Δ 放大系数 B</button>
             </div>
           </div>
           <div class="hint">开启后，变形图显示 B = 1/(1−ΣN/ΣN_cr)。<br><strong style="color:#38bdf8">💡 算法说明：</strong>系统会在后台自动“剥离”所有竖向荷载，临时计算一次纯水平力下的侧向刚度，从而推导出真实的 N_cr。因此，即使存在大悬挑或不对称竖向荷载，B 值也不受重力偏心引起的假侧移干扰。</div>
@@ -424,6 +665,15 @@ var _hmt = _hmt || [];
             <option value="qc2">二层悬挑 qc₂</option>
             <option value="qc3">三层悬挑 qc₃</option>
           </optgroup>
+          <optgroup label="集中力">
+            <option value="P1">一层集中力 P₁</option>
+            <option value="P2">二层集中力 P₂</option>
+            <option value="P3">三层集中力 P₃</option>
+          </optgroup>
+          <optgroup label="温度">
+            <option value="tempAll">整体升温 ΔT</option>
+            <option value="tempGrad">截面温差 ΔT</option>
+          </optgroup>
           <optgroup label="水平力">
             <option value="H1">一层水平力 H₁</option>
             <option value="H2">二层水平力 H₂</option>
@@ -472,7 +722,7 @@ var _hmt = _hmt || [];
       <span class="ssbItem"><b>RESIDUAL</b><i id="ssbResid">—</i></span>
       <span class="ssbItem"><b>STATUS</b><i id="ssbStatus" class="ok">OK</i></span>
       <span class="ssbSpacer"></span>
-      <span class="ssbMeta" title="工具持续开发中，请勿盲目相信计算结果">⚠ 持续开发中 · 结果仅供概念参考 · ZHAO STRUCTURAL LAB · <span id="ui-ver-status">v0.1.5</span></span>
+      <span class="ssbMeta" title="工具持续开发中，请勿盲目相信计算结果">⚠ 持续开发中 · 结果仅供概念参考 · ZHAO STRUCTURAL LAB · <span id="ui-ver-status"></span></span>
     </div>
 
     <!-- 求解徽章 -->
@@ -512,6 +762,14 @@ var _hmt = _hmt || [];
           <div class="rRow" id="row-alloc1"><span class="lbl">一层</span><span class="val" id="r-alloc1">—</span></div>
           <div class="rRow" id="row-alloc2"><span class="lbl">二层</span><span class="val" id="r-alloc2">—</span></div>
           <div class="rRow" id="row-alloc3" style="display:none"><span class="lbl">三层</span><span class="val" id="r-alloc3">—</span></div>
+        </div>
+
+        <div class="rGroup" id="row-stiffDecomp">
+          <div class="rGroupTitle">刚度贡献分解（当前工况）</div>
+          <div class="rRow"><span class="lbl">基准 K</span><span class="val" id="r-Kall">—</span></div>
+          <div class="rRow"><span class="lbl">去支撑后 K</span><span class="val" id="r-Knobrace">—</span></div>
+          <div class="rRow"><span class="lbl">去梁约束后 K</span><span class="val" id="r-Knobeam">—</span></div>
+          <div class="hint" style="margin-top:4px">去梁 = 梁端铰接（β<sub>j</sub>=0）；分项不可线性叠加；扫掠中暂不更新</div>
         </div>
 
         <!-- 支座反力已移至内力图 R 标签，此处留空 -->
@@ -584,7 +842,8 @@ var _hmt = _hmt || [];
         </div>
         <div class="deformOverlay">
           <div class="dTitle">变形图</div>
-          <div class="dRow"><span>最大位移</span><b id="r-maxD">—</b></div>
+          <div class="dRow"><span title="对于受温度弯曲等工况，位移极值可能发生在构件中部，而非节点处">最大水平位移 u<sub>x</sub></span><b id="r-maxDx">—</b></div>
+          <div class="dRow"><span title="对于受温度弯曲等工况，位移极值可能发生在构件中部，而非节点处">最大竖向位移 u<sub>y</sub></span><b id="r-maxDy">—</b></div>
           <div id="r-drift-list" style="margin: 4px 0 8px 0; display: flex; flex-direction: column; gap: 4px; font-size: 11.5px; font-family: 'JetBrains Mono', ui-monospace, monospace;"></div>
           <div class="dRow"><span>表观侧移刚度 K</span><b id="r-K">—</b></div>
           <div class="dRow" id="rowPD" style="display:none"><span>P-Δ 放大系数 B</span><b id="r-pd">—</b></div>
@@ -635,7 +894,7 @@ var _hmt = _hmt || [];
         <li><strong>轴向变形开关</strong>：默认「考虑（精确）」。切换为「忽略（刚性）」时，梁柱轴向刚度 EA 相对放大 1e6 倍，使轴向变形远小于弯曲变形，模拟传统手算"轴向不可伸长"假定。这是数值近似（相对放大），不是数学上的无限刚性；EI 不变，仅锁轴向；支撑 A<sub>s</sub> 的轴向刚度不受影响。</li>
         <li><strong>单元</strong>：平面梁单元，每节点 3 个自由度（水平、竖向、转角）。</li>
         <li><strong>支撑单元</strong>：二力杆，<code>kind:'brace'</code>，局部刚度仅保留轴向项 <code>EA/L</code>，所有弯曲刚度项（<code>12EI/L³</code> 等）置 0；两端强制铰接，不参与 β<sub>j</sub> 半刚接修正。按「层 × 跨」网格逐格布置（X / ╱ / ╲），每格可独立选择材质（钢 Q355 / 混凝土 C30）与截面积 A<sub>s</sub>，并可逐格开启「仅受拉」。</li>
-        <li><strong>忽略</strong>：剪切变形、扭转变形、材料非线性、节点域变形、施工阶段效应、温度作用、收缩徐变、钢筋与混凝土滑移。</li>
+        <li><strong>忽略</strong>：剪切变形、扭转变形、材料非线性、节点域变形、施工阶段效应、收缩徐变、钢筋与混凝土滑移。温度作用采用简化模型（见第五节）。</li>
       </ul>
 
       <h3>三、截面与刚度</h3>
@@ -673,14 +932,16 @@ var _hmt = _hmt || [];
 
       <h3>五、荷载</h3>
       <ul>
-        <li><strong>梁均布荷载</strong> q₁、q₂、q₃：分别作用于一层、二层、三层跨内梁，<strong>同层所有跨取相同值</strong>（不支持逐跨独立调载）。代码内部以局部坐标 <code>w = −q</code> 输入。</li>
+        <li><strong>梁均布荷载</strong> q₁、q₂、q₃：作用于跨内梁。支持「统一值」和「按跨指定」两种模式。在「按跨指定」模式下，可对不同跨赋予不同荷载，可轻松实现“荷载不利布置”的对比（如仅中跨加载、隔跨加载）。</li>
+        <li><strong>梁集中荷载</strong> P₁、P₂、P₃：作用于跨内梁。默认在跨中，通过「按跨指定」可设置作用点距离左端的距离 a。求解器会在作用点处自动将梁单元拆分为两个子单元，从而在弯矩图上产生精确的“尖角”。</li>
         <li><strong>悬挑均布荷载</strong> q<sub>c1</sub>、q<sub>c2</sub>、q<sub>c3</sub>：作用于右侧各层悬挑梁，长度 L<sub>c</sub>。悬挑梁为右柱节点伸出的标准刚接单元，<strong>不参与 β<sub>j</sub> 半刚接修正</strong>。</li>
         <li><strong>水平力</strong> H₁、H₂、H₃（仅正向，不支持反向）：两种施加方式
           <ul style="margin-top:3px">
-            <li><strong>仅左柱</strong>：全部施加于左柱顶节点，模拟风压从左侧来。</li>
+            <li><strong>无楼板</strong>：全部施加于左柱顶节点，模拟风压从左侧来。</li>
             <li><strong>刚性楼板</strong>：强制同层柱顶水平位移相等，通过约束自动分配剪力，更接近真实现浇楼盖。</li>
           </ul>
         </li>
+        <li><strong>非荷载作用 · 温度</strong>：全结构均匀升温 ΔT 会产生轴向膨胀受阻的次内力；<strong>结构内外温差</strong>（室外温度高于室内为正）仅作用于框架最外侧的边柱和顶层边梁，使结构产生向外膨胀的弯曲次内力。内部梁柱及悬挑梁截面本身无温差，不受此项影响。支撑默认不受温度影响。</li>
         <li>所有荷载为静力荷载，不考虑动力放大、偶然偏心、荷载组合系数。</li>
       </ul>
 
@@ -712,7 +973,7 @@ var _hmt = _hmt || [];
       <p><strong>仅受拉（逐格指定）</strong></p>
       <ul>
         <li>每格支撑右上角有 <code>T</code> 角标：点击可单独开启 / 关闭该格「仅受拉」；「模型」Tab 的「全部仅受拉 / 全部普通」按钮为批量操作。</li>
-        <li>求解器 <code>analyzeTensionOnly</code> 只对开启了「仅受拉」的支撑做失效判定：一旦检测到轴力受压（<code>N &lt; −1e−4 kN</code>），即把该杆从 K 矩阵中移除、重新求解，最多迭代 10 次，直至不再有新的支撑失效。</li>
+        <li>求解器 <code>analyzeTensionOnly</code> 只对开启了「仅受拉」的支撑做失效判定：一旦检测到轴力受压（<code>N &lt; −1e−4 kN</code>），即把该杆从 K 矩阵中移除、重新求解，最多迭代 15 次，直至不再有新的支撑失效。</li>
         <li>失效支撑的轴力按 0 输出，N 图上该杆不再显示数值；但杆件轮廓仍以灰色绘制，便于识别「曾经存在但已退出」的支撑。</li>
         <li>若某格 X 撑两根全部失效导致矩阵奇异，程序提示「仅受拉支撑全部退出（已失效 N 根），结构可能失稳」，而不是笼统的「刚度矩阵奇异」。</li>
         <li>普通支撑（未开启仅受拉）受压时照常工作，不受失效迭代影响。</li>
@@ -720,7 +981,7 @@ var _hmt = _hmt || [];
 
       <p><strong>绘图约定</strong></p>
       <ul>
-        <li>支撑<strong>仅绘制 N 图</strong>；M / V 图下支撑自动隐身（弯曲刚度为零，M、V 恒为 0，无绘制意义）。</li>
+        <li>支撑<strong>仅绘制 N 图内力曲线</strong>；M / V 图下支撑不显示内力（弯曲刚度为零，M、V 恒为 0），但<strong>保留青色轮廓线</strong>以示支撑存在——这与 SAP2000 / MIDAS 等工程软件的处理一致，避免用户误以为"支撑消失了"。</li>
         <li>支撑轴力线强制使用青色 <code>#22d3ee</code> 绘制在最上层，并把显示比例强制放大 5 倍（<code>refDiv</code> 逻辑），避免被柱子的巨大轴力压得看不见。</li>
         <li>荷载简图中自动标注斜撑实际倾角（取整，如 <code>34°</code>）；X 撑两条线中点重合，已做去重与背景底色处理，防止文字重叠。</li>
       </ul>
@@ -766,7 +1027,7 @@ var _hmt = _hmt || [];
         <li style="margin-bottom:5px"><strong>无节点域</strong>：节点处按纯刚接或纯铰接处理，未考虑节点域剪切变形。</li>
         <li style="margin-bottom:5px"><strong>悬挑梁简化</strong>：悬挑梁按标准刚接单元处理，不参与 β<sub>j</sub> 半刚接修正；悬挑端为自由端，未建模实际边梁的弹性约束。</li>
         <li style="margin-bottom:5px"><strong>两端完全铰接的梁</strong>：当 β<sub>j</sub> 降至 0 时，梁单元弯曲刚度归零，仅保留轴向刚度（类似链杆）。因此多跨连续梁若中间跨两端完全铰接，无法传递剪力，结构侧向柔度会显著增大。这是标准有限元处理方式，并非程序错误。</li>
-        <li style="margin-bottom:5px"><strong>支撑仅受拉的非线性</strong>：采用「一次性受压失效 + 矩阵重算」的迭代法（最多 10 次）。一旦检测到某根仅受拉支撑轴力受压（&lt; −1e−4 kN），即将其标记为失效、从 K 矩阵中移除并重新求解，直至不再有新的支撑失效。若某格 X 撑两根全部失效导致矩阵奇异，程序会提示「仅受拉支撑全部退出，结构可能失稳」。该法<strong>未考虑支撑在反复荷载下的滞回性能</strong>，仅适用于静力单向加载的概念演示，不适用于动力时程或往复荷载分析。逐格指定「仅受拉」仅影响该格支撑，普通支撑受压时仍正常工作。</li>
+        <li style="margin-bottom:5px"><strong>支撑仅受拉的非线性</strong>：采用「一次性受压失效 + 矩阵重算」的迭代法（最多 15 次）。一旦检测到某根仅受拉支撑轴力受压（&lt; −1e−4 kN），即将其标记为失效、从 K 矩阵中移除并重新求解，直至不再有新的支撑失效。若某格 X 撑两根全部失效导致矩阵奇异，程序会提示「仅受拉支撑全部退出，结构可能失稳」。该法<strong>未考虑支撑在反复荷载下的滞回性能</strong>，仅适用于静力单向加载的概念演示，不适用于动力时程或往复荷载分析。逐格指定「仅受拉」仅影响该格支撑，普通支撑受压时仍正常工作。</li>
         <li style="margin-bottom:5px"><strong>每根杆件一个单元</strong>：对于只有均布荷载的情况已足够精确，但对有多个集中力或复杂荷载的杆件精度有限。</li>
         <li style="margin-bottom:5px"><strong>无剪切变形</strong>：按 Euler-Bernoulli 梁理论，忽略 Timoshenko 梁的剪切效应。</li>
         <li style="margin-bottom:5px"><strong>无材料非线性</strong>：不考虑混凝土开裂、钢筋屈服等实际非线性效应。</li>
@@ -776,15 +1037,16 @@ var _hmt = _hmt || [];
 
       <h3>十、力学概念自检建议</h3>
       <div class="note" style="margin-bottom:12px">
-        左侧栏「自检」Tab 内置了 16 个一键播放的力学场景。点击卡片即可自动加载工况、开启扫掠并慢速播放。以下是这 16 个场景的具体考点：
+        左侧栏「自检」Tab 内置了 20+ 个一键播放的力学场景。场景按大类折叠（A~G），点击卡片即可自动加载工况、开启扫掠并慢速播放；部分概念类卡片（如不利布置）为静态对比，点击后会弹出提示。
       </div>
       <div style="margin-left:18px; margin-bottom:12px;">
         <p><strong>A. 弯矩与刚度</strong></p>
         <ul style="margin-top:2px; margin-bottom:8px;">
           <li><strong>① 梁端弯矩释放</strong>：扫掠梁端 β<sub>j</sub> (0→1)，看梁端弯矩逐渐产生、跨中正弯矩随之减小。</li>
           <li><strong>② 柱脚弯矩释放</strong>：扫掠柱脚 β<sub>f</sub> (0→1)，看柱脚弯矩逐渐产生、底层侧移随之减小。</li>
-          <li><strong>③ 强梁弱柱效应</strong>：扫掠梁高 h<sub>b</sub>，看梁刚度变大如何使柱反弯点下移。</li>
-          <li><strong>④ 跨中与支座弯矩</strong>：扫掠均布荷载 q<sub>1</sub> (0→100)，观察跨中正弯矩与支座负弯矩线性增长。</li>
+          <li><strong>③ 梁刚度与反弯点</strong>：扫掠梁高 h<sub>b</sub>，看梁刚度变大如何使柱反弯点下移。</li>
+          <li><strong>④ 悬挑长度平方效应</strong>：扫掠悬挑长度 L<sub>c</sub>，看均布荷载下根部弯矩的平方级增长（M ∝ L<sub>c</sub>²），以及端部挠度的四次方级剧增（Δ ∝ L<sub>c</sub>⁴）。</li>
+          <li><strong>⑤ 跨中与支座弯矩</strong>：扫掠均布荷载 q<sub>1</sub> (0→100)，观察跨中正弯矩与支座负弯矩线性增长。</li>
         </ul>
         
         <p><strong>B. 轴力与框架</strong></p>
@@ -795,7 +1057,7 @@ var _hmt = _hmt || [];
 
         <p><strong>C. 变形与侧移</strong></p>
         <ul style="margin-top:2px; margin-bottom:8px;">
-          <li><strong>⑦ 薄弱层转移</strong>：扫掠二层层高 h<sub>2</sub> (2.5→7)，看层间位移角如何从一层转移到二层。</li>
+          <li><strong>⑦ 层刚度变化与变形集中</strong>：扫掠二层层高 h<sub>2</sub> (2.5→7)，看层高增大使二层线刚度降低时，层间位移角如何向该层集中。</li>
           <li><strong>⑧ 不对称侧移</strong>：扫掠左跨长 L<sub>1</sub> (3→12)，看单侧竖向荷载偏心引起的框架侧移。</li>
           <li><strong>⑨ 悬挑重力侧移</strong>：扫掠悬挑荷载 q<sub>c1</sub>，看纯重力偏心侧移（放大显示）。</li>
         </ul>
@@ -811,7 +1073,7 @@ var _hmt = _hmt || [];
         <ul style="margin-top:2px; margin-bottom:8px;">
           <li><strong>⑬ 支撑截面积与侧向刚度</strong>：扫掠 As (100→5000)，看支撑变粗后侧移显著减小、轴力增大、柱端弯矩被分走。</li>
           <li><strong>⑭ 仅受拉支撑的单向工作</strong>：扫掠 H₁，N 图上始终只有受拉斜杆有数值，受压杆自动退出。</li>
-          <li><strong>⑮ 支撑角度与轴力分配</strong>：扫掠 L₁ (3→12)，看支撑变平后单根斜杆轴力反而减小。</li>
+          <li><strong>⑮ 支撑角度与轴力分配</strong>：扫掠 L₁ (3→12)，倾角变小使斜杆轴力减小；在截面积不变的纯线弹性假定下，整体侧向刚度的理论极值在 θ ≈ 35.3°（L₁ ≈ 5.7m），而非直觉上的 45°。</li>
         </ul>
 
         <p><strong>F. 非荷载作用</strong></p>
@@ -832,8 +1094,8 @@ var _hmt = _hmt || [];
 
       <h3>十二、界面速览</h3>
       <ul>
-        <li><strong>左栏 Tab 与读数面板</strong>：「自检」放 15 个预设工况，「模型」放拓扑 / 几何 / 截面 / 支撑，「荷载」放均布 / 悬挑 / 水平力 / 二阶效应；右侧读数面板显示截面尺寸、内柱刚度比 r、逐层逐跨 ρ、水平力分配。原「左栏摘要卡」已合并进读数面板（避免与左栏重复）。</li>
-        <li><strong>左栏 Tab</strong>：「自检」内置 16 个预设工况（A 弯矩与刚度 / B 轴力与框架 / C 变形与侧移 / D 水平力与二阶 / E 支撑系统 / F 非荷载作用），「模型」放拓扑 / 几何 / 截面 / 支撑，「荷载」放均布 / 悬挑 / 水平力 / 二阶效应。快捷键 <code>1</code> / <code>2</code> / <code>3</code> 切换。</li>
+                <li><strong>左栏 Tab 与读数面板</strong>：「自检」放 30+ 个预设工况，「模型」放拓扑 / 几何 / 截面 / 支撑，「荷载」放均布 / 悬挑 / 水平力 / 二阶效应；右侧读数面板显示截面尺寸、内柱刚度比 r、逐层逐跨 ρ、水平力分配、刚度贡献分解。原「左栏摘要卡」已合并进读数面板（避免与左栏重复）。</li>
+        <li><strong>左栏 Tab</strong>：「自检」内置 30+ 个预设工况（A 弯矩与刚度 / B 轴力与框架 / C 变形与侧移 / D 水平力与二阶 / E 支撑系统 / F 非荷载作用），「模型」放拓扑 / 几何 / 截面 / 支撑，「荷载」放均布 / 悬挑 / 水平力 / 二阶效应。快捷键 <code>1</code> / <code>2</code> / <code>3</code> 切换。</li>
         <li><strong>内力图卡（右上角工具条）</strong>：
           <ul style="margin-top:3px">
             <li><code>M</code> / <code>N</code> / <code>V</code> / <code>R</code>：切换内力类型或支座反力图；</li>
@@ -852,6 +1114,7 @@ var _hmt = _hmt || [];
         <li><strong>录制</strong>：录制范围为内力图或变形图单张 canvas。录制期间自动切白底、关扫描线、限制分辨率 ≤ 1920×1080，优先 mp4，回退 webm。</li>
         <li><strong>URL 分享</strong>（底栏 🔗）：把当前工况编码进 <code>#st=...</code> 一键复制。支持 <code>file://</code> / <code>https://</code> / <code>localhost</code>。重置全部时自动清除 hash。</li>
         <li><strong>底部状态栏</strong>：<code>NODES</code> 节点数 · <code>ELEMENTS</code> 单元数 · <code>DOF</code> 自由度数 · <code>SOLVE</code> 本次求解耗时（ms）· <code>RESIDUAL</code> <strong>相对</strong>平衡残差（柱脚反力之和与外部荷载之和的差值，除以柱脚反力量级，越小越准）· <code>STATUS</code> 状态（<strong>相对残差</strong> &lt; 1e-8 显示绿色 OK，否则 CHECK；仅受拉迭代 10 次未收敛时显示 NC·未收敛）。</li>
+        <li><strong>刚度贡献分解</strong>（读数面板中）：显示当前工况下基准 K、去支撑后 K、去梁约束后 K（去梁 = 梁端铰接 β<sub>j</sub>=0）。三者基于同一 u_top 口径，可直接对比。⚠ 各分项不是线性叠加（刚度非线性耦合），只能看「去掉某项后下降多少」，不能反过来相加。扫掠播放中暂不更新。</li>
       </ul>
 
       <h3>十三、P-Δ 放大系数与侧移刚度的说明</h3>
@@ -874,7 +1137,7 @@ var _hmt = _hmt || [];
       <h3>十四、支持作者</h3>
       <p>如果这个工具帮你理清过某个力学概念，可以请作者喝杯咖啡。</p>
       <div class="tipInline">
-        <img src="m.jpg" alt="打赏码">
+        <img src="m.jpg" alt="打赏码" style="width: 240px !important; height: 240px !important; object-fit: contain; background: #fff; border-radius: 6px; padding: 4px;">
         <div class="tipText">
           <p>微信扫码 · 赞赏码</p>
           <p>金额随意 · 感谢支持</p>

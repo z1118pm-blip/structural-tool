@@ -37,35 +37,71 @@ function matVec(A,v){
 function localK(el){
   const {EA,EI,L}=el;
   const a=EA/L;
-  let b=12*EI/(L*L*L);
-  let c=6*EI/(L*L);
-  let d=4*EI/L;
-  let e=2*EI/L;
 
-  if(el.kind === 'beam'){
-    if(el.hinge){
-      /* 两端完全铰接：弯曲刚度项全为 0，只剩轴向 */
-      b = 0; c = 0; d = 0; e = 0;
-    } else if(el.alpha > 0){
-      const al = el.alpha;
-      const D  = 1 + 8*al + 12*al*al;
-      b = 12*EI/(L*L*L) / (1 + 6*al);
-      c = 6*EI/(L*L) * (1 + 2*al) / D;
-      d = (4*EI/L) * (1 + 3*al) / D;
-      e = (2*EI/L) / D;
-    }
-  } else if(el.kind === 'brace'){
-    /* 斜撑：仅轴向刚度，无弯曲刚度 */
-    b = 0; c = 0; d = 0; e = 0;
+  /* 支撑：纯轴向，无弯曲刚度 */
+  if(el.kind === 'brace'){
+    return [
+      [ a, 0, 0, -a, 0, 0],
+      [ 0, 0, 0,  0, 0, 0],
+      [ 0, 0, 0,  0, 0, 0],
+      [-a, 0, 0,  a, 0, 0],
+      [ 0, 0, 0,  0, 0, 0],
+      [ 0, 0, 0,  0, 0, 0]
+    ];
   }
 
+  /* 梁两端完全铰接：只保留轴向 */
+  if(el.kind === 'beam' && el.hinge){
+    return [
+      [ a, 0, 0, -a, 0, 0],
+      [ 0, 0, 0,  0, 0, 0],
+      [ 0, 0, 0,  0, 0, 0],
+      [-a, 0, 0,  a, 0, 0],
+      [ 0, 0, 0,  0, 0, 0],
+      [ 0, 0, 0,  0, 0, 0]
+    ];
+  }
+
+  /* 梁/柱：两端可独立指定柔度 alphaI / alphaJ（未指定时回退到 el.alpha） */
+  const alI = (el.alphaI != null) ? el.alphaI : (el.alpha || 0);
+  const alJ = (el.alphaJ != null) ? el.alphaJ : (el.alpha || 0);
+
+  /* 标准刚接（两端柔度均为 0）：沿用原公式 */
+  if(alI === 0 && alJ === 0){
+    const b = 12*EI/(L*L*L);
+    const c = 6*EI/(L*L);
+    const d = 4*EI/L;
+    const e = 2*EI/L;
+    return [
+      [ a,  0,  0, -a,  0,  0],
+      [ 0,  b,  c,  0, -b,  c],
+      [ 0,  c,  d,  0, -c,  e],
+      [-a,  0,  0,  a,  0,  0],
+      [ 0, -b, -c,  0,  b, -c],
+      [ 0,  c,  e,  0, -c,  d]
+    ];
+  }
+
+  /* Monforton-Wu 两端半刚接修正刚度：
+     Δ = (1+4αI)(1+4αJ) − 4αIαJ
+     αI=αJ=α 时退化为原单端公式（k_vv=12EI/L³/(1+6α)，k_vθ=6EI/L²·(1+2α)/Δ 等）。
+     集中力打断梁时，打断点那一端传 alpha=0（刚接），
+     只有与柱相连的梁端才保留真实半刚接 alphaJ。 */
+  const D  = (1 + 4*alI)*(1 + 4*alJ) - 4*alI*alJ;
+  const b  = 12*EI/(L*L*L) * (1 + alI + alJ) / D;
+  const c1 = 6*EI/(L*L) * (1 + 2*alJ) / D;   // k23：i 端横向 ↔ i 端转角
+  const c2 = 6*EI/(L*L) * (1 + 2*alI) / D;   // k26：i 端横向 ↔ j 端转角
+  const d1 = 4*EI/L * (1 + 3*alJ) / D;        // k33：i 端转角自项
+  const d2 = 4*EI/L * (1 + 3*alI) / D;        // k66：j 端转角自项
+  const e  = 2*EI/L / D;                       // k36：i-j 转角耦合
+
   return [
-    [ a,  0,  0, -a,  0,  0],
-    [ 0,  b,  c,  0, -b,  c],
-    [ 0,  c,  d,  0, -c,  e],
-    [-a,  0,  0,  a,  0,  0],
-    [ 0, -b, -c,  0,  b, -c],
-    [ 0,  c,  e,  0, -c,  d]
+    [ a,  0,   0,  -a,  0,   0 ],
+    [ 0,  b,  c1,   0, -b,  c2],
+    [ 0, c1,  d1,   0,-c1,   e],
+    [-a,  0,   0,   a,  0,   0 ],
+    [ 0, -b, -c1,   0,  b, -c2],
+    [ 0, c2,   e,   0,-c2,  d2]
   ];
 }
 function Tmat(el){
@@ -83,25 +119,108 @@ function globalK(el){
   const T=Tmat(el);
   return matMul(matMul(transpose(T), localK(el)), T);
 }
-function localEqLoad(el){
+function localEqLoad(el, p){
   const {w,L}=el;
-  let pFe = w*L*L/12;
+  let pFeI =  w*L*L/12;   // i 端固端弯矩（均布荷载，向下为正）
+  let pFeJ = -w*L*L/12;   // j 端固端弯矩（标准对称梁为负）
+  let pFeTI = 0;          // i 端温度梯度固端弯矩
+  let pFeTJ = 0;          // j 端温度梯度固端弯矩
+  let pFeN = 0;           // 温度产生的固端轴力
 
   if(el.kind === 'beam'){
     if(el.hinge){
-      /* 两端铰接：固端弯矩为 0，均布荷载全部转为节点力 */
-      pFe = 0;
-    } else if(el.alpha > 0){
-      const al = el.alpha;
-      const D  = 1 + 8*al + 12*al*al;
-      pFe = (w*L*L/12) * (1 + 6*al) / D;
+      pFeI = 0; pFeJ = 0;
+    } else {
+      const alI = (el.alphaI != null) ? el.alphaI : (el.alpha || 0);
+      const alJ = (el.alphaJ != null) ? el.alphaJ : (el.alpha || 0);
+      if(alI === 0 && alJ === 0){
+        /* 标准刚接：保持默认值 */
+      } else {
+        /* Monforton-Wu 两端半刚接固端弯矩：
+           FEM_i =  wL²/12 · (1+6αJ)/Δ
+           FEM_j = -wL²/12 · (1+6αI)/Δ
+           αI=αJ=α 时退化为原 (1+6α)/(1+8α+12α²) 公式 */
+        const D = (1 + 4*alI)*(1 + 4*alJ) - 4*alI*alJ;
+        pFeI =  (w*L*L/12) * (1 + 6*alJ) / D;
+        pFeJ = -(w*L*L/12) * (1 + 6*alI) / D;
+      }
     }
   }
 
-  return [0, w*L/2, pFe, 0, w*L/2, -pFe];
+  /* 温度荷载计算 (仅针对梁柱，支撑不承受温度) */
+  if(p && el.kind !== 'brace'){
+    const alpha = 1.0e-5;
+    const tempAll = p.tempAll || 0;
+    const tempGrad = p.tempGrad || 0;
+    const h = (el.kind === 'col') ? (p.hc/1000) : (p.hb/1000);
+
+    /* 均匀升温：产生固端轴力。
+       不能用 el.EA（axialMode='rigid' 时含 1e6 放大），否则温度轴力被错误放大。
+       用真实截面刚度重算。 */
+    {
+      const E_frame_real = (p.frameMat === 'steel') ? E_STEEL : E_CONC;
+      const bcM = p.bc/1000, hcM = p.hc/1000;
+      const bbM = p.bb/1000, hbM = p.hb/1000;
+      const Ac = bcM*hcM, Ab = bbM*hbM;
+      let realEA;
+      if(el.kind === 'col'){
+        const kc = (el.col > 0 && el.col < p.nBay) ? p.r : 1.0;
+        realEA = E_frame_real * Ac * kc;
+      } else {
+        realEA = E_frame_real * Ab;
+      }
+      pFeN = -realEA * alpha * tempAll;
+    }
+
+    /* ===== 精准识别“结构外围构件”以施加截面内外温差 =====
+       - 左柱：左侧为室外，系数 1.0
+       - 右柱：右侧为室外，局部坐标反向，系数 -1.0
+       - 中柱：两侧均为室内，系数 0
+       - 顶层跨内梁：上侧为室外，系数 1.0
+       - 悬挑梁 / 内部梁：上下均在室外或室内，系数 0
+    */
+    let gradFactor = 0;
+    if (el.kind === 'col') {
+      if (el.col === 0) gradFactor = 1.0;
+      else if (el.col === p.nBay) gradFactor = -1.0;
+    } else if (el.kind === 'beam' && !el.isCant) {
+      if (el.lev === p.nLev) gradFactor = 1.0;
+    }
+
+    if (gradFactor !== 0) {
+      if (el.kind === 'beam') {
+        if (el.hinge) {
+          pFeTI = 0; pFeTJ = 0;
+        } else {
+          /* 梁端热梯度产生向下凹的固端弯矩，以匹配柱顶转角。
+             两端柔度不同时，i/j 端的释放系数分别用 (1+6αJ)/Δ 与 (1+6αI)/Δ。 */
+          const baseT = (el.EI * alpha * tempGrad * gradFactor / h);
+          const alI = (el.alphaI != null) ? el.alphaI : (el.alpha || 0);
+          const alJ = (el.alphaJ != null) ? el.alphaJ : (el.alpha || 0);
+          if(alI === 0 && alJ === 0){
+            pFeTI = baseT; pFeTJ = baseT;
+          } else {
+            const D = (1 + 4*alI)*(1 + 4*alJ) - 4*alI*alJ;
+            pFeTI = baseT * (1 + 6*alJ) / D;
+            pFeTJ = baseT * (1 + 6*alI) / D;
+          }
+        }
+      } else {
+        pFeTI = -(el.EI * alpha * tempGrad * gradFactor / h);
+        pFeTJ = pFeTI;
+      }
+    } else {
+      pFeTI = 0; pFeTJ = 0;
+    }
+  }
+
+  /* 局部等效节点力 [Fx_i, Fy_i, M_i, Fx_j, Fy_j, M_j]
+     i 端弯矩 = pFeI − pFeTI，j 端弯矩 = pFeJ + pFeTJ。
+     对称情况（αI=αJ）退化为原 [pFeN, wL/2, pFe−pFeT, −pFeN, wL/2, −pFe+pFeT]。 */
+  return [pFeN, w*L/2, pFeI - pFeTI, -pFeN, w*L/2, pFeJ + pFeTJ];
 }
-function globalEqLoad(el){
-  return matVec(transpose(Tmat(el)), localEqLoad(el));
+function globalEqLoad(el, p){
+  return matVec(transpose(Tmat(el)), localEqLoad(el, p));
 }
 
 /* =====================================================================
@@ -118,6 +237,22 @@ function analyze(p, opts = {}){
   const nBay = p.nBay;
   const nLev = p.nLev;
   const nCol = nBay + 1;                    // 柱列数 = 跨数 + 1
+
+  /* 🚨 前置安全检查：全铰接梁无法承受跨内集中力 */
+  if (p.betaJ <= BETA_HINGE) {
+    /* 以「逐跨覆盖后的最终 P」判定，避免 pLoadMap 把某跨 P 覆盖为 0 时误报 */
+    const pLoadMapTmp = (p.pLoadMap && typeof p.pLoadMap === 'object') ? p.pLoadMap : {};
+    for(let lv=1; lv<=nLev; lv++){
+      for(let c=1; c<=nBay; c++){
+        const key = lv + '-' + c;
+        let P = p['P'+lv] || 0;
+        if (pLoadMapTmp[key] && pLoadMapTmp[key].P != null) P = pLoadMapTmp[key].P;
+        if (P > 0) {
+          throw new Error(`第 ${lv} 层第 ${c} 跨存在集中力，但梁端完全铰接 (βj=0)，跨内节点失去竖向约束（几何可变），无法计算。请提高 βj 或取消集中力。`);
+        }
+      }
+    }
+  }
 
   /* ---- 坐标累加 ---- */
   const X = [0];
@@ -194,14 +329,60 @@ function analyze(p, opts = {}){
   }
 
   /* ---- 跨内梁：nLev 层 × nBay 跨 ---- */
+  /* 逐跨荷载覆盖：qSpanMap 键 "层-跨"（如 "1-2"）存在时优先，否则回退该层标量 q_lv。
+     pLoadMap 同理处理集中力。如果有集中力，则在作用点处打断梁，拆分为两个子单元。 */
+  const qSpanMap = (p.qSpanMap && typeof p.qSpanMap === 'object') ? p.qSpanMap : {};
+  const pLoadMap = (p.pLoadMap && typeof p.pLoadMap === 'object') ? p.pLoadMap : {};
   for(let lv=1;lv<=nLev;lv++){
-    const q = p['q'+lv];
+    const qDefault = p['q'+lv];
+    const pDefault = p['P'+lv] || 0;
     for(let c=0;c<nBay;c++){
+      const spanKey = lv + '-' + (c+1);
+      const q = Object.prototype.hasOwnProperty.call(qSpanMap, spanKey)
+        ? (parseFloat(qSpanMap[spanKey]) || 0)
+        : qDefault;
+      
       const i=nid(c,lv), j=nid(c+1,lv);
       const dx=nodes[j].x-nodes[i].x, dy=nodes[j].y-nodes[i].y;
       const L=Math.hypot(dx,dy);
-      els.push({i,j,L,cs:dx/L,sn:dy/L,EA:EAb,EI:EIb,w:-q,q,
-                kind:'beam',alpha:alphaJ,hinge:beamHinge,lev:lv,bay:c+1});
+
+      /* 解析集中力参数 */
+      let P = pDefault;
+      let a = L / 2;
+      if (pLoadMap[spanKey]) {
+        if (pLoadMap[spanKey].P != null) P = pLoadMap[spanKey].P;
+        if (pLoadMap[spanKey].a != null) a = pLoadMap[spanKey].a;
+      }
+
+      if (P > 0) {
+        /* a 越界（分享链接或异常输入）时钳制到跨内，避免集中力丢失，
+           同时保证结构施加与 appliedFy / ΣV 残差口径一致。
+           NaN 防御：非法 a 回退到跨中，避免污染节点坐标。 */
+        if (!isFinite(a)) a = L / 2;
+        a = Math.max(0.001, Math.min(L - 0.001, a));
+        /* 有集中力：在 a 处生成子节点，拆分为两个单元 */
+        const midIndex = nodes.length;
+        nodes.push({
+          x: nodes[i].x + dx * a / L,
+          y: nodes[i].y + dy * a / L,
+          col: c, lev: lv, isSub: true,
+          pLoad: P /* 记录该子节点承受的集中力，供绘图和施加 F 使用 */
+        });
+
+        /* 左子单元：i 端接柱（保留半刚接 alphaJ 作为 alphaI），
+           j 端是集中力打断点（内部节点，强制刚接 alphaJ=0）。
+           集中力打断点不是梁端，不应有半刚接弹簧。 */
+        els.push({i, j: midIndex, L: a, cs:dx/L, sn:dy/L, EA:EAb, EI:EIb, w:-q, q,
+                  kind:'beam', alphaI:alphaJ, alphaJ:0, hinge:beamHinge, lev:lv, bay:c+1, qSpan:q});
+        /* 右子单元：i 端是集中力打断点（强制刚接 alphaI=0），
+           j 端接柱（保留半刚接 alphaJ 作为 alphaJ）。 */
+        els.push({i: midIndex, j, L: L - a, cs:dx/L, sn:dy/L, EA:EAb, EI:EIb, w:-q, q,
+                  kind:'beam', alphaI:0, alphaJ:alphaJ, hinge:beamHinge, lev:lv, bay:c+1, qSpan:q});
+      } else {
+        /* 无集中力：标准单单元 */
+        els.push({i,j,L,cs:dx/L,sn:dy/L,EA:EAb,EI:EIb,w:-q,q,
+                  kind:'beam',alpha:alphaJ,hinge:beamHinge,lev:lv,bay:c+1, qSpan:q});
+      }
     }
   }
 
@@ -264,8 +445,15 @@ function analyze(p, opts = {}){
       for(let b=0;b<6;b++)
         K[d[a]][d[b]] += kg[a][b];
 
-    const pg = globalEqLoad(el);
+    const pg = globalEqLoad(el, p);
     for(let a=0;a<6;a++) F[d[a]] += pg[a];
+  }
+
+  /* 叠加集中力节点荷载（向下为负） */
+  for(let idx=0; idx<nodes.length; idx++){
+    if(nodes[idx].pLoad){
+      F[idx*3+1] -= nodes[idx].pLoad;
+    }
   }
 
   /* ---- 水平力施加 ---- */
@@ -307,11 +495,12 @@ function analyze(p, opts = {}){
    - 有沉降时跳过"单跨对称约束"和"浮点噪声清理"，避免掩盖沉降效应
    ===================================================================== */
 const fixedDisp = new Map();
-const hasSettlement = (p.settleDy > 0);
+const settleDyVal = parseFloat(p.settleDy) || 0;
+const hasSettlement = (settleDyVal > 1e-6);
 if (hasSettlement) {
   const sc = Math.max(0, Math.min(nCol - 1, p.settleCol | 0));
   const nSettle = nid(sc, 0);
-  fixedDisp.set(nSettle*3 + 1, -(p.settleDy | 0) * 1e-3);  // uy 向下为负
+  fixedDisp.set(nSettle*3 + 1, -settleDyVal * 1e-3);  // uy 向下为负
 }
 
 /* =====================================================================
@@ -323,10 +512,30 @@ if (hasSettlement) {
 let sumH = 0;
 for(let lv=1; lv<=nLev; lv++) sumH += p['H'+lv];
 
-if (Math.abs(sumH) < 1e-12 && nBay === 1 && !p.hasCant && !hasSettlement) {
+/* 扩展对称约束：适用于多跨等跨、等刚度、无悬挑、无水平力、无沉降的纯竖向工况。
+   彻底消除由浮点误差引起的多跨对称结构虚假侧移。 */
+let isSymmetric = (
+  Math.abs(sumH) < 1e-12 &&
+  !p.hasCant &&
+  Math.abs((p.r || 1) - 1) < 1e-6
+);
+if(nBay >= 2 && Math.abs(p.L1 - p.L2) > 1e-6) isSymmetric = false;
+if(nBay >= 3 && Math.abs(p.L2 - p.L3) > 1e-6) isSymmetric = false;
+/* 荷载/温度/支撑不对称时，禁止强制柱顶水平位移为 0，否则会抹掉真实侧移。
+   保守策略：只要存在任一可能破坏对称性的因素，就关闭对称约束。 */
+if(isSymmetric){
+  if(Object.keys(p.qSpanMap || {}).length > 0) isSymmetric = false;
+  if(Object.keys(p.pLoadMap || {}).length > 0) isSymmetric = false;
+  if((p.P1 || 0) > 0 || (p.P2 || 0) > 0 || (p.P3 || 0) > 0) isSymmetric = false;
+  if(Math.abs(p.tempAll || 0) > 1e-9 || Math.abs(p.tempGrad || 0) > 1e-9) isSymmetric = false;
+  if(Object.keys(p.braceMap || {}).some(k => p.braceMap[k] && p.braceMap[k] !== 'none')) isSymmetric = false;
+}
+
+if (isSymmetric && !hasSettlement) {
   for(let lv=1; lv<=nLev; lv++){
-    fixed.add(nid(0, lv)*3);
-    fixed.add(nid(1, lv)*3);
+    for(let c=0; c<=nBay; c++){
+      fixed.add(nid(c, lv)*3);
+    }
   }
 }
 
@@ -344,7 +553,7 @@ if(p.Hmode === 'rigid'){
   for(let lv=1; lv<=nLev; lv++) masterUx[lv] = nid(0, lv)*3;
   for(let idx=0; idx<nodes.length; idx++){
     const nd = nodes[idx];
-    if(nd.lev < 1) continue;
+    if(nd.lev < 1 || nd.cant) continue; // 悬挑端属于自由端，不参与楼板刚性缩并
     reduce[idx*3] = masterUx[nd.lev];
   }
   /* 缩并 K、F：所有贡献累加到主 DOF */
@@ -472,7 +681,7 @@ for(let i=0;i<ndof;i++) if(!fixedR.has(i) && reduce[i] === i) free.push(i);
     }
     const ul = matVec(Tmat(el), ug);
     const ku = matVec(localK(el), ul);
-    const pl = localEqLoad(el);
+    const pl = localEqLoad(el, p);
     const f  = new Float64Array(6);
     for(let a=0;a<6;a++) f[a]=ku[a]-pl[a];
     return {el, f, ug};
@@ -493,14 +702,23 @@ for(let i=0;i<ndof;i++) if(!fixedR.has(i) && reduce[i] === i) free.push(i);
     Rx += R[n*3];
     Ry += R[n*3+1];
   }
+  /* 统一通过全局等效节点力累加外部荷载（含均布、集中力、温度），
+     避免手工累加时温度循环重复计算均布荷载的竖向分量。
+     支撑无分布荷载和温度，跳过。 */
   let appliedFx = 0;
-  for(let lv=1;lv<=nLev;lv++) appliedFx += p['H'+lv];
   let appliedFy = 0;
-  for(let lv=1;lv<=nLev;lv++){
-    const q = p['q'+lv];
-    for(let c=0;c<nBay;c++) appliedFy -= q * (X[c+1]-X[c]);
-    if(p.hasCant) appliedFy -= p['qc'+lv] * p.Lc;
+  for(const el of els){
+    if(el.kind === 'brace') continue;
+    const pg = globalEqLoad(el, p);
+    appliedFx += pg[0] + pg[3];
+    appliedFy += pg[1] + pg[4];
   }
+  /* 集中力是作为节点荷载直接施加到 F 的，需额外累加 */
+  for(let idx=0; idx<nodes.length; idx++){
+    if(nodes[idx].pLoad) appliedFy -= nodes[idx].pLoad;
+  }
+  /* 水平力直接施加在左柱顶节点 */
+  for(let lv=1; lv<=nLev; lv++) appliedFx += p['H'+lv];
   const residX = appliedFx + Rx;
   const residY = appliedFy + Ry;
 
@@ -516,18 +734,23 @@ for(let i=0;i<ndof;i++) if(!fixedR.has(i) && reduce[i] === i) free.push(i);
     rho.push(row);
   }
   return {nodes, els, U, results, p, R, residX, residY,
-          nBay, nLev, nCol, nid, rho, nFree: nf};
+          nBay, nLev, nCol, nid, rho, nFree: nf, inactiveBraces};
 }
 
 function analyzeTensionOnly(p) {
   let inactiveBraces = new Set();
   let m = null;
   let converged = false;
-  for(let iter=0; iter<10; iter++) {
+  const hasTemp = Math.abs(p.tempAll || 0) > 1e-6 || Math.abs(p.tempGrad || 0) > 1e-6;
+
+  for(let iter=0; iter<15; iter++) {
     try {
       m = analyze(p, { inactiveBraces });
     } catch(err) {
       if(inactiveBraces.size > 0) {
+        if (hasTemp) {
+           throw new Error('温度工况下，仅受拉支撑发生刚度奇异（可能是温度膨胀导致全截面受压而退出）。建议关闭该格「仅受拉」或减小温差。');
+        }
         throw new Error('仅受拉支撑全部退出（已失效 ' + inactiveBraces.size + ' 根），结构可能失稳：' + err.message);
       }
       throw err;
@@ -536,8 +759,8 @@ function analyzeTensionOnly(p) {
     for(const res of m.results) {
       if(res.el.kind === 'brace' && res.el.tensionOnly) {
         const key = res.el.braceUid;
-        const axialN = -res.f[0]; // 提取轴力 N（拉为正，压为负）
-        if(!inactiveBraces.has(key) && axialN < -1e-4) { // 若受压，标记失效
+        const axialN = -res.f[0];
+        if(!inactiveBraces.has(key) && axialN < -1e-4) {
           inactiveBraces.add(key);
           changed = true;
         }
