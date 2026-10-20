@@ -7,7 +7,7 @@ const E_CONC = 3.0e7;
 const E_STEEL = 2.06e8;
 
 // 全局版本号：以后升级版本只需修改这里，全站自动联动
-const APP_VERSION = 'v0.1.6.1';
+const APP_VERSION = 'v0.1.6.4';
 
 // ⚠️ 重要：线上部署地址。本地 file:// 打开时，分享二维码指向这里。
 // 如果你更换了 GitHub 仓库名或部署到自定义域名，请务必同步修改此处的 URL，否则本地生成的分享二维码会失效。
@@ -51,10 +51,12 @@ const S = {
   frameMat:'conc',
   braceMat:'steel',
   As:2000,
+  braceI:30,           /* 支撑回转半径 i (mm)，长细比 λ = μL/i 由杆长实时计算 */
   braceTensionMap:{},
   braceMap:{},
   brushBrace:'none',
   forceType:'M',
+  probe: { elIndex: null, xRatio: 0.5 }, /* 截面探针：锁定单元索引与沿杆件比例位置 */
   r:1.0,
   betaF:1.0,
   betaJ:1.0,

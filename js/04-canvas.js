@@ -15,6 +15,12 @@ function setupCanvas(canvas, overrideDPR){
   canvas.height = Math.round(H*dpr);
   const ctx = canvas.getContext('2d');
   ctx.setTransform(dpr,0,0,dpr,0,0);
+  
+  // 统一重置文本和线条状态，防止上一个绘图函数的状态泄漏
+  ctx.textAlign = 'start';
+  ctx.textBaseline = 'alphabetic';
+  ctx.setLineDash([]);
+  
   return {ctx,W,H};
 }
 
@@ -137,9 +143,10 @@ function makeTransform(model, W, H, pad){
   const ys = model.nodes.map(n=>n.y);
   const x0 = Math.min(...xs), x1 = Math.max(...xs);
   const y0 = Math.min(...ys), y1 = Math.max(...ys);
-  const availW = W - padL - padR;
-  const availH = H - padT - padB;
-  const sc = Math.min(availW/(x1-x0||1), availH/(y1-y0||1));
+  const availW = Math.max(10, W - padL - padR);
+  const availH = Math.max(10, H - padT - padB);
+  let sc = Math.min(availW/Math.max(1e-6, x1-x0), availH/Math.max(1e-6, y1-y0));
+  if (!isFinite(sc) || sc <= 0) sc = 1; // 增加 NaN 兜底
   const dw = (x1-x0)*sc, dh = (y1-y0)*sc;
   const left   = padL + (availW - dw)/2;
   const bottom = H - padB - (availH - dh)/2;

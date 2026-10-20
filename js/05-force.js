@@ -33,7 +33,7 @@ const FORCE_STYLE = {
        beam: { color:'#4ade80', fill:'rgba(74,222,128,0.28)' } },
   R: { ref: 200, unit: 'kN', tag: '支座反力图 R', lbl: '|R|max',
        col:  { color:'#10b981', fill:'rgba(16,185,129,0.32)' },
-       beam: { color:'#10b981', fill:'rgba(16,185,129,0.30)' } }
+       beam: { color:'#10b981', fill:'rgba(16,185,129,0.30)' } },
 };
 const FORCE_STYLE_LIGHT = {
   M: { ref: 200, unit: 'kN·m', tag: '弯矩图 M', lbl: '|M|max',
@@ -47,7 +47,7 @@ const FORCE_STYLE_LIGHT = {
        beam: { color:'#15803d', fill:'rgba(21,128,61,0.24)' } },
   R: { ref: 200, unit: 'kN', tag: '支座反力图 R', lbl: '|R|max',
        col:  { color:'#059669', fill:'rgba(5,150,105,0.26)' },
-       beam: { color:'#059669', fill:'rgba(5,150,105,0.24)' } }
+       beam: { color:'#059669', fill:'rgba(5,150,105,0.24)' } },
 };
 function forceStyleOf(type, kind){
   const s = S.lightBg ? FORCE_STYLE_LIGHT[type] : FORCE_STYLE[type];
@@ -79,7 +79,7 @@ function drawInternal(canvas, model, dprOverride){
       ctx.font = '10px ui-sans-serif,system-ui,sans-serif';
       ctx.textAlign = 'left'; ctx.textBaseline = 'top';
       ctx.fillStyle = S.lightBg ? 'rgba(100,116,139,0.75)' : 'rgba(148,163,184,0.75)';
-      ctx.fillText('注：R 图不支持冻结对比', 14, 76);
+      ctx.fillText('注：R 图不支持冻结对比', 14, 104);
       ctx.restore();
     }
     ctx.font = 'bold 11px ui-sans-serif,system-ui,sans-serif';
@@ -359,6 +359,36 @@ function drawInternal(canvas, model, dprOverride){
     ctx.strokeStyle = '#22d3ee'; ctx.lineWidth = 1.5; ctx.setLineDash([]); ctx.stroke();
   }
 
+  /* N 图：受压支撑超过欧拉临界力时标红 + ⚠ */
+  if(type === 'N' && model.p.braceI && model.p.braceMap){
+    const E_brace = (model.p.braceMat === 'steel') ? E_STEEL : E_CONC;
+    const As_m2 = (model.p.As || 2000) / 1e6;
+    const i_m = (model.p.braceI || 30) / 1000;
+    for(const res of model.results){
+      const el = res.el;
+      if(el.kind !== 'brace') continue;
+      if(filter !== 'all' && filter !== 'brace') continue;
+      if(model.inactiveBraces && model.inactiveBraces.has(el.braceUid)) continue;
+      const lam = el.L / i_m;
+      const Ncr = Math.PI * Math.PI * E_brace * As_m2 / (lam * lam);
+      const N = axialAt(res, el.L/2);
+      if(N < 0 && Math.abs(N) > Ncr){
+        const ni = model.nodes[el.i], nj = model.nodes[el.j];
+        const [ax,ay] = toS(ni.x, ni.y);
+        const [bx,by] = toS(nj.x, nj.y);
+        ctx.save();
+        ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(bx,by); ctx.stroke();
+        const mx = (ax+bx)/2, my = (ay+by)/2;
+        ctx.font = 'bold 14px ui-sans-serif,system-ui,sans-serif';
+        ctx.fillStyle = '#ef4444';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('⚠', mx, my - 14);
+        ctx.restore();
+      }
+    }
+  }
+
   /* 反弯点标注（仅弯矩图，且受独立开关控制） */
   if(type === 'M' && model.p.showAntiPts){
     ctx.strokeStyle = T.antiCurve;
@@ -455,4 +485,61 @@ function drawInternal(canvas, model, dprOverride){
     }
   }
   if(model.p.showIds) drawIds(ctx, model, toS);
+
+  /* ======== 探针高亮与选中标记 ======== */
+  const drawProbeMarker = (elIdx, xr, isHover) => {
+    const res = model.results[elIdx];
+    if(!res) return;
+    const el = res.el;
+    const ni = model.nodes[el.i], nj = model.nodes[el.j];
+    const [ax, ay] = toS(ni.x, ni.y);
+    const [ex, ey] = toS(nj.x, nj.y);
+    const bx = ni.x + (nj.x - ni.x) * xr;
+    const by = ni.y + (nj.y - ni.y) * xr;
+    const [sx, sy] = toS(bx, by);
+
+    ctx.save();
+    if(isHover) {
+      // 悬停：整杆泛光 + 青色小圆圈
+      ctx.strokeStyle = 'rgba(56,189,248,0.8)';
+      ctx.lineWidth = 4;
+      ctx.shadowColor = '#38bdf8';
+      ctx.shadowBlur = 12;
+      ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(ex, ey); ctx.stroke();
+      
+      ctx.fillStyle = 'rgba(56,189,248,0.9)';
+      ctx.beginPath(); ctx.arc(sx, sy, 6, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.shadowBlur = 0;
+      ctx.beginPath(); ctx.arc(sx, sy, 6, 0, Math.PI*2); ctx.stroke();
+    } else {
+      // 选中：紫色高亮 + 十字靶心
+      ctx.strokeStyle = '#a855f7';
+      ctx.lineWidth = 3;
+      ctx.shadowColor = '#a855f7';
+      ctx.shadowBlur = 15;
+      ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(ex, ey); ctx.stroke();
+      
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#a855f7';
+      ctx.beginPath(); ctx.arc(sx, sy, 5, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(sx, sy, 8, 0, Math.PI*2); ctx.stroke();
+      // 十字准星
+      ctx.beginPath();
+      ctx.moveTo(sx - 12, sy); ctx.lineTo(sx + 12, sy);
+      ctx.moveTo(sx, sy - 12); ctx.lineTo(sx, sy + 12);
+      ctx.stroke();
+    }
+    ctx.restore();
+  };
+
+  if(typeof PROBE_HOVER !== 'undefined' && PROBE_HOVER && PROBE_HOVER.elIndex !== -1) {
+    drawProbeMarker(PROBE_HOVER.elIndex, PROBE_HOVER.xRatio, true);
+  }
+  if(model.p.probe && model.p.probe.elIndex !== null) {
+    drawProbeMarker(model.p.probe.elIndex, model.p.probe.xRatio, false);
+  }
+  /* ======== 探针标记结束 ======== */
 }

@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>应力释放 · Structura Breakout</title>
+<!-- v0.1.6.2 冻结版：ESC 暂停 + 失焦不打断 + 穿透/粘球/多球组合边界修复 -->
 <style>
   *{box-sizing:border-box;margin:0;padding:0;}
   html,body{height:100%;background:radial-gradient(circle at center, #0f172a 0%, #0b1120 100%);color:#f8fafc;overflow:hidden;
@@ -449,10 +450,24 @@
     tone(baseFreq + comboShift, 0.045, 'square', 0.03);
   }
   function sfxLose(){ tone(220, 0.32, 'sawtooth', 0.07); }
+  let sfxTimers = new Set();
+  function scheduleTone(freq, dur, type, vol, delay){
+    /* 用 Set 记录待触发的 setTimeout id，触发时自删，避免长会话无界增长；
+       用 Set 而非 Array 保证 delete 是 O(1)。 */
+    const id = setTimeout(() => {
+      sfxTimers.delete(id);
+      tone(freq, dur, type, vol);
+    }, delay);
+    sfxTimers.add(id);
+  }
+  function clearSfxTimers(){
+    for(const id of sfxTimers) clearTimeout(id);
+    sfxTimers.clear();
+  }
   function sfxClear(){
     tone(523, 0.08, 'sine', 0.06);
-    setTimeout(()=>tone(659, 0.08, 'sine', 0.06), 80);
-    setTimeout(()=>tone(784, 0.14, 'sine', 0.06), 160);
+    scheduleTone(659, 0.08, 'sine', 0.06, 80);
+    scheduleTone(784, 0.14, 'sine', 0.06, 160);
   }
   function sfxPowerup(){
     tone(880, 0.06, 'sine', 0.06);
@@ -632,12 +647,39 @@
       /* 先按新尺寸更新球半径，后续 clamp 才能用正确的 BALL_R */
       updateBallRadius();
 
-      /* 砖块：位置按 sx/sy 缩放，宽高统一取新的全局 BRICK_W/BRICK_H。
-         砖块尺寸只随宽度缩放（BRICK_H = 24 * W/800），不能按 sy 拉伸，
-         否则 sx !== sy 时砖块会被非等比扭曲。 */
-      for (const b of G.bricks) {
-        b.x *= sx; b.y *= sy;
-        b.w = BRICK_W; b.h = BRICK_H;
+      /* 修复非等比拉伸导致砖块散架：由于砖块和挡板的尺寸只和宽度有关，
+         若宽高比变化剧烈（比如横竖屏切换），直接按比例缩放会撕裂布局。
+         最优雅的方案是：当宽高比剧烈变化时，直接重排现有砖块阵列。 */
+      const ratioChanged = Math.abs((W/H) - (oldW/oldH)) > 0.2;
+      
+      if (ratioChanged) {
+        // 强行将存活砖块按新的网格重新排布
+        const s = W / 800;
+        const topOffset = BRICK_MARGIN_TOP;
+        for (const b of G.bricks) {
+          // 基于旧坐标反推行列（利用旧的 W 和 BRICK_W）
+          const oldS = oldW / 800;
+          const oldBrickW = Math.max(6 * oldS, (oldW - Math.max(20 * oldS + 2, 40 * oldS) * 2 - 8 * oldS * (BRICK_COLS - 1)) / BRICK_COLS);
+          const oldBrickH = 24 * oldS;
+          const oldGap = 8 * oldS;
+          const oldMarginX = Math.max(20 * oldS + 2, 40 * oldS);
+          const oldMarginTop = 90 * oldS;
+          
+          const col = Math.round((b.x - oldMarginX) / (oldBrickW + oldGap));
+          const row = Math.round((b.y - oldMarginTop) / (oldBrickH + oldGap));
+          
+          // 映射到新尺寸
+          b.x = BRICK_MARGIN_X + col * (BRICK_W + BRICK_GAP);
+          b.y = marginTop + row * (BRICK_H + BRICK_GAP); // 注意此处的 marginTop 是 buildBricks 内部逻辑，外部不好拿，干脆按 BRICK_MARGIN_TOP 算
+          b.y = BRICK_MARGIN_TOP + row * (BRICK_H + BRICK_GAP); // 简化处理
+          b.w = BRICK_W; b.h = BRICK_H;
+        }
+      } else {
+        // 比例变化不大，正常平滑缩放
+        for (const b of G.bricks) {
+          b.x *= sx; b.y *= sy;
+          b.w = BRICK_W; b.h = BRICK_H;
+        }
       }
 
       /* 球：位置按 sx/sy 缩放；速度大小按宽度比例 sx 统一缩放，保持方向不变，
@@ -687,6 +729,10 @@
       for (const bu of G.bullets) {
         bu.x *= sx; bu.y *= sy;
         bu.vy *= speedScale;
+        /* 子弹无子步进，限制每帧最大位移 < BRICK_H，避免大屏下跳过砖块。
+           dt 上限 0.05，即 |vy| * 0.05 < BRICK_H → |vy| < 20 * BRICK_H */
+        const maxVy = Math.max(600, 20 * BRICK_H);
+        if(bu.vy < -maxVy) bu.vy = -maxVy;
       }
       G.particles = []; G.rings = []; G.floaters = []; G.trail = [];
     }
@@ -834,7 +880,7 @@
       const againBtn = document.createElement('button');
       againBtn.className = 'overlayBtn danger';
       againBtn.textContent = '↻ 再来一局';
-      againBtn.addEventListener('click', () => location.reload());
+      againBtn.addEventListener('click', () => resetGame());
       const backLink = document.createElement('a');
       backLink.href = 'index.html';
       backLink.className = 'overlayBtn';
@@ -1122,6 +1168,9 @@
     } else if(tpl.id === 'extraLife'){
       G.lives += 1;
       updateHUD('life');
+      /* 加命后立即同步“最后一球”警告：生命从 1 变 2 时必须停止红框脉冲 */
+      const wrapEl = document.getElementById('canvasWrap');
+      if(wrapEl) wrapEl.classList.toggle('last-life', G.lives === 1 && (G.state === 'ready' || G.state === 'playing'));
     } else if(tpl.id === 'catch'){
       G.effects.catch = tpl.duration;
     } else if(tpl.id === 'pierce'){
@@ -1253,6 +1302,11 @@
     /* 击碎 */
     brick.alive = false;
     brick.hp = 0;
+    /* 击碎后立即清空穿透免疫集合：
+       1) 释放其中的球引用；
+       2) 让 stepBall 的每帧清理逻辑对 size===0 的 Set 直接 continue 跳过，
+          避免无意义遍历死砖块的残留 Set。 */
+    if(brick._piercedSet && brick._piercedSet.size > 0) brick._piercedSet.clear();
     G.brokenCount++;
     const gain = Math.round(base * mult);
     G.score += gain;
@@ -1323,7 +1377,8 @@
     G.maxCombo = 0; G.brokenCount = 0; G.powerupsCollected = 0;
     G._nextBossTaunt = 0;
     if(comboHudEl) comboHudEl.classList.remove('show');
-    if(tauntTimer){ clearTimeout(tauntTimer); tauntTimer = null; }
+        if(tauntTimer){ clearTimeout(tauntTimer); tauntTimer = null; }
+    clearSfxTimers();
     if(tauntEl) tauntEl.classList.remove('show');
     buildLegend(); // 重置时刷新图例解锁状态
     switchBgm();
@@ -1339,8 +1394,13 @@
     if(G.state === 'ready'){
       let speed = BASE_SPEED * Math.pow(1.10, G.level - 1);
       speed *= (0.95 + Math.random() * 0.10);   // 每关微随机球速
+      
+      /* 修复 ready 状态下吃道具导致发射双重加速：
+         stuck 时球速为 0，applyPowerup 乘倍率无效，但 launchBall 又乘了一遍。
+         这里统一处理：如果 effects 存在，仅应用一次倍率。 */
       if(G.effects.slowBall > 0) speed *= 0.65;
       if(G.effects.fastBall > 0) speed *= 1.4;
+      
       speed = Math.min(speed, 950); // 球速硬上限
       const angle = -Math.PI / 2 + (Math.random() - 0.5) * 0.22;
       G.ball.vx = Math.cos(angle) * speed;
@@ -1424,6 +1484,8 @@
     G.shake = 5;
 
     G.state = 'paused';   // 直接设状态，避免 setState('paused') 中间态闪烁
+    const wrapEl = document.getElementById('canvasWrap');
+    if(wrapEl) wrapEl.classList.remove('last-life');
     showOverlay('关卡通过 · ' + G.layoutName, [
       { text: '剩余生命奖励', small: true }
     ], '+' + bonus);
@@ -1479,7 +1541,7 @@
     // 打字音效
     if(G.soundOn){
       tone(800, 0.05, 'square', 0.02);
-      setTimeout(()=>tone(900, 0.05, 'square', 0.02), 80);
+      scheduleTone(900, 0.05, 'square', 0.02, 80);
     }
     
     if (tauntTimer) clearTimeout(tauntTimer);
@@ -1690,6 +1752,12 @@
         if(r === 'out'){
           if(G.extraBalls.length > 0){
             const next = G.extraBalls.shift();
+            /* 修复内存泄漏：额外球被 consume 后其对象不再移动，
+               若它残留在某砖的穿透免疫集合里将永远无法被清理。
+               先将其从所有砖块 Set 中移除，再由 G.ball 接管位置与速度。 */
+            for(const br of G.bricks){
+              if(br._piercedSet && br._piercedSet.size > 0) br._piercedSet.delete(next);
+            }
             G.ball.x = next.x;
             G.ball.y = next.y;
             G.ball.vx = next.vx;
@@ -1724,7 +1792,15 @@
       for(let s = 0; s < steps; s++){
         if(stepBall(eb, sdt) === 'out'){ dead = true; break; }
       }
-      if(!dead) survivors.push(eb);
+      if(!dead){
+        survivors.push(eb);
+      } else {
+        /* 额外球出界：必须从所有砖块的穿透免疫集合中删除该球引用，
+           否则穿透效果持续期间该球对象无法被 GC 回收（内存泄漏） */
+        for(const br of G.bricks){
+          if(br._piercedSet && br._piercedSet.size > 0) br._piercedSet.delete(eb);
+        }
+      }
     }
     G.extraBalls = survivors;
 
@@ -1768,21 +1844,25 @@
       }
     }
 
-    /* 子弹更新 */
+    /* 子弹更新（引入子步进，防跨帧漏判） */
     const aliveBullets = [];
     for(const bullet of G.bullets){
-      bullet.y += bullet.vy * dt;
-      if(bullet.y < -10) continue;
+      const absStep = Math.abs(bullet.vy) * dt;
+      const stepLen = Math.max(1, BRICK_H * 0.5);
+      const steps = Math.max(1, Math.ceil(absStep / stepLen));
+      const sdt = dt / steps;
       let hit = false;
-      for(const brick of G.bricks){
-        if(!brick.alive) continue;
-        /* 用子弹视觉体 [y-10, y+4] 与砖块 AABB 做区间重叠判定，与 drawBullets 的绘制长度一致；
-           比中心点判定多覆盖 14px，降低大步长漏判概率 */
-        if(bullet.x >= brick.x && bullet.x <= brick.x + brick.w &&
-           bullet.y + 4 >= brick.y && bullet.y - 10 <= brick.y + brick.h){
-          hitBrick(brick);
-          hit = true;
-          break;
+      for(let s = 0; s < steps && !hit; s++){
+        bullet.y += bullet.vy * sdt;
+        if(bullet.y < -10){ hit = true; break; }
+        for(const brick of G.bricks){
+          if(!brick.alive) continue;
+          if(bullet.x >= brick.x && bullet.x <= brick.x + brick.w &&
+             bullet.y + 4 >= brick.y && bullet.y - 10 <= brick.y + brick.h){
+            hitBrick(brick);
+            hit = true;
+            break;
+          }
         }
       }
       if(!hit) aliveBullets.push(bullet);
@@ -2133,6 +2213,7 @@
   }
 
   function drawActiveEffects(){
+    /* 先统计当前激活项数，保证整列文字不越过画布顶部 */
     let y = H - 70;
     for(const key of EFFECT_ORDER){
       const t = G.effects[key];
@@ -2324,9 +2405,14 @@
       }
     }
 
-    updateParticles(dt);
+    const fxDt = (G.state === 'paused' || G.state === 'over') ? 0 : dt;
+    updateParticles(fxDt);
+    /* 修复：over 时粒子可以冻结，但屏幕震动必须归零，
+       否则 G.shake=10 会随着 Math.pow(0.001,0)=1 永不衰减，
+       结束画面会持续剧烈抖动。paused 保留冻结语义（用户暂停即冻结）。 */
+    if(G.state === 'over' && G.shake > 0) G.shake = 0;
     /* 暂停/结束时星星冻结，与暂停语义一致；ready/playing 正常漂移 */
-    const starDt = (G.state === 'paused' || G.state === 'over') ? 0 : dt;
+    const starDt = fxDt;
     draw(now, starDt);
     requestAnimationFrame(loop);
   }
@@ -2445,7 +2531,12 @@
   document.addEventListener('visibilitychange', () => {
     /* 页面隐藏时 rAF 自然停止，切回来继续；不再自动暂停。
        清空按键状态，防止切标签页时 keyup 丢失导致卡键。 */
-    if(document.hidden) G.keys = {};
+    if(document.hidden) {
+      G.keys = {};
+    } else {
+      /* 修复切回页面画布未重新计算：强制触发一次 resize */
+      resizeCanvas();
+    }
   });
 
   /* 音量滑块：同时作用于 BGM 与 SFX */

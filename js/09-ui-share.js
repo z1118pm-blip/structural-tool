@@ -1,5 +1,16 @@
 "use strict";
 
+(function bindProbeClear(){
+  const btn = document.getElementById('btnProbeClear');
+  if(btn) {
+    btn.addEventListener('click', () => {
+      S.probe = { elIndex: null, xRatio: 0.5 };
+      PROBE_HOVER = null;
+      run();
+    });
+  }
+})();
+
 (function bindElem(){
   const seg = document.getElementById('segElem');
   if(!seg) return;
@@ -170,6 +181,80 @@ function exportCanvasPNG(canvasId, baseName){
   });
 })();
 
+/* 内力图探针拾取与悬停高亮 */
+let PROBE_HOVER = null;
+(function bindProbeClick(){
+  const cv = document.getElementById('cvForce');
+  if(!cv) return;
+
+  const getClosest = (e) => {
+    if(!MODEL) return null;
+    const rect = cv.getBoundingClientRect();
+    if(rect.width < 10 || rect.height < 10) return null;
+    const clickX = e.clientX - rect.left;
+    const clickY = e.clientY - rect.top;
+    const padB = MODEL.p.forceType === 'R' ? 80 : 36;
+    const {toS} = makeTransform(MODEL, rect.width, rect.height, { padL: 120, padT: 100, padR: 60, padB });
+    
+    let closest = null;
+    let minDist = 45; // 容差 45px
+    
+    for(let i = 0; i < MODEL.els.length; i++){
+      const el = MODEL.els[i];
+      const ni = MODEL.nodes[el.i], nj = MODEL.nodes[el.j];
+      const [ax, ay] = toS(ni.x, ni.y);
+      const [bx, by] = toS(nj.x, nj.y);
+      
+      const dx = bx - ax, dy = by - ay;
+      const len2 = dx*dx + dy*dy;
+      if(len2 === 0) continue;
+      
+      let t = ((clickX - ax) * dx + (clickY - ay) * dy) / len2;
+      t = Math.max(0, Math.min(1, t));
+      
+      const px = ax + t * dx, py = ay + t * dy;
+      const dist = Math.hypot(clickX - px, clickY - py);
+      
+      if(dist < minDist){
+        minDist = dist;
+        closest = { elIndex: i, dist: dist, xRatio: t };
+      }
+    }
+    return closest;
+  };
+
+  cv.addEventListener('pointermove', (e) => {
+    const h = getClosest(e);
+    if(h) {
+      if(!PROBE_HOVER || PROBE_HOVER.elIndex !== h.elIndex || Math.abs(PROBE_HOVER.xRatio - h.xRatio) > 0.005) {
+        PROBE_HOVER = h;
+        redrawOnly('force');
+      }
+    } else {
+      if(PROBE_HOVER) {
+        PROBE_HOVER = null;
+        redrawOnly('force');
+      }
+    }
+  });
+
+  cv.addEventListener('pointerleave', () => {
+    if(PROBE_HOVER) {
+      PROBE_HOVER = null;
+      redrawOnly('force');
+    }
+  });
+
+  cv.addEventListener('click', (e) => {
+    const h = getClosest(e);
+    if(h){
+      S.probe = { elIndex: h.elIndex, xRatio: h.xRatio };
+      PROBE_HOVER = null; // 点击后清空悬停，让选中的靶心接管
+      run(); 
+    }
+  });
+})();
+
 (function bindForce(){
   const seg = document.getElementById('segForce');
   if(!seg) return;
@@ -217,7 +302,10 @@ function exportCanvasPNG(canvasId, baseName){
   const modal = document.getElementById('modalTip');
   const btnOpen = document.getElementById('btn-tip');
   const btnClose = document.getElementById('btnTipClose');
-  if(!modal || !btnOpen) return;
+  if(!modal || !btnOpen) {
+    console.warn('[UI] 找不到打赏弹窗或按钮');
+    return;
+  }
 
   const open  = ()=> modal.classList.add('open');
   const close = ()=> modal.classList.remove('open');
@@ -238,7 +326,7 @@ const SHARE_KEYS = [
   'qc1','qc2','qc3','H1','H2','H3',
   'tempAll','tempGrad','tempT0',
   'Hmode','settleDy','settleCol','braceMap','braceTensionMap','brushBrace','betaF','betaJ',
-  'frameMat','braceMat','As','axialMode',
+  'frameMat','braceMat','As','braceI','axialMode',
   'mScale','dScale','forceType','elFilter','displayMode',
   'showVals','showIds','showAntiPts','showPDelta'
 ];
@@ -255,8 +343,8 @@ function encodeState(){
     H1: 0, H2: 0, H3: 0, Hmode: 'none', settleDy: 0, settleCol: 0,
     tempAll: 0, tempGrad: 0, tempT0: 20,
     braceMap: {}, braceTensionMap: {}, brushBrace: 'none',
-    betaF: 1, betaJ: 1, frameMat: 'conc', braceMat: 'steel',
-    As: 2000, axialMode: 'real', mScale: 1, dScale: 30,
+    betaF: 1, betaJ: 1,     frameMat: 'conc', braceMat: 'steel',
+    As: 2000, braceI: 30, axialMode: 'real', mScale: 1, dScale: 30,
     forceType: 'M', elFilter: 'all', displayMode: 'all',
     showVals: false, showIds: false, showAntiPts: true, showPDelta: true
   };
@@ -322,6 +410,7 @@ function encodeState(){
 
 function decodeState(str){
   try{
+    if(typeof str !== 'string' || str.length > 8000) return null; // 拦截超长恶意链接
     let b64 = str.replace(/-/g, '+').replace(/_/g, '/');
     while(b64.length % 4) b64 += '=';
     const obj = JSON.parse(atob(b64));
@@ -345,8 +434,8 @@ function applyStateFromObj(obj){
     H1: 0, H2: 0, H3: 0, Hmode: 'none', settleDy: 0, settleCol: 0,
     tempAll: 0, tempGrad: 0, tempT0: 20,
     braceMap: {}, braceTensionMap: {}, brushBrace: 'none',
-    betaF: 1, betaJ: 1, frameMat: 'conc', braceMat: 'steel',
-    As: 2000, axialMode: 'real', mScale: 1, dScale: 30,
+    betaF: 1, betaJ: 1,     frameMat: 'conc', braceMat: 'steel',
+    As: 2000, braceI: 30, axialMode: 'real', mScale: 1, dScale: 30,
     forceType: 'M', elFilter: 'all', displayMode: 'all',
     showVals: false, showIds: false, showAntiPts: true, showPDelta: true
   };
@@ -454,15 +543,40 @@ function applyStateFromObj(obj){
     } else if(k === 'brushBrace'){
       if(v === 'none' || v === 'X' || v === '/' || v === '\\') S[k] = v;
     } else {
-      const n = parseFloat(v);
+      let n = parseFloat(v);
       if(!isFinite(n)) continue;
       const el = document.getElementById(k);
       if(el && el.type === 'range'){
         const lo = parseFloat(el.min), hi = parseFloat(el.max);
+        /* 对齐滑块步进，避免非步进值造成「显示值与实际计算值不一致」 */
+        const step = parseFloat(el.step) || 0;
+        if(step > 0){
+          n = lo + Math.round((n - lo) / step) * step;
+        }
         S[k] = Math.max(lo, Math.min(hi, n));
       } else {
         S[k] = n;
       }
+    }
+  }
+
+  /* 老链接兼容：v0.1.6.3 之前用全局 braceLambda，现改为 braceI。
+     若老链接携带 braceLambda 但无 braceI，用最大支撑杆长 L_max 反算等效 i = L_max/λ，
+     使"最危险杆"的 λ 与老链接保持一致。 */
+  if(obj.braceLambda != null && obj.braceI == null){
+    let Lmax = 0;
+    for(const k in S.braceMap){
+      if(!S.braceMap[k] || S.braceMap[k] === 'none') continue;
+      const parts = k.split('-');
+      const lv = parseInt(parts[0]), c = parseInt(parts[1]);
+      const Lb = S['L' + c] || 6;
+      const hL = S['h' + lv] || 4;
+      const L = Math.hypot(Lb, hL);
+      if(L > Lmax) Lmax = L;
+    }
+    const lamOld = parseFloat(obj.braceLambda) || 80;
+    if(Lmax > 0 && lamOld > 0){
+      S.braceI = Math.max(10, Math.min(100, Math.round(Lmax * 1000 / lamOld)));
     }
   }
 
@@ -779,6 +893,94 @@ function shareURL(){
 })();
 
 /* =====================================================================
+   反弯点悬浮窗逻辑
+   ===================================================================== */
+(function bindAntiRhoFloat(){
+  const btnOpen = document.getElementById('btnFloatAntiRho');
+  const btnClose = document.getElementById('btnFloatAntiRhoClose');
+  const wrap = document.getElementById('floatAntiRhoWrap');
+  const header = document.getElementById('floatAntiRhoHeader');
+  if(!btnOpen || !wrap || !header) return;
+
+  // 暴露给外部调用（如自检卡），支持传入 x, y 坐标
+  window.openAntiRhoFloat = function(x, y) {
+    wrap.hidden = false;
+    if (x != null && y != null) {
+      wrap.style.left = x + 'px';
+      wrap.style.top = y + 'px';
+      wrap.style.right = 'auto';
+    }
+    // 浮窗从 hidden 解锁后需要等浏览器完成一次布局，
+    // 否则 cvAntiRhoFloat 的 clientWidth/Height 仍是 0，
+    // 同步 run() 会被 renderTo 里的 W<10 判断提前 return，导致白框。
+    if(typeof run === 'function'){
+      requestAnimationFrame(()=>{ if(typeof run === 'function') run(); });
+    }
+  };
+
+  btnOpen.addEventListener('click', () => {
+    // 用户手动点浮动按钮时，如果没坐标，重置到默认右上角
+    if (wrap.hidden) {
+      wrap.style.right = '40px';
+      wrap.style.left = 'auto';
+      wrap.style.top = '120px';
+    }
+    window.openAntiRhoFloat();
+  });
+
+  if(btnClose) {
+    btnClose.addEventListener('click', () => {
+      wrap.hidden = true;
+    });
+  }
+
+  /* 拖拽逻辑 */
+  let isDragging = false;
+  let startX, startY, initialLeft, initialTop;
+
+  header.addEventListener('mousedown', (e) => {
+    if(e.target.tagName === 'BUTTON') return; // 点关闭按钮不拖拽
+    isDragging = true;
+    startX = e.clientX;
+    startY = e.clientY;
+    
+    // 如果之前没设置过 left/top，先通过 getBoundingClientRect 初始化
+    if(!wrap.style.left || !wrap.style.top) {
+      const rect = wrap.getBoundingClientRect();
+      wrap.style.left = rect.left + 'px';
+      wrap.style.top = rect.top + 'px';
+      wrap.style.right = 'auto'; // 移除 right 定位，改用 left
+    }
+    initialLeft = parseInt(wrap.style.left) || 0;
+    initialTop = parseInt(wrap.style.top) || 0;
+    
+    e.preventDefault(); // 防止选中文本
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if(!isDragging) return;
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    
+    let newLeft = initialLeft + dx;
+    let newTop = initialTop + dy;
+    
+    // 边界限制，防止拖出屏幕
+    const maxLeft = window.innerWidth - wrap.offsetWidth;
+    const maxTop = window.innerHeight - wrap.offsetHeight;
+    newLeft = Math.max(0, Math.min(newLeft, maxLeft));
+    newTop = Math.max(0, Math.min(newTop, maxTop));
+    
+    wrap.style.left = newLeft + 'px';
+    wrap.style.top = newTop + 'px';
+  });
+
+  window.addEventListener('mouseup', () => {
+    isDragging = false;
+  });
+})();
+
+/* =====================================================================
    游戏入口（彩蛋）：左侧悬浮侧边按钮，独立标签页打开 game.html
    - 默认半隐藏，hover 滑出；录制中锁定（is-locked + click 拦截）
    - 扫掠播放中点击先 sweepStop()，避免后台 rAF 空转
@@ -787,21 +989,12 @@ function shareURL(){
      那时 10-boot.js 已加载完毕，不存在 undefined 风险
    ===================================================================== */
 (function bindGameSideBtn(){
-  const a = document.createElement('a');
-  a.id = 'gameSideBtn';
-  a.href = 'game.html';
+  const a = document.getElementById('gameSideBtn');
+  if (!a) return;
+  
+  // 确保有 target 等属性（以防 HTML 漏写）
   a.target = '_blank';
   a.rel = 'noopener noreferrer';
-  a.title = '应力释放 · 摸鱼彩蛋';
-
-  const icon = document.createElement('span');
-  icon.className = 'gsbIcon';
-  icon.textContent = '🎮';
-  const txt = document.createElement('span');
-  txt.className = 'gsbText';
-  txt.textContent = '摸鱼';
-  a.appendChild(icon);
-  a.appendChild(txt);
 
   a.addEventListener('click', (e) => {
     if (S.rec.active) {
@@ -812,10 +1005,7 @@ function shareURL(){
       return;
     }
     if (S.sweep.playing) sweepStop();
-    // target="_blank" 默认行为放行，由浏览器开新标签
   });
-
-  document.body.appendChild(a);
 })();
 
 const btnReset = document.getElementById('btn-reset');
@@ -850,6 +1040,7 @@ if(btnReset) btnReset.addEventListener('click', ()=>{
   S.braceMat = 'steel';
   S.axialMode = 'real';
   S.As = 2000;
+  S.braceI = 30;
   S.braceTensionMap = {};
   S.braceMap = {};
   S.qSpanMap = {};
@@ -875,12 +1066,15 @@ if(btnReset) btnReset.addEventListener('click', ()=>{
   try{ window.dispatchEvent(new CustomEvent('structura-topo-change')); }catch(e){}
   
   // 重置所有新注入的滑块 UI
-  ['P1','P2','P3','tempAll','tempGrad'].forEach(id => {
+  ['P1','P2','P3','tempAll','tempGrad','tempT0'].forEach(id => {
     const el = document.getElementById(id);
     if(el) {
-      el.value = 0;
+      const isT0 = (id === 'tempT0');
+      const v = isT0 ? 20 : 0;
+      el.value = v;
+      S[id] = v;
       const out = document.getElementById('v-'+id);
-      if(out) out.textContent = id.startsWith('P') ? '0 kN' : '0 ℃';
+      if(out) out.textContent = isT0 ? '20 ℃' : (id.startsWith('P') ? '0 kN' : '0 ℃');
       updateRangeProgress(el);
     }
   });

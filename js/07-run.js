@@ -9,11 +9,12 @@ function getMaxInternal(model, type, filter){
     for(let c=0; c<model.nCol; c++){
       const nd = model.nid(c, 0);
       /* 仅统计水平/竖向反力（kN）；弯矩反力为 kN·m，量纲不同，
-         不参与 |R|max 计算，否则标签单位会与实际最大箭头长度不匹配。 */
+         不参与 |R|max 计算，否则标签单位与实际最大箭头长度不匹配。 */
       maxR = Math.max(maxR, Math.abs(model.R[nd*3]), Math.abs(model.R[nd*3+1]));
     }
     return maxR;
   }
+
   let maxF = 0;
   for(const res of model.results){
     const el = res.el;
@@ -52,13 +53,19 @@ function updateReadout(model){
   {
     const box = document.getElementById('r-rhoBox');
     if(box){
-      let html = '';
+      if(box.children.length !== model.nLev){
+        let html = '';
+        for(let lv=1; lv<=model.nLev; lv++){
+          html += `<div class="rRow"><span class="lbl">${lv} 层</span><span class="val" id="rho-val-${lv}">—</span></div>`;
+        }
+        box.innerHTML = html;
+      }
       for(let lv=1; lv<=model.nLev; lv++){
         const row = model.rho[lv-1] || [];
         const vals = row.map(v => v.toFixed(2)).join(' / ');
-        html += `<div class="rRow"><span class="lbl">${lv} 层</span><span class="val">${vals}</span></div>`;
+        const valEl = document.getElementById('rho-val-' + lv);
+        if(valEl && valEl.textContent !== vals) valEl.textContent = vals;
       }
-      if(box.innerHTML !== html) box.innerHTML = html;
     }
   }
 
@@ -94,30 +101,45 @@ function updateReadout(model){
     // 生成带虚线引导和对齐的动态逐层列表
     const listEl = document.getElementById('r-drift-list');
     if(listEl){
-      let html = `<div style="color:#94a3b8; font-weight:600; margin-bottom:2px;">层间位移角 θ</div>`;
+      const expectedRows = model.nLev;
+      const actualRows = listEl.querySelectorAll('[id^="drift-row-"]').length;
+      if(!listEl.querySelector('.drift-header') || actualRows !== expectedRows){
+        let html = `<div class="drift-header" style="color:#94a3b8; font-weight:600; margin-bottom:2px;">层间位移角 θ</div>`;
+        for(let lv=1; lv<=model.nLev; lv++){
+          html += `<div style="display:flex; align-items:baseline; color:#e2e8f0;" id="drift-row-${lv}">
+            <span class="drift-lv" style="color:#94a3b8; font-weight:400; width:26px;">${lv}层</span>
+            <span class="drift-line" style="flex:1; border-bottom:1px dashed #475569; margin:0 6px; position:relative; top:-3px; opacity:0.7;"></span>
+            <span class="drift-val" style="font-weight:600;">—</span>
+          </div>`;
+        }
+        listEl.innerHTML = html;
+      }
       
       for(let lv=1; lv<=model.nLev; lv++){
         const d = floorDrifts[lv];
         let vTxt = '≈0';
-        // 阈值提升至 1e-6：小于 1/1000000 的位移角视为无有效侧移
         if (d > 1e-6) {
            const denom = Math.round(1 / d);
            vTxt = denom > 999999 ? '≈0' : `1/${denom}`;
         }
-        
-        // 同样提升阈值，只有真正发生宏观侧移时才寻找并高亮“最大”
         const isWorst = (lv === driftFloor && maxDrift > 1e-6);
         const color = isWorst ? '#f97316' : '#e2e8f0';
         const dotColor = isWorst ? '#f97316' : '#475569';
         
-        html += `<div style="display:flex; align-items:baseline; color:${color};">
-          <span style="color:#94a3b8; font-weight:${isWorst?'600':'400'}; width:26px;">${lv}层</span>
-          <span style="flex:1; border-bottom:1px dashed ${dotColor}; margin:0 6px; position:relative; top:-3px; opacity:0.7;"></span>
-          <span style="font-weight:600;">${vTxt}${isWorst?' (最大)':''}</span>
-        </div>`;
+        const rowEl = document.getElementById('drift-row-' + lv);
+        if(rowEl){
+          rowEl.style.color = color;
+          const lvEl = rowEl.querySelector('.drift-lv');
+          if(lvEl) lvEl.style.fontWeight = isWorst ? '600' : '400';
+          const lineEl = rowEl.querySelector('.drift-line');
+          if(lineEl) lineEl.style.borderBottomColor = dotColor;
+          const valEl = rowEl.querySelector('.drift-val');
+          if(valEl) {
+            const targetTxt = vTxt + (isWorst ? ' (最大)' : '');
+            if(valEl.textContent !== targetTxt) valEl.textContent = targetTxt;
+          }
+        }
       }
-      
-      if (listEl.innerHTML !== html) listEl.innerHTML = html;
     }
   }
 
@@ -169,7 +191,7 @@ function updateReadout(model){
           JSON.stringify(p.pLoadMap || {}),
           p.tempAll, p.tempGrad,
           p.settleDy, p.settleCol,
-          p.frameMat, p.braceMat, p.As, p.axialMode,
+          p.frameMat, p.braceMat, p.As, p.braceI, p.axialMode,
           JSON.stringify(p.braceMap || {}),
           JSON.stringify(p.braceTensionMap || {})
         ].join('|');
@@ -259,6 +281,10 @@ function updateReadout(model){
       let uPure;
       if (S._uPureCache && S._uPureCache.key === pPureKey) {
         uPure = S._uPureCache.value;
+      } else if((S.sweep && S.sweep.playing) || (S._lastSliderInput && performance.now() - S._lastSliderInput < 200)){
+        /* 扫掠/拖动中跳过纯侧向刚度反算，避免逐帧额外 analyze 拖慢帧率；
+           扫掠结束后 sweepStop 会触发 scheduleRender() 补算到准确值 */
+        uPure = Math.abs(uTopAvg) || 1e-9;
       } else {
         const pPure = { ...p, q1:0, q2:0, q3:0, qc1:0, qc2:0, qc3:0,
                         qSpanMap:{}, P1:0, P2:0, P3:0, pLoadMap:{},
@@ -314,6 +340,65 @@ function updateReadout(model){
     rowPD.style.display = 'none';
   }
 
+    /* 受压支撑欧拉临界力粗估 */
+  {
+    const hasBraceNow = Object.keys(p.braceMap || {}).some(k => p.braceMap[k] && p.braceMap[k] !== 'none');
+    const braceChkRow = document.getElementById('row-braceChk');
+    const braceWrap = document.getElementById('ssbBraceWrap');
+    if(braceChkRow) braceChkRow.style.display = hasBraceNow ? '' : 'none';
+    if(braceWrap) braceWrap.style.display = hasBraceNow ? '' : 'none';
+    if(hasBraceNow){
+      const E_brace = (p.braceMat === 'steel') ? E_STEEL : E_CONC;
+      const As_m2 = (p.As || 2000) / 1e6;
+      const i_m = (p.braceI || 30) / 1000;
+      const failures = [];
+      let lamMin = Infinity, lamMax = -Infinity, ncrMin = Infinity, braceCount = 0;
+      for(const res of model.results){
+        const el = res.el;
+        if(el.kind !== 'brace') continue;
+        if(model.inactiveBraces && model.inactiveBraces.has(el.braceUid)) continue;
+        const lam = el.L / i_m;
+        const Ncr = Math.PI * Math.PI * E_brace * As_m2 / (lam * lam);  // kN
+        braceCount++;
+        if(lam < lamMin) lamMin = lam;
+        if(lam > lamMax) lamMax = lam;
+        if(Ncr < ncrMin) ncrMin = Ncr;
+        const N = axialAt(res, el.L/2);
+        if(N < 0 && Math.abs(N) > Ncr){
+          failures.push({ lev: el.lev, bay: el.bay, ratio: Math.abs(N) / Ncr });
+        }
+      }
+      const listEl = document.getElementById('r-braceChkList');
+      if(listEl){
+        const lamTxt = (braceCount === 0) ? '—'
+                     : (lamMin === lamMax ? lamMin.toFixed(0) : `${lamMin.toFixed(0)}~${lamMax.toFixed(0)}`);
+        const ncrTxt = Number.isFinite(ncrMin) ? ncrMin.toFixed(0) : '—';
+        if(failures.length === 0){
+          listEl.innerHTML = `<span style="color:#4ade80">✓ 全部通过 · λ = ${lamTxt} · N<sub>cr,min</sub> = ${ncrTxt} kN</span>`;
+        } else {
+          let html = `<div style="color:#fbbf24;margin-bottom:3px">λ = ${lamTxt} · N<sub>cr,min</sub> = ${ncrTxt} kN · 超限 ${failures.length} 根</div>`;
+          for(const f of failures.slice(0, 5)){
+            html += `<div style="display:flex;justify-content:space-between;color:#fbbf24">
+              <span>${f.lev}层-${f.bay}跨</span>
+              <span>|N|/N<sub>cr</sub> = ${f.ratio.toFixed(2)}</span>
+            </div>`;
+          }
+          if(failures.length > 5) html += `<div style="color:#94a3b8">…还有 ${failures.length-5} 根</div>`;
+          listEl.innerHTML = html;
+        }
+      }
+      const braceEl = document.getElementById('ssbBrace');
+      if(braceEl){
+        if(failures.length === 0){
+          braceEl.textContent = 'OK'; braceEl.classList.add('ok');
+        } else {
+          braceEl.textContent = 'CHECK'; braceEl.classList.remove('ok');
+        }
+      }
+    }
+  }
+
+
   function allocStr(level){
     const nCol = model.nCol;
     const vals = new Array(nCol).fill(0);
@@ -355,6 +440,319 @@ function updateReadout(model){
   /* 左侧残差 UI 已移除，仅通过右下角状态栏状态展示 */
 }
 
+function drawProbeCanvas(model){
+  const cv = document.getElementById('cvProbe');
+  if(!cv) return;
+  const W = cv.clientWidth, H = cv.clientHeight;
+  if(W < 10 || H < 10) return;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+
+  const infoEl = document.getElementById('r-probeInfo');
+  const btnClear = document.getElementById('btnProbeClear');
+
+  if(!S.probe || S.probe.elIndex === null || S.probe.elIndex >= model.els.length){
+    if(infoEl) { infoEl.textContent = '在右侧内力图上点击任意杆件以分析截面应力。'; infoEl.style.color = '#64748b'; }
+    if(btnClear) btnClear.style.display = 'none';
+    ctx.fillStyle = '#64748b';
+    ctx.font = '12px sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('未选中截面', W/2, H/2);
+    return;
+  }
+
+  const res = model.results[S.probe.elIndex];
+  if(!res || !res.el){
+    if(infoEl) { infoEl.textContent = '在右侧内力图上点击任意杆件以分析截面应力。'; infoEl.style.color = '#64748b'; }
+    if(btnClear) btnClear.style.display = 'none';
+    return;
+  }
+  
+  if(btnClear) btnClear.style.display = 'inline-block';
+
+  const el = res.el;
+  const x = el.L * Math.max(0, Math.min(1, S.probe.xRatio));
+  const N = axialAt(res, x);
+  const M = momentAt(res, x);
+
+  if(el.kind === 'brace') {
+    if(infoEl) { infoEl.textContent = '支撑为二力杆，全截面均匀受拉/压'; infoEl.style.color = '#38bdf8'; }
+    ctx.strokeStyle = N > 0 ? '#38bdf8' : '#ef4444';
+    ctx.lineWidth = 6; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(W/2, 30); ctx.lineTo(W/2, H-30); ctx.stroke();
+    
+    ctx.font = 'bold 12px "JetBrains Mono", monospace';
+    ctx.fillStyle = N > 0 ? '#38bdf8' : '#ef4444';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText((N > 0 ? '+' : '') + N.toFixed(1) + ' kN', W/2, H/2);
+    return;
+  }
+
+  let b, h;
+  if(el.kind === 'col') { b = model.p.bc; h = model.p.hc; }
+  else                  { b = model.p.bb; h = model.p.hb; }
+
+  const A = (b/1000) * (h/1000);
+  const Wsec = (b/1000) * Math.pow(h/1000, 2) / 6;
+  
+  const sigTop = (N / A) - (M / Wsec);
+  const sigBot = (N / A) + (M / Wsec);
+  const sigMax = Math.max(Math.abs(sigTop), Math.abs(sigBot), 1e-6);
+
+  /* === 布局：限制最大跨度，并整体居中 === */
+  const cy = H / 2;
+  const drawH = 80;  // 截面高度
+  const drawW = 30;  // 截面宽度
+  
+  const maxSpanRight = 60; // 应力图最大跨度
+  
+  // 计算整体宽度：截面宽 + 间距 + 应力图最大跨度 + 右侧留给文字的空间(约65px)
+  const totalW = drawW + 12 + maxSpanRight + 65;
+  // 计算起始位置，使整个图形居中
+  const secLeft = Math.max(10, (W - totalW) / 2); 
+  
+  const zeroX = secLeft + drawW + 12; // 基准线紧贴截面右侧
+  const yTop = cy - drawH / 2;
+  const yBot = cy + drawH / 2;
+
+  const scale = maxSpanRight / sigMax;
+
+  const xTop = zeroX + Math.abs(sigTop) * scale;
+  const xBot = zeroX + Math.abs(sigBot) * scale;
+
+  /* 1. 画截面矩形 */
+  ctx.strokeStyle = '#64748b'; ctx.lineWidth = 1.5;
+  ctx.strokeRect(secLeft, yTop, drawW, drawH);
+  ctx.fillStyle = 'rgba(100,116,139,0.1)';
+  ctx.fillRect(secLeft, yTop, drawW, drawH);
+
+  /* 2. 画应力包络图 */
+  const yZero = (sigTop * sigBot < 0) 
+    ? yTop + drawH * Math.abs(sigTop) / (Math.abs(sigTop) + Math.abs(sigBot)) 
+    : null;
+
+  if (yZero !== null) {
+    const isTopComp = sigTop < 0;
+    
+    // 上半部
+    ctx.beginPath();
+    ctx.moveTo(zeroX, yTop);
+    ctx.lineTo(xTop, yTop);
+    ctx.lineTo(zeroX, yZero);
+    ctx.closePath();
+    ctx.fillStyle = isTopComp ? 'rgba(239,68,68,0.2)' : 'rgba(56,189,248,0.2)';
+    ctx.fill();
+    ctx.strokeStyle = isTopComp ? '#ef4444' : '#38bdf8';
+    ctx.stroke();
+
+    // 下半部
+    ctx.beginPath();
+    ctx.moveTo(zeroX, yZero);
+    ctx.lineTo(xBot, yBot);
+    ctx.lineTo(zeroX, yBot);
+    ctx.closePath();
+    ctx.fillStyle = isTopComp ? 'rgba(56,189,248,0.2)' : 'rgba(239,68,68,0.2)';
+    ctx.fill();
+    ctx.strokeStyle = isTopComp ? '#38bdf8' : '#ef4444';
+    ctx.stroke();
+  } else {
+    const isTens = sigTop > 0;
+    ctx.beginPath();
+    ctx.moveTo(zeroX, yTop);
+    ctx.lineTo(xTop, yTop);
+    ctx.lineTo(xBot, yBot);
+    ctx.lineTo(zeroX, yBot);
+    ctx.closePath();
+    ctx.fillStyle = isTens ? 'rgba(56,189,248,0.2)' : 'rgba(239,68,68,0.2)';
+    ctx.fill();
+    ctx.strokeStyle = isTens ? '#38bdf8' : '#ef4444';
+    ctx.stroke();
+  }
+
+  /* 3. 画基准线 */
+  ctx.strokeStyle = '#475569'; ctx.lineWidth = 1;
+  ctx.beginPath(); 
+  ctx.moveTo(zeroX, yTop - 10); 
+  ctx.lineTo(zeroX, yBot + 10); 
+  ctx.stroke();
+
+  /* 4. 画箭头（动态插值，保证不超出包络线） */
+  const drawArrow = (y) => {
+    let val;
+    if (yZero !== null) {
+      if (y <= yZero) val = sigTop * (yZero - y) / (yZero - yTop);
+      else val = sigBot * (y - yZero) / (yBot - yZero);
+    } else {
+      val = sigTop + (sigBot - sigTop) * (y - yTop) / drawH;
+    }
+
+    if (Math.abs(val) < 0.1) return;
+
+    const edgeX = zeroX + Math.abs(val) * scale;
+    const isTens = val > 0;
+    const color = isTens ? '#38bdf8' : '#ef4444';
+
+    ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 1.5;
+    const headLen = 4;
+
+    if (isTens) {
+      // 受拉：从零线向右画，箭头向右
+      ctx.beginPath(); ctx.moveTo(zeroX, y); ctx.lineTo(edgeX, y); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(edgeX, y);
+      ctx.lineTo(edgeX - headLen * Math.cos(0.5), y - headLen * Math.sin(0.5));
+      ctx.lineTo(edgeX - headLen * Math.cos(0.5), y + headLen * Math.sin(0.5));
+      ctx.fill();
+    } else {
+      // 受压：从右侧向左画，箭头向左（指向基准线）
+      ctx.beginPath(); ctx.moveTo(edgeX, y); ctx.lineTo(zeroX, y); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(zeroX, y);
+      ctx.lineTo(zeroX + headLen * Math.cos(0.5), y - headLen * Math.sin(0.5));
+      ctx.lineTo(zeroX + headLen * Math.cos(0.5), y + headLen * Math.sin(0.5));
+      ctx.fill();
+    }
+  };
+
+  // 画 5 个箭头：分布更均匀
+  drawArrow(yTop);
+  drawArrow(yTop + drawH * 0.25);
+  drawArrow(cy);
+  drawArrow(yBot - drawH * 0.25);
+  drawArrow(yBot);
+
+  /* 5. 标注数值 */
+  const drawLabel = (val, y) => {
+    if (Math.abs(val) < 0.1) return;
+    ctx.font = 'bold 10.5px "JetBrains Mono", monospace';
+    ctx.textBaseline = 'middle';
+    const valMPa = (val / 1000).toFixed(2);
+    const txt = (val > 0 ? '+' : '') + valMPa + ' MPa';
+    
+    const edgeX = zeroX + Math.abs(val) * scale;
+    ctx.textAlign = 'left';
+    const tx = edgeX + 8;
+    ctx.fillStyle = val > 0 ? '#38bdf8' : '#ef4444';
+    ctx.fillText(txt, tx, y);
+  };
+
+  drawLabel(sigTop, yTop);
+  drawLabel(sigBot, yBot);
+
+  /* 6. 写信息 */
+  if(infoEl) {
+    infoEl.style.color = '#cbd5e1';
+    const where = el.kind === 'col' ? '柱' : '梁';
+    const pos = el.kind === 'col' ? `x/h=${S.probe.xRatio.toFixed(2)}` : `x/L=${S.probe.xRatio.toFixed(2)}`;
+    infoEl.innerHTML = `<b>${where} ${pos}</b> · N=${N.toFixed(1)} kN · M=${M.toFixed(1)} kN·m`;
+  }
+}
+
+function drawAntiRhoCanvas(model){
+  const renderTo = (id) => {
+  const cv = document.getElementById(id);
+  if(!cv || !cv.offsetParent && id === 'cvAntiRhoFloat') return;
+  const W = cv.clientWidth, H = cv.clientHeight;
+  if(W < 10 || H < 10) return;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+
+  const padL = 42, padR = 14, padT = 16, padB = 28;
+  const plotW = W - padL - padR;
+  const plotH = H - padT - padB;
+  if(plotW < 10 || plotH < 10) return;
+
+  const logMin = -1, logMax = 1;
+  const xOf = rho => {
+    const v = Math.max(0.1, Math.min(10, rho));
+    return padL + (Math.log10(v) - logMin) / (logMax - logMin) * plotW;
+  };
+  const yOf = xr => padT + (1 - Math.max(0, Math.min(1, xr))) * plotH;
+
+  /* 网格 */
+  ctx.strokeStyle = 'rgba(100,116,139,0.4)';
+  ctx.lineWidth = 0.5;
+  for(const v of [0.1, 0.5, 1, 5, 10]){
+    const x = xOf(v);
+    ctx.beginPath(); ctx.moveTo(x, padT); ctx.lineTo(x, padT + plotH); ctx.stroke();
+  }
+  for(const v of [0, 0.25, 0.5, 0.75, 1]){
+    const y = yOf(v);
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL + plotW, y); ctx.stroke();
+  }
+
+  /* 参考线 x/h = 0.5 */
+  ctx.strokeStyle = '#64748b';
+  ctx.setLineDash([3, 3]);
+  ctx.beginPath();
+  ctx.moveTo(padL, yOf(0.5)); ctx.lineTo(padL + plotW, yOf(0.5));
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  /* 轴标签 */
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '9px "JetBrains Mono",ui-monospace,monospace';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  for(const v of [0.1, 1, 10]){
+    ctx.fillText(v.toString(), xOf(v), padT + plotH + 4);
+  }
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    for(const v of [0, 0.5, 1]){
+      ctx.fillText(v.toString(), padL - 4, yOf(v));
+    }
+
+    /* 绘制坐标轴标题 */
+    ctx.fillStyle = '#64748b';
+    ctx.font = 'bold 10px ui-sans-serif,system-ui,sans-serif';
+    // Y轴标题：左上角
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillText('x/h', 6, 4);
+    // X轴标题：右下角
+    ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
+    ctx.fillText('ρ', W - 6, H - 4);
+
+  /* 各柱反弯点 */
+  const NP = 61;
+  const p = model.p;
+  for(const res of model.results){
+    const el = res.el;
+    if(el.kind !== 'col') continue;
+    let found = null;
+    let prevM = momentAt(res, 0);
+    for(let k=1;k<=NP;k++){
+      const x = el.L*k/NP;
+      const M = momentAt(res, x);
+      if((prevM > 0 && M <= 0) || (prevM < 0 && M >= 0)){
+        const xPrev = el.L*(k-1)/NP;
+        const denom = Math.abs(prevM) + Math.abs(M);
+        const xz = denom > 1e-12 ? xPrev + (x - xPrev) * Math.abs(prevM) / denom : xPrev;
+        const xr = xz / el.L;
+        if(xr > 0.05 && xr < 0.95){ found = xr; break; }
+      }
+      prevM = M;
+    }
+    if(found == null) continue;
+    const lev = el.lev;
+    const bayIdx = Math.min(el.col, model.nBay - 1);
+    const rho = model.rho && model.rho[lev-1] ? model.rho[lev-1][bayIdx] : null;
+    if(rho == null || !isFinite(rho)) continue;
+    const px = xOf(rho), py = yOf(found);
+    ctx.fillStyle = '#38bdf8';
+    ctx.beginPath(); ctx.arc(px, py, 3.5, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = '#0f172a'; ctx.lineWidth = 1; ctx.stroke();
+  }
+  }; // end renderTo
+
+  renderTo('cvAntiRho');
+  renderTo('cvAntiRhoFloat');
+}
+
 function run(){
   if(BASE){
     const p0 = BASE.p;
@@ -373,8 +771,12 @@ function run(){
     }
   }
   const _badge = document.getElementById('solveBadge');
-  // 扫掠播放时不显示求解徽章，避免高频闪烁，且此时控制条已有耗时显示
-  if(_badge && !(S.sweep && S.sweep.playing)) _badge.classList.add('on');
+  let _showBadge = false;
+  // 扫掠播放或高频拖拽时不显示求解徽章，避免高频闪烁
+  if(_badge && !(S.sweep && S.sweep.playing) && !(S._lastSliderInput && performance.now() - S._lastSliderInput < 200)) {
+    _badge.classList.add('on');
+    _showBadge = true;
+  }
   try{
     const _solveT0 = performance.now();
     /* 只要有任意一格支撑开启了「仅受拉」，就走非线性迭代；
@@ -444,11 +846,13 @@ function run(){
   }
 
   drawLoadDiagram(document.getElementById('cvLoad'), MODEL);
-  drawInternal(document.getElementById('cvForce'), MODEL);
-  drawDeform(document.getElementById('cvD'), MODEL);
+  if (document.getElementById('cvForce').offsetParent !== null) drawInternal(document.getElementById('cvForce'), MODEL);
+  if (document.getElementById('cvD').offsetParent !== null) drawDeform(document.getElementById('cvD'), MODEL);
   updateReadout(MODEL);
   updateStatusBar(MODEL);
-  if(_badge) requestAnimationFrame(()=> _badge.classList.remove('on'));
+  drawAntiRhoCanvas(MODEL);
+  drawProbeCanvas(MODEL);
+  if(_showBadge && _badge) requestAnimationFrame(()=> _badge.classList.remove('on'));
 }
 
 function updateStatusBar(m){
@@ -462,9 +866,16 @@ function updateStatusBar(m){
   set('ssbDof',   (m.nFree != null ? m.nFree : m.U.length) + ' / ' + m.U.length);
   set('ssbTime',  (m.solveTime||0).toFixed(2) + ' ms');
   const resid = Math.max(Math.abs(m.residX), Math.abs(m.residY));
-  set('ssbResid', resid.toExponential(1));
+  set('ssbResid', isFinite(resid) ? resid.toExponential(1) : 'NaN');
+  
   const statusEl = document.getElementById('ssbStatus');
   if(statusEl){
+    if (!isFinite(resid)) {
+      statusEl.textContent = 'FAIL·NaN';
+      statusEl.classList.remove('ok');
+      statusEl.title = '计算矩阵出现非法值 (NaN)，请检查输入或重置。';
+      return;
+    }
     /* 相对残差：以柱脚反力量级为参考，避免小荷载误报 / 大荷载过严 */
     let refMag = 0;
     for(let c=0;c<m.nCol;c++){
@@ -517,6 +928,9 @@ function applyTopoState(){
   hide('row-P3', S.nLev < 3);
 
   updateSettleColOptions();
+  
+  /* 拓扑变化时，清空探针，防止索引残留导致靶心乱飘 */
+  if (typeof S.probe !== 'undefined') S.probe = { elIndex: null, xRatio: 0.5 };
   
   try{ window.dispatchEvent(new CustomEvent('structura-topo-change')); } catch(e){}
   updateSweepOptions();
@@ -644,6 +1058,7 @@ function isElemHighlighted(el, hl, model){
   if(hl === 'bc' || hl === 'hc') return el.kind === 'col';
   if(hl === 'bb' || hl === 'hb') return el.kind === 'beam';
   if(hl === 'r')                 return el.kind === 'col' && el.col > 0 && el.col < model.nBay;
+  if(hl === 'As' || hl === 'braceI') return el.kind === 'brace';
   if(hl === 'Lc')                return !!el.isCant;
   if(/^L[123]$/.test(hl))        return el.kind === 'beam' && !el.isCant && el.bay === parseInt(hl[1]);
   if(/^h[123]$/.test(hl))        return el.kind === 'col'  && el.lev === parseInt(hl[1]);
@@ -699,6 +1114,7 @@ const fmtMap = {
   betaJ_d: v=>v.toFixed(2),
   mScale: v=>v.toFixed(2), dScale: v=>v.toFixed(0),
   As: v=>v.toFixed(0)+' mm²',
+  braceI: v=>v.toFixed(0)+' mm',
   P1: v=>v.toFixed(0)+' kN', P2: v=>v.toFixed(0)+' kN', P3: v=>v.toFixed(0)+' kN',
   tempAll: v=>v.toFixed(0)+' ℃', tempGrad: v=>v.toFixed(0)+' ℃', tempT0: v=>v.toFixed(0)+' ℃',
   settleDy: v=>v.toFixed(0)+' mm'
@@ -708,8 +1124,8 @@ let hlTimer = null;
 const DRAW_ONLY = new Set(['mScale', 'dScale']);
 function redrawOnly(key){
   if(!MODEL) return;
-  if(key === 'mScale')       drawInternal(document.getElementById('cvForce'), MODEL);
-  else if(key === 'dScale')  drawDeform(document.getElementById('cvD'), MODEL);
+  if(key === 'mScale' || key === 'force') drawInternal(document.getElementById('cvForce'), MODEL);
+  else if(key === 'dScale')               drawDeform(document.getElementById('cvD'), MODEL);
 }
 
 let dragRaf = null;
@@ -736,7 +1152,9 @@ function bindRange(id, key, fmt){
   el.addEventListener('input', ()=>{
     if(S.sweep && S.sweep.playing) sweepStop();
     S._lastSliderInput = performance.now();
-    S[key] = parseFloat(el.value);
+    const v = parseFloat(el.value);
+    if(!isFinite(v)) return;
+    S[key] = v;
     out.textContent = fmt(S[key]);
     updateRangeProgress(el);
     syncMirror(id, key, S[key], fmt);
@@ -753,11 +1171,8 @@ function bindRange(id, key, fmt){
       run();
     }, 500);
 
-    if(dragRaf) return;
-    dragRaf = requestAnimationFrame(()=>{
-      dragRaf = null;
-      run();
-    });
+    // 移除全局 dragRaf 的抢占，改用防抖/节流或直接同步渲染
+    if(typeof scheduleRender === 'function') scheduleRender(); else run();
   });
   S[key] = parseFloat(el.value);
   out.textContent = fmt(S[key]);
@@ -791,6 +1206,7 @@ bindRange('dScale','dScale', v=>v.toFixed(0));
 bindRange('betaF_d','betaF', v=>v.toFixed(2));
 bindRange('betaJ_d','betaJ', v=>v.toFixed(2));
 bindRange('As','As', v=>v.toFixed(0)+' mm²');
+bindRange('braceI','braceI', v=>v.toFixed(0)+' mm');
 bindRange('settleDy','settleDy', v=>v.toFixed(0)+' mm');
 
 /* =====================================================================
@@ -812,9 +1228,12 @@ bindRange('settleDy','settleDy', v=>v.toFixed(0)+' mm');
     </div>`;
   }
   
-  // 插入到“右侧悬挑均布”组的前面
-  const targetGroup = [...document.querySelectorAll('.tabPanel[data-tab="load"] .group')].find(g => g.querySelector('.gtitle') && g.querySelector('.gtitle').textContent.includes('右侧悬挑均布'));
-  if(targetGroup) targetGroup.insertAdjacentHTML('beforebegin', html);
+  // 插入到“竖向荷载” details 的 groupContent 内部，放在悬挑前面的位置
+  const vertDetails = document.getElementById('details-load-vert');
+  if(vertDetails) {
+    const targetGroup = [...vertDetails.querySelectorAll('.group')].find(g => g.querySelector('.gtitle') && g.querySelector('.gtitle').textContent.includes('右侧悬挑均布'));
+    if(targetGroup) targetGroup.insertAdjacentHTML('beforebegin', html);
+  }
 })();
 
 /* 动态注入温度荷载 UI */
@@ -840,14 +1259,19 @@ bindRange('settleDy','settleDy', v=>v.toFixed(0)+' mm');
       <div class="hint">整体温升使框架产生轴力重分布；结构内外温差仅作用于边柱及顶层边梁（产生弯曲）。内部构件及悬挑梁不受截面温差影响。</div>
     </div>`;
   
-  // 插入到「荷载」Tab 的最底部（即“支座沉降”组之后），符合从“荷载”到“非荷载作用”的工程习惯
-  const loadPanel = document.querySelector('.tabPanel[data-tab="load"]');
-  if(loadPanel) {
-    loadPanel.insertAdjacentHTML('beforeend', html);
+  // 插入到新建的“非荷载作用”面板中
+  const otherDetails = document.getElementById('details-load-other');
+  if(otherDetails) {
+    const content = otherDetails.querySelector('.groupContent');
+    if(content) content.insertAdjacentHTML('afterbegin', html); // 插到占位 div 前面
     
-    // 顺带把原有的“二阶效应”组也移动到最后（放在温度下方）
-    const pDeltaGroup = [...loadPanel.querySelectorAll('.group')].find(g => g.querySelector('.gtitle') && g.querySelector('.gtitle').textContent.includes('二阶效应'));
-    if (pDeltaGroup) loadPanel.appendChild(pDeltaGroup);
+    // 把原有的“二阶效应”移动到“水平力与二阶”面板里
+    const pDeltaGroup = [...document.querySelectorAll('.tabPanel[data-tab="load"] .group')].find(g => g.querySelector('.gtitle') && g.querySelector('.gtitle').textContent.includes('二阶效应'));
+    const horzDetails = document.getElementById('details-load-horz');
+    if (pDeltaGroup && horzDetails) {
+      const horzContent = horzDetails.querySelector('.groupContent');
+      if(horzContent) horzContent.appendChild(pDeltaGroup);
+    }
   }
   
   const bindT = (id, fmt) => {
@@ -857,7 +1281,9 @@ bindRange('settleDy','settleDy', v=>v.toFixed(0)+' mm');
     updateRangeProgress(el);
     el.addEventListener('input', ()=>{
       if(S.sweep && S.sweep.playing) sweepStop();
-      S[id] = parseFloat(el.value);
+      const v = parseFloat(el.value);
+      if(!isFinite(v)) return;
+      S[id] = v;
       out.textContent = fmt(S[id]);
       updateRangeProgress(el);
       if(dragRaf) return;
@@ -880,7 +1306,9 @@ bindRange('settleDy','settleDy', v=>v.toFixed(0)+' mm');
     
     el.addEventListener('input', ()=>{
       if(S.sweep && S.sweep.playing) sweepStop();
-      S['P'+lv] = parseFloat(el.value);
+      const v = parseFloat(el.value);
+      if(!isFinite(v)) return;
+      S['P'+lv] = v;
       out.textContent = S['P'+lv].toFixed(0) + ' kN';
       updateRangeProgress(el);
       
@@ -1158,7 +1586,10 @@ function renderSpanEditors(onlyLev){
     }
     if(typeof renderBraceGrid === 'function') renderBraceGrid();
     refreshBtn();
-    run();
+    // 先让按钮状态刷到屏幕上，再异步求解，避免求解耗时期间按钮文字还没变
+    requestAnimationFrame(() => {
+      try { run(); } catch(e) { console.error('[braceTension]', e); }
+    });
   });
 
   refreshBtn();

@@ -20,6 +20,34 @@ function internalAt(res, x, type){
   return momentAt(res, x);
 }
 
+/* 截面正应力：σ(x) = N/A ± M/W。返回 [左边缘, 右边缘]，单位 kPa。
+   柱：A = bc·hc，W = bc·hc²/6；梁：A = bb·hb，W = bb·hb²/6；
+   支撑只有 N/As，两端同值。
+   符号：拉为正；M 按 momentAt 的符号，左边缘取 -M/W，右边缘取 +M/W。 */
+function stressAt(res, x, p){
+  const el = res.el;
+  const N = axialAt(res, x);
+  const M = momentAt(res, x);
+  if(el.kind === 'brace'){
+    const As = (p.As || 2000) / 1e6;
+    const s = N / As;
+    return [s, s];
+  }
+  let A, W;
+  if(el.kind === 'col'){
+    const bcM = p.bc / 1000, hcM = p.hc / 1000;
+    A = bcM * hcM;
+    W = bcM * hcM * hcM / 6;
+  } else {
+    const bbM = p.bb / 1000, hbM = p.hb / 1000;
+    A = bbM * hbM;
+    W = bbM * hbM * hbM / 6;
+  }
+  const sAxial = N / A;
+  const sBend = M / W;
+  return [sAxial - sBend, sAxial + sBend];
+}
+
 /* 单元内部任意点的位移。
    当前实现：Hermite 形函数（端点位移 + 端点转角，由整体求解精确给出）
    + 均布荷载固端特解附加项。端点处位移/转角严格等于求解值，
@@ -55,10 +83,11 @@ function elemDisp(res, x){
   
   let vly = N1*vi + N2*ti + N3*vj + N4*tj;
 
-  // 附加挠度：两端固定梁在均布荷载下的特解。
-  // 悬挑梁（一端自由）的端点位移/转角已由整体求解精确给出，
-  // Hermite 插值端点精确，中间段误差可接受，不再叠加这个不成立的固端项。
-  if (w !== 0 && !el.isCant) {
+  // 附加挠度：满足 f(0)=f'(0)=f(L)=f'(L)=0 的特解，修正中间段挠曲。
+  // 对两端固定梁与悬挑梁形式相同：v_add = w·x²(L-x)²/(24EI)。
+  // 悬挑梁 j 端位移/转角由整体求解精确给出，Hermite 端点精确，
+  // 此处补上剩余部分，避免中间段挠度显示偏差。
+  if (w !== 0) {
     vly += (w * x*x * (L-x)*(L-x)) / (24 * EI);
   }
   /* 温度梯度特解：截面内外温差使杆产生均匀曲率 κ = α·ΔT/h，

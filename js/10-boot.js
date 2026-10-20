@@ -57,6 +57,12 @@ const SELF_TEST_CASES = [
     state: { nBay: 2, nLev: 2, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 400, hc: 400, bb: 250, hb: 500, r: 1, q1: 20, q2: 20, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 0, H2: 0, H3: 0, Hmode: 'none', betaF: 1, betaJ: 1, forceType: 'M', elFilter: 'all', showVals: true, showIds: false, showPDelta: false, displayMode: 'force', mScale: 5, dScale: 30 }
   },
   {
+    id: 'anti-rho',
+    sweep: 'hb',
+    state: { nBay: 2, nLev: 2, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 400, hc: 400, bb: 250, hb: 150, r: 1, q1: 0, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 30, H2: 30, H3: 0, Hmode: 'none', betaF: 1, betaJ: 1, forceType: 'M', elFilter: 'all', showVals: false, showIds: false, showPDelta: false, displayMode: 'all', mScale: 1, dScale: 30 },
+    toast: '纯水平力工况下，扫掠梁高 hb 时，请留意「反弯点 x/h vs ρ」小图。随着梁高增加（ρ 变大），梁对柱的转动约束增强，各柱反弯点会非常规整地向虚线 x/h=0.5 靠拢。'
+  },
+  {
     id: 'colbase-hinge',
     sweep: 'betaF',
     state: { nBay: 2, nLev: 2, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 400, hc: 400, bb: 250, hb: 500, r: 1, q1: 0, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 30, H2: 0, H3: 0, Hmode: 'none', betaF: 1, betaJ: 1, forceType: 'M', elFilter: 'all', showVals: true, showIds: false, showPDelta: false, displayMode: 'all', mScale: 10, dScale: 300 }
@@ -194,6 +200,13 @@ const SELF_TEST_CASES = [
     sweep: 'h1',
     state: { nBay: 1, nLev: 2, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 2.5, h2: 6, h3: 4, Lc: 1.5, bc: 250, hc: 250, bb: 250, hb: 500, r: 1, q1: 0, q2: 20, q3: 0, qc1: 0, qc2: 0, qc3: 0, P1:0, P2:0, P3:0, pLoadMap:{}, H1: 3, H2: 3, H3: 0, Hmode: 'none', betaF: 1, betaJ: 0, forceType: 'M', elFilter: 'all', showVals: false, showIds: false, showPDelta: true, displayMode: 'deform', mScale: 1, dScale: 5 }
   },
+  /* ㉕ P-δ vs P-Δ 概念卡（静态，无数值） */
+  {
+    id: 'pdelta-vs-pdelta',
+    sweep: null,
+    state: { nBay: 1, nLev: 2, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 6, h2: 6, h3: 4, Lc: 1.5, bc: 250, hc: 250, bb: 250, hb: 500, r: 1, q1: 0, q2: 50, q3: 0, qc1: 0, qc2: 0, qc3: 0, P1:0, P2:0, P3:0, pLoadMap:{}, H1: 3, H2: 3, H3: 0, Hmode: 'none', betaF: 1, betaJ: 0, forceType: 'M', elFilter: 'all', showVals: false, showIds: false, showPDelta: true, displayMode: 'deform', mScale: 1, dScale: 5 },
+    toast: '本工具只计算 P-Δ（结构侧移引起），不计算 P-δ（构件自身挠曲）。P-δ 在高轴压比细长柱中才显著；若需精确二阶分析，应使用带几何刚度的专用软件。'
+  },
   {
     id: 'p-moment',
     sweep: 'P1',
@@ -224,7 +237,7 @@ function showToast(msg, duration){
   t.textContent = msg;
   t.classList.add('on');
   clearTimeout(t._timer);
-  t._timer = setTimeout(()=>t.classList.remove('on'), duration || 5000);
+  t._timer = setTimeout(()=>t.classList.remove('on'), duration || 10000);
 }
 
 /* 把当前 MODEL 冻结为对比基线，统一处理深拷贝与按钮状态，
@@ -256,6 +269,10 @@ function runSelfTest(caseId){
 
   /* 2. 停止可能正在播放的扫掠 */
   if(S.sweep.playing) sweepStop();
+
+  /* 2.0 自动关闭可能残留的浮窗 */
+  const floatAnti = document.getElementById('floatAntiRhoWrap');
+  if(floatAnti) floatAnti.hidden = true;
 
   /* 2.1 清空用户此前手动冻结的基线，避免同拓扑自检场景带着无关灰线 */
   BASE = null;
@@ -313,10 +330,46 @@ function runSelfTest(caseId){
   /* 3. 应用预设状态 */
   if(!applyStateFromObj(tc.state)) return;
 
+  /* 3.1 自动导航：打开对应的 Tab 和折叠面板 */
+  const isModelParam = ['L1','L2','L3','h1','h2','h3','Lc','bc','hc','bb','hb','r','As','braceI'].includes(tc.sweep);
+  const isLoadParam  = ['q1','q2','q3','qc1','qc2','qc3','H1','H2','H3','P1','P2','P3','tempAll','tempGrad','settleDy','betaF','betaJ'].includes(tc.sweep);
+  
+  const openDetails = (id) => { const el = document.getElementById(id); if(el) el.open = true; };
+
+  if (isModelParam) {
+    const btn = document.querySelector('#tabBar button[data-tab="model"]');
+    if(btn) btn.click();
+    if (tc.sweep === 'As' || tc.sweep === 'braceI') openDetails('details-model-brace');
+    else if (tc.sweep === 'bc' || tc.sweep === 'hc' || tc.sweep === 'bb' || tc.sweep === 'hb' || tc.sweep === 'r') openDetails('details-model-mat');
+    else openDetails('details-model-topo');
+  } else if (isLoadParam) {
+    const btn = document.querySelector('#tabBar button[data-tab="load"]');
+    if(btn) btn.click();
+    if (['tempAll','tempGrad','settleDy'].includes(tc.sweep)) openDetails('details-load-other');
+    else if (['H1','H2','H3'].includes(tc.sweep)) openDetails('details-load-horz');
+    else openDetails('details-load-vert');
+  }
+
   /* 3.5 freezeAfter：本次加载后立即冻结（㉔a 使用） */
   if(tc.freezeAfter){
     _freezeCurrentModel();
     run();   // 让虚线基线立即出现
+  }
+
+  /* 3.55 针对反弯点自检卡，自动弹出悬浮窗并放置在弯矩图左侧 */
+  if(tc.id === 'anti-rho'){
+    requestAnimationFrame(() => {
+      const chartForce = document.getElementById('chartForce');
+      if(chartForce) {
+        const rect = chartForce.getBoundingClientRect();
+        // 放在弯矩图左侧（减去浮窗宽度 280 和一点间距）
+        const targetX = Math.max(20, rect.left - 290);
+        const targetY = Math.max(80, rect.top + 10);
+        if(typeof window.openAntiRhoFloat === 'function') {
+          window.openAntiRhoFloat(targetX, targetY);
+        }
+      }
+    });
   }
 
   /* 3.6 静态卡片：不打开扫掠条、不播放，只弹 toast 提示观察要点 */
@@ -405,7 +458,32 @@ function runSelfTest(caseId){
     };
 
     addNewCard('A. 弯矩与刚度', `<div class="selfTestCard" data-selftest="p-moment"><div class="stcTitle">集中力弯矩尖角</div><div class="stcDesc">单层单跨 · 跨中集中力。扫掠 P₁ (0→200)，观察集中力作用点处弯矩图的"尖角"，以及跨中正弯矩的线性增长。</div><span class="stcAction">▶ 播放</span></div>`);
+    addNewCard('A. 弯矩与刚度', `<div class="selfTestCard" data-selftest="anti-rho"><div class="stcTitle">反弯点 vs ρ 联动</div><div class="stcDesc">两层两跨 · 纯水平力。扫掠梁高 h<sub>b</sub>，注意看「反弯点 x/h vs ρ」小图（可点击⤢浮动拖到图旁）。梁高增加使梁线刚度上升，各柱反弯点逐渐向 x/h=0.5 靠拢。</div><span class="stcAction">▶ 播放</span></div>`);
     addNewCard('D. 水平力与二阶', `<div class="selfTestCard" data-selftest="pdelta-h1"><div class="stcTitle">P-Δ 层高敏感性</div><div class="stcDesc">两层单跨 · 柔性框架 · 开启P-Δ。扫掠一层的 h₁ (2.5→7)，看层高增加时 N_cr 平方级下降，导致 B 值急剧放大并逼近失稳。</div><span class="stcAction">▶ 播放</span></div>`);
+    addNewCard('D. 水平力与二阶', `<div class="selfTestCard" data-selftest="pdelta-vs-pdelta">
+      <div class="stcTitle">P-δ 与 P-Δ 的区别</div>
+      <div class="stcDesc">本工具只计算 P-Δ（结构侧移引起的二阶效应），不计算 P-δ（构件自身挠曲）。
+      <svg viewBox="0 0 240 120" style="width:100%;height:auto;margin:6px 0;background:#0f172a;border-radius:4px;display:block;">
+        <text x="60" y="12" fill="#94a3b8" font-size="9" text-anchor="middle">P-Δ</text>
+        <line x1="20" y1="100" x2="100" y2="100" stroke="#475569" stroke-width="2"/>
+        <line x1="20" y1="100" x2="20" y2="30" stroke="#475569" stroke-width="1.5" stroke-dasharray="2,2"/>
+        <line x1="100" y1="100" x2="100" y2="30" stroke="#475569" stroke-width="1.5" stroke-dasharray="2,2"/>
+        <line x1="20" y1="100" x2="35" y2="30" stroke="#38bdf8" stroke-width="2"/>
+        <line x1="100" y1="100" x2="115" y2="30" stroke="#38bdf8" stroke-width="2"/>
+        <line x1="35" y1="30" x2="115" y2="30" stroke="#38bdf8" stroke-width="2"/>
+        <text x="125" y="40" fill="#f87171" font-size="8">δ_top</text>
+        <text x="180" y="12" fill="#94a3b8" font-size="9" text-anchor="middle">P-δ</text>
+        <line x1="140" y1="100" x2="220" y2="100" stroke="#475569" stroke-width="2"/>
+        <line x1="140" y1="100" x2="140" y2="30" stroke="#475569" stroke-width="1.5" stroke-dasharray="2,2"/>
+        <line x1="220" y1="100" x2="220" y2="30" stroke="#475569" stroke-width="1.5" stroke-dasharray="2,2"/>
+        <path d="M 140 100 Q 155 65 140 30" stroke="#38bdf8" stroke-width="2" fill="none"/>
+        <path d="M 220 100 Q 235 65 220 30" stroke="#38bdf8" stroke-width="2" fill="none"/>
+        <line x1="140" y1="30" x2="220" y2="30" stroke="#38bdf8" stroke-width="2"/>
+        <text x="160" y="70" fill="#fbbf24" font-size="8">δ_local</text>
+      </svg>
+      P-Δ：整体侧移，节点位移放大；P-δ：柱中部挠曲，构件局部放大。</div>
+      <span class="stcAction">▶ 加载</span>
+    </div>`);
     addNewCard('F. 非荷载作用', `<div class="selfTestCard" data-selftest="temp-axial"><div class="stcTitle">均匀升温的轴力</div><div class="stcDesc">单层两跨 · 无外荷载。扫掠均匀升温 ΔT (0→50℃)，看超静定框架因膨胀受阻产生的内部轴力。</div><span class="stcAction">▶ 播放</span></div>`);
     addNewCard('F. 非荷载作用', `<div class="selfTestCard" data-selftest="temp-grad"><div class="stcTitle">单侧温差的反弯点</div><div class="stcDesc">单层两跨 · 无外荷载。扫掠截面温差 ΔT，看梁柱因温度梯度产生弯曲，及框架侧移带来的二阶附加内力。</div><span class="stcAction">▶ 播放</span></div>`);
 
@@ -433,6 +511,38 @@ function runSelfTest(caseId){
   document.querySelectorAll('.selfTestCard[data-selftest]').forEach(card=>{
     card.addEventListener('click', ()=>{
       runSelfTest(card.dataset.selftest);
+    });
+  });
+})();
+
+/* =====================================================================
+   折叠面板状态记忆
+   ===================================================================== */
+(function bindDetailsMemory(){
+  const detailsEls = document.querySelectorAll('.tabDetails');
+  if(!detailsEls.length) return;
+  
+  let savedState = {};
+  try {
+    savedState = JSON.parse(localStorage.getItem('structura-details-state') || '{}');
+  } catch(e) {}
+  
+  // 恢复状态
+  detailsEls.forEach(el => {
+    if (el.id && typeof savedState[el.id] === 'boolean') {
+      el.open = savedState[el.id];
+    }
+  });
+
+  // 监听变化并保存
+  detailsEls.forEach(el => {
+    el.addEventListener('toggle', () => {
+      if(el.id) {
+        savedState[el.id] = el.open;
+        try {
+          localStorage.setItem('structura-details-state', JSON.stringify(savedState));
+        } catch(e) {}
+      }
     });
   });
 })();

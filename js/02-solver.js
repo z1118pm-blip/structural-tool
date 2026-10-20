@@ -168,6 +168,12 @@ function localEqLoad(el, p){
         realEA = E_frame_real * Ac * kc;
       } else {
         realEA = E_frame_real * Ab;
+        // 修复：如果该梁是集中力打断的子单元，其轴力刚度应取原梁的长度比例
+        // 否则打断点两端的固端力会把原总温升力翻倍
+        const trueL = p['L' + (el.bay || 1)];
+        if (trueL && el.L < trueL - 1e-4) {
+          realEA = realEA * (el.L / trueL); 
+        }
       }
       pFeN = -realEA * alpha * tempAll;
     }
@@ -323,6 +329,7 @@ function analyze(p, opts = {}){
   if(p.betaJ < BETA_FIXED){
     if(p.betaJ <= BETA_HINGE){
       beamHinge = true;
+      alphaJ = Infinity; // 显式标记为无穷大，虽然 hinge 分支已拦截，但这能防止其他地方误用
     } else {
       alphaJ = (1 - p.betaJ) / (4 * p.betaJ);
     }
@@ -693,16 +700,18 @@ for(let i=0;i<ndof;i++) if(!fixedR.has(i) && reduce[i] === i) free.push(i);
     const d=[el.i*3, el.i*3+1, el.i*3+2, el.j*3, el.j*3+1, el.j*3+2];
     const ug=new Float64Array(6);
     for(let a=0;a<6;a++) ug[a]=U[d[a]];
-    /* 失效支撑：轴力按 0 输出，避免下一轮迭代反复抖动 */
-    if(el.kind === 'brace' && inactiveBraces.has(el.braceUid)){
-      return {el, f:new Float64Array(6), ug};
-    }
     const ul = matVec(Tmat(el), ug);
     const ku = matVec(localK(el), ul);
     const pl = localEqLoad(el, p);
     const f  = new Float64Array(6);
     for(let a=0;a<6;a++) f[a]=ku[a]-pl[a];
-    return {el, f, ug};
+    
+    // 即使是失效支撑，也计算其真实虚拟内力供迭代判定
+    let forceToReturn = f;
+    if(el.kind === 'brace' && inactiveBraces.has(el.braceUid)){
+      forceToReturn = new Float64Array(6); // 界面显示用 0
+    }
+    return {el, f: forceToReturn, ug, _real_f: f};
   });
 
   /* ---- 反力 ---- */
@@ -761,6 +770,7 @@ function analyzeTensionOnly(p) {
   let converged = false;
   const hasTemp = Math.abs(p.tempAll || 0) > 1e-6 || Math.abs(p.tempGrad || 0) > 1e-6;
 
+  const seenFingerprints = new Set();
   for(let iter=0; iter<15; iter++) {
     try {
       m = analyze(p, { inactiveBraces });
@@ -774,16 +784,32 @@ function analyzeTensionOnly(p) {
       throw err;
     }
     let changed = false;
+    let nextInactiveBraces = new Set();
+    
     for(const res of m.results) {
       if(res.el.kind === 'brace' && res.el.tensionOnly) {
         const key = res.el.braceUid;
-        const axialN = -res.f[0];
-        if(!inactiveBraces.has(key) && axialN < -1e-4) {
-          inactiveBraces.add(key);
-          changed = true;
+        const axialN = -res._real_f[0]; // 用真实受力判断
+        
+        if(axialN < -1e-4) {
+          nextInactiveBraces.add(key);
+          if(!inactiveBraces.has(key)) changed = true;
+        } else {
+          if(inactiveBraces.has(key)) changed = true; // 重新受拉，被激活
         }
       }
     }
+    
+    // 振荡检测：若新失效集与历史某次完全相同，说明在两点间反复横跳。
+    // 继续迭代只会重复相同解，直接退出，避免跑满 15 次卡住主线程。
+    const fp = [...nextInactiveBraces].sort().join('|');
+    if(seenFingerprints.has(fp)){
+      inactiveBraces = nextInactiveBraces;
+      break;
+    }
+    seenFingerprints.add(fp);
+    
+    inactiveBraces = nextInactiveBraces;
     if(!changed){ converged = true; break; }
   }
   if(m) m.tensionConverged = converged;

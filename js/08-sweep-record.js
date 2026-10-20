@@ -52,6 +52,31 @@ function sweepSetValue(key, v){
   if(progOut && fmtMap[key]) {
     progOut.textContent = fmtMap[key](v);
   }
+
+  // 自动感知：扫掠时如果包含该参数的面板被折叠，自动展开
+  if(S.sweep.playing) {
+    const isModelParam = ['L1','L2','L3','h1','h2','h3','Lc','bc','hc','bb','hb','r','As','braceI'].includes(key);
+    const isLoadParam  = ['q1','q2','q3','qc1','qc2','qc3','H1','H2','H3','P1','P2','P3','tempAll','tempGrad','settleDy','betaF','betaJ'].includes(key);
+    
+    const openDetails = (id) => { 
+      const el = document.getElementById(id); 
+      if(el && !el.open) el.open = true; 
+    };
+
+    if (isModelParam) {
+      const tabBtn = document.querySelector('#tabBar button[data-tab="model"]');
+      if(tabBtn && !tabBtn.classList.contains('on')) tabBtn.click();
+      if (key === 'As' || key === 'braceI') openDetails('details-model-brace');
+      else if (['bc','hc','bb','hb','r'].includes(key)) openDetails('details-model-mat');
+      else openDetails('details-model-topo');
+    } else if (isLoadParam) {
+      const tabBtn = document.querySelector('#tabBar button[data-tab="load"]');
+      if(tabBtn && !tabBtn.classList.contains('on')) tabBtn.click();
+      if (['tempAll','tempGrad','settleDy'].includes(key)) openDetails('details-load-other');
+      else if (['H1','H2','H3'].includes(key)) openDetails('details-load-horz');
+      else openDetails('details-load-vert');
+    }
+  }
 }
 
 function sweepStop(){
@@ -80,6 +105,12 @@ function sweepReset(){
 
 function sweepPlay(loop){
   if(S.sweep.playing) return; // 防重入：如果已在播放，直接忽略
+  
+  // 修复：如果在延迟启动的间隙用户关闭了扫掠条，拒绝启动
+  const bar = document.getElementById('sweepBar');
+  if(bar && !bar.classList.contains('on')) return;
+
+  S.probe = { elIndex: null, xRatio: 0.5 }; // 扫掠开始时清空探针，防止索引失效
   const key = S.sweep.param;
   const el  = document.getElementById(key);
   if(!el) return;
@@ -249,11 +280,12 @@ function setSweepLocked(locked){
     });
   }
   // 底栏按钮（保留 btnSweepRec 可点，它是取消录制入口）
+  // 注意：btn-tip 已经移到顶部，这里一并禁用
   for(const id of ['btn-reset','btn-help','btn-share','btn-tip']){
     const el = document.getElementById(id);
     if(el) el.disabled = locked;
   }
-  // 游戏侧边按钮是 <a>，无 disabled 属性，用类切换视觉禁用；实际拦截在 click 监听里
+  // 游戏入口是 <a>，无 disabled 属性，用类切换视觉禁用
   const gameBtn = document.getElementById('gameSideBtn');
   if(gameBtn) gameBtn.classList.toggle('is-locked', locked);
   // 右侧 chartBar 内所有 slider（拖动会触发 sweepStop 中断录制）
@@ -428,8 +460,23 @@ function stopRecording(){
 
 (function bindRec(){
   const btn = document.getElementById('btnSweepRec');
-  const sel = document.getElementById('sweepRecScope');
-  if(sel) S.rec.scope = sel.value;
+  const seg = document.getElementById('sweepRecScope');
+  
+  if(seg) {
+    const btns = seg.querySelectorAll('button');
+    // 初始化
+    const active = seg.querySelector('.on');
+    if(active) S.rec.scope = active.dataset.scope;
+    
+    // 监听按钮切换
+    btns.forEach(b => {
+      b.addEventListener('click', () => {
+        btns.forEach(x => x.classList.remove('on'));
+        b.classList.add('on');
+        S.rec.scope = b.dataset.scope;
+      });
+    });
+  }
+  
   if(btn) btn.addEventListener('click', startRecording);
-  if(sel) sel.addEventListener('change', ()=>{ S.rec.scope = sel.value; });
 })();
