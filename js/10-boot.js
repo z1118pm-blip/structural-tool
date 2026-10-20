@@ -336,21 +336,19 @@ function runSelfTest(caseId){
   /* 3. 应用预设状态 */
   if(!applyStateFromObj(tc.state)) return;
 
-  /* 3.1 自动导航：打开对应的 Tab 和折叠面板 */
+  /* 3.1 静默展开对应的折叠面板（不切换 Tab，用户希望停留在「自检」Tab）
+     说明：原先这里会 tabBtn.click() 强制切到「模型 / 荷载」Tab，用户反馈体验不好。
+     现在只把 <details> 打开（open=true），切 Tab 时面板已经是展开的。 */
   const isModelParam = ['L1','L2','L3','h1','h2','h3','Lc','bc','hc','bb','hb','r','As','braceI'].includes(tc.sweep);
   const isLoadParam  = ['q1','q2','q3','qc1','qc2','qc3','H1','H2','H3','P1','P2','P3','tempAll','tempGrad','settleDy','betaF','betaJ'].includes(tc.sweep);
-  
+
   const openDetails = (id) => { const el = document.getElementById(id); if(el) el.open = true; };
 
   if (isModelParam) {
-    const btn = document.querySelector('#tabBar button[data-tab="model"]');
-    if(btn) btn.click();
     if (tc.sweep === 'As' || tc.sweep === 'braceI') openDetails('details-model-brace');
     else if (tc.sweep === 'bc' || tc.sweep === 'hc' || tc.sweep === 'bb' || tc.sweep === 'hb' || tc.sweep === 'r') openDetails('details-model-mat');
     else openDetails('details-model-topo');
   } else if (isLoadParam) {
-    const btn = document.querySelector('#tabBar button[data-tab="load"]');
-    if(btn) btn.click();
     if (['tempAll','tempGrad','settleDy'].includes(tc.sweep)) openDetails('details-load-other');
     else if (['H1','H2','H3'].includes(tc.sweep)) openDetails('details-load-horz');
     else openDetails('details-load-vert');

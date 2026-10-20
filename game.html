@@ -215,7 +215,9 @@
   let PADDLE_W = 110, PADDLE_H = 14;
   let PADDLE_Y = H - 50;
   let BALL_R = 8; 
-  let BASE_SPEED = 380;
+  let BASE_SPEED = 280;
+  const MAX_SPEED = 750;
+  const SPEED_INCREASE_RATE = 0.02;
   let PADDLE_SPEED = 720;
   const MAX_BOUNCE_ANGLE = Math.PI / 3;
   const MIN_VY_RATIO = Math.sin(Math.PI / 12);
@@ -327,6 +329,7 @@
     bricks: [], particles: [], rings: [], floaters: [], trail: [],
     paddle: { x: W / 2, targetX: W / 2, control: 'pointer', squash: 0, w: PADDLE_W },
     ball:   { x: W / 2, y: PADDLE_Y - BALL_R - 2, vx: 0, vy: 0, stuck: true, held: false },
+    speedMultiplier: 1.0,
     extraBalls: [],
     powerups: [],
     bullets: [],
@@ -335,6 +338,7 @@
     keys: {},
     combo: 0,
     shake: 0,
+    hitStop: 0,
     stuckSamples: [],
     soundOn: true,
     musicOn: true,
@@ -350,42 +354,44 @@
   const comboNumEl = document.getElementById('comboNum');
 
   /* ===================== 赛博旁白台词库 ===================== */
+  /* 四川话版赛博旁白。用词取向：成都/重庆口语，避免生僻方言字，
+     保证非川渝玩家也能看懂语气，川渝玩家会心一笑。 */
   const TAUNTS = {
     combo: [
       '噢哟，你好凶哦！',
-      '手速不错嘛，继续保持。',
-      '这波连击有点东西。',
-      '挡板都跟不上你的节奏了。',
-      '再猛一点，砖块顶不住了。'
+      '手速要得，接到整！',
+      '这波连击，巴适得板！',
+      '挡板都跟不上你咯，莫慌。',
+      '再雄起点嘛，砖块要遭你打穿咯！'
     ],
     lose: [
-      '球掉了，人也掉了。',
-      '这球我帮你接不住。',
-      '再来一次吧，别气馁。',
-      '手滑？还是心滑？'
+      '球都掉咯，人也梭咯。',
+      '这球我帮你接到都难哦。',
+      '再来一盘嘛，莫怄气。',
+      '手滑咯？还是心滑咯嘛？'
     ],
     lowLife: [
-      '只剩一条命了，稳住。',
-      '深呼吸，手别抖。',
-      '最后一条命，拿出真本事。'
+      '只剩一条命咯，稳到起哦。',
+      '深呼吸，手莫抖嘛。',
+      '最后一条命咯，把真功夫拿出来！'
     ],
     bad: [
-      '啊，吃了个坏的。',
-      '运气不太好呢。',
-      '这就是贪吃的代价。',
-      '这口吃得不太划算。'
+      '哦豁，吃了个撇火药。',
+      '今天运气有点撇哦。',
+      '贪吃要遭嘛，记到起。',
+      '这口吃得有点划不着哈。'
     ],
     hard: [
-      '三血硬砖，被你磨穿了。',
-      '这砖有点硬，不过你更硬。',
-      '装甲都挡不住你。'
+      '三血硬砖，都遭你磨穿咯！',
+      '这砖硬是有点硬，不过你更凶！',
+      '装甲都挡不住你，巴适！'
     ],
     boss: [
-      '你看看你后面是哪个？',
-      '领导在你后面看你耍。',
-      '摸鱼可以，别被看见。',
-      '工位摄像头还亮着呢。',
-      '这局打完记得切回工作。'
+      '你看哈你后头是哪个嘛？',
+      '领导在你后头看你耍哦。',
+      '摸鱼可以，莫遭逮到咯。',
+      '工位摄像头还亮起的哦，记到起。',
+      '这盘打完记到切回工作哈。'
     ]
   };
 
@@ -420,6 +426,7 @@
   }
   function tone(freq, dur, type, vol){
     if(!G.soundOn) return;
+    if(G.volume === 0) return; // 新增：音量为 0 时直接跳过音频合成，节省 CPU
     const ac = ensureAudio();
     if(!ac) return;
     try {
@@ -471,7 +478,7 @@
   }
   function sfxPowerup(){
     tone(880, 0.06, 'sine', 0.06);
-    setTimeout(()=>tone(1100, 0.08, 'sine', 0.05), 60);
+    scheduleTone(1100, 0.08, 'sine', 0.05, 60);
   }
 
   /* ===================== 背景音乐 ===================== */
@@ -632,14 +639,24 @@
     PADDLE_W = 110 * s;
     PADDLE_H = 14 * s;
     PADDLE_Y = H - 50 * s;
-    BASE_SPEED = 380 * s;
+    BASE_SPEED = 280 * s;
     PADDLE_SPEED = 720 * s;
     BRICK_MARGIN_X = Math.max(WALL + 2, 40 * s);
     BRICK_MARGIN_TOP = 90 * s;
     BRICK_H = 24 * s;
     BRICK_GAP = 8 * s;
     /* 极端窄屏下加下限保护，避免 BRICK_W 为负导致砖块重叠 */
-    BRICK_W = Math.max(6 * s, (W - BRICK_MARGIN_X * 2 - BRICK_GAP * (BRICK_COLS - 1)) / BRICK_COLS);
+    const rawBrickW = (W - BRICK_MARGIN_X * 2 - BRICK_GAP * (BRICK_COLS - 1)) / BRICK_COLS;
+    BRICK_W = Math.max(6 * s, rawBrickW);
+    if(BRICK_W > rawBrickW && BRICK_COLS > 1){
+      /* 极窄屏：砖块触底后压缩间距与左右边距，保证整行不溢出画布 */
+      const avail = W - 2 * WALL;
+      const minTotal = BRICK_W * BRICK_COLS;
+      const gapTotal = Math.max(0, avail - minTotal);
+      BRICK_GAP = Math.min(BRICK_GAP, gapTotal / (BRICK_COLS - 1));
+      const marginTotal = Math.max(0, avail - minTotal - BRICK_GAP * (BRICK_COLS - 1));
+      BRICK_MARGIN_X = Math.max(WALL, marginTotal / 2);
+    }
     
     // 如果宽高发生改变，无缝按比例迁移当前物体位置
     if (oldW > 0 && oldH > 0 && (oldW !== W || oldH !== H)) {
@@ -654,24 +671,23 @@
       
       if (ratioChanged) {
         // 强行将存活砖块按新的网格重新排布
-        const s = W / 800;
-        const topOffset = BRICK_MARGIN_TOP;
         for (const b of G.bricks) {
-          // 基于旧坐标反推行列（利用旧的 W 和 BRICK_W）
-          const oldS = oldW / 800;
-          const oldBrickW = Math.max(6 * oldS, (oldW - Math.max(20 * oldS + 2, 40 * oldS) * 2 - 8 * oldS * (BRICK_COLS - 1)) / BRICK_COLS);
-          const oldBrickH = 24 * oldS;
-          const oldGap = 8 * oldS;
-          const oldMarginX = Math.max(20 * oldS + 2, 40 * oldS);
-          const oldMarginTop = 90 * oldS;
-          
-          const col = Math.round((b.x - oldMarginX) / (oldBrickW + oldGap));
-          const row = Math.round((b.y - oldMarginTop) / (oldBrickH + oldGap));
-          
-          // 映射到新尺寸
-          b.x = BRICK_MARGIN_X + col * (BRICK_W + BRICK_GAP);
-          b.y = marginTop + row * (BRICK_H + BRICK_GAP); // 注意此处的 marginTop 是 buildBricks 内部逻辑，外部不好拿，干脆按 BRICK_MARGIN_TOP 算
-          b.y = BRICK_MARGIN_TOP + row * (BRICK_H + BRICK_GAP); // 简化处理
+          /* 直接读建关时保存的网格坐标，避免用固定 90*oldS 反推导致矮窗口错位 */
+          const col = (b.gridCol != null) ? b.gridCol : 0;
+          const row = (b.gridRow != null) ? b.gridRow : 0;
+
+          const safeCol = Math.max(0, Math.min(BRICK_COLS - 1, col));
+          b.x = BRICK_MARGIN_X + safeCol * (BRICK_W + BRICK_GAP);
+
+          const brickLayout = computeBrickLayout();
+          const safeRow = Math.max(0, Math.min(brickLayout.rows - 1, row));
+          b.y = brickLayout.marginTop + safeRow * (BRICK_H + BRICK_GAP);
+
+          /* 重排后行号变了，音效音调要跟着更新 */
+          b.row = safeRow;
+          b.gridRow = safeRow;
+          b.gridCol = safeCol;
+
           b.w = BRICK_W; b.h = BRICK_H;
         }
       } else {
@@ -709,6 +725,11 @@
           G.ball.vx *= speedScale; G.ball.vy *= speedScale;
           clampSpeed(G.ball);
         }
+        if (G.ball.held) {
+          G.ball.heldOffset = (G.ball.heldOffset || 0) * sx;
+          const half = G.paddle.w / 2;
+          G.ball.heldOffset = Math.max(-half, Math.min(half, G.ball.heldOffset));
+        }
         clampBall(G.ball);
       }
       for (const b of G.extraBalls) {
@@ -735,6 +756,7 @@
         if(bu.vy < -maxVy) bu.vy = -maxVy;
       }
       G.particles = []; G.rings = []; G.floaters = []; G.trail = [];
+      G.stuckSamples = [];
     }
     
     prerenderBackground();
@@ -798,7 +820,7 @@
     const h = document.createElement('h1');
     h.innerHTML = titleHtml;
     overlay.appendChild(h);
-    if(big){
+    if(big !== undefined && big !== null){
       const b = document.createElement('div');
       b.className = 'big';
       b.textContent = big;
@@ -895,14 +917,7 @@
   }
 
   /* ===================== 砖块（随机布局） ===================== */
-  function buildBricks(){
-    const cols = BRICK_COLS;
-    const rnd = Math.random;
-    /* 行数与顶部留白自适应：
-       - 先按全局 BRICK_MARGIN_TOP 计算可放行数；
-       - 若连 5 行都放不下（超宽横屏/矮窗口），逐步压缩顶部 margin，
-         而不是把 rows 硬拉到 5 导致砖块压到挡板甚至溢出画布；
-       - 最终 rows 下限 2 行，上限 14 行。 */
+  function computeBrickLayout(){
     const s = W / 800;
     const bottomReserve = 150 * s;
     const rowUnit = BRICK_H + BRICK_GAP;
@@ -916,7 +931,20 @@
       availH = H - marginTop - bottomReserve;
       maxRows = Math.floor(availH / rowUnit);
     }
-    const rows = Math.max(2, Math.min(14, maxRows));
+    return { marginTop: marginTop, rows: Math.max(2, Math.min(14, maxRows)) };
+  }
+
+  function buildBricks(){
+    const cols = BRICK_COLS;
+    const rnd = Math.random;
+    /* 行数与顶部留白自适应：
+       - 先按全局 BRICK_MARGIN_TOP 计算可放行数；
+       - 若连 5 行都放不下（超宽横屏/矮窗口），逐步压缩顶部 margin，
+         而不是把 rows 硬拉到 5 导致砖块压到挡板甚至溢出画布；
+       - 最终 rows 下限 2 行，上限 14 行。 */
+    const brickLayout = computeBrickLayout();
+    const marginTop = brickLayout.marginTop;
+    const rows = brickLayout.rows;
 
     /* 排除最近 5 关用过的图案；全用完则清空记忆 */
     if(!G.recentPatterns) G.recentPatterns = [];
@@ -959,6 +987,8 @@
             color: color,
             score: (rows - r) * 10,
             row: r,
+            gridRow: r,
+            gridCol: c,
             alive: true,
             flash: 0,
             phase: Math.random() * Math.PI * 2,
@@ -989,6 +1019,7 @@
             y: marginTop + r * (BRICK_H + BRICK_GAP),
             w: BRICK_W, h: BRICK_H,
             color: color, score: (rows - r) * 10, row: r,
+            gridRow: r, gridCol: c,
             alive: true, flash: 0, phase: Math.random() * Math.PI * 2,
             hp: hp, maxHp: hp
           });
@@ -1149,7 +1180,7 @@
       /* 球被粘住时先释放主球：否则 atan2(0,0)=0，额外球水平向右飞出，
          主球仍 held 不动，与额外球方向不一致 */
       if(G.ball.held) releaseHeldBall();
-      const baseSpeed = Math.hypot(G.ball.vx, G.ball.vy) || BASE_SPEED;
+      const baseSpeed = Math.hypot(G.ball.vx, G.ball.vy) || (BASE_SPEED * G.speedMultiplier);
       const baseAng = G.ball.stuck ? -Math.PI / 2 : Math.atan2(G.ball.vy, G.ball.vx);
       for(let i = 0; i < 2; i++){
         const ang = baseAng + (i === 0 ? -0.35 : 0.35);
@@ -1289,6 +1320,42 @@
     /* 未击碎：扣耐久，给部分分数 */
     if(brick.hp > 1){
       brick.hp -= 1;
+      if (!brick.cracks) {
+        brick.cracks = [];
+        const clamp = (val, min, max) => Math.max(min, Math.min(max, val));
+        
+        const impactX = brick.w * (0.3 + Math.random() * 0.4);
+        const impactY = brick.h * (0.3 + Math.random() * 0.4);
+        
+        const mainCracks = 2 + Math.floor(Math.random() * 2);
+        for (let c = 0; c < mainCracks; c++) {
+          let cx = impactX;
+          let cy = impactY;
+          let angle = (Math.random() > 0.5 ? 0 : Math.PI) + (Math.random() - 0.5) * 1.2;
+          const segments = 4; 
+          
+          for (let i = 0; i < segments; i++) {
+            const step = brick.w * 0.15 + Math.random() * brick.w * 0.1;
+            angle += (Math.random() - 0.5) * 0.8; 
+            
+            let nx = clamp(cx + Math.cos(angle) * step, 1, brick.w - 1);
+            let ny = clamp(cy + Math.sin(angle) * step, 1, brick.h - 1);
+            
+            // isMain 标记为 true，表示这是主裂缝
+            brick.cracks.push({ x1: cx, y1: cy, x2: nx, y2: ny, isMain: true });
+            
+            // 增加细小的微裂纹（非主裂缝）
+            if (Math.random() > 0.3) {
+              const ba = angle + (Math.random() > 0.5 ? 1.2 : -1.2); 
+              const bx = clamp(nx + Math.cos(ba) * (step * 0.4), 1, brick.w - 1);
+              const by = clamp(ny + Math.sin(ba) * (step * 0.4), 1, brick.h - 1);
+              brick.cracks.push({ x1: nx, y1: ny, x2: bx, y2: by, isMain: false }); // 标记为分支
+            }
+            
+            cx = nx; cy = ny;
+          }
+        }
+      }
       const chipGain = Math.round(base * mult * 0.4);
       G.score += chipGain;
       updateHUD('score');
@@ -1308,6 +1375,7 @@
           避免无意义遍历死砖块的残留 Set。 */
     if(brick._piercedSet && brick._piercedSet.size > 0) brick._piercedSet.clear();
     G.brokenCount++;
+    G.hitStop = Math.max(G.hitStop, 0.05);
     const gain = Math.round(base * mult);
     G.score += gain;
     updateHUD('score');
@@ -1326,14 +1394,20 @@
         brick.color
       );
     }
-    if(G.combo > 0 && G.combo % 5 === 0) {
-      // 20% 概率触发职场恐吓，否则正常夸奖
-      if(Math.random() < 0.2) showTaunt('boss');
+    /* 台词频率收敛：
+       - 连击台词从「每 5 连击」改为「每 8 连击」
+       - boss 混入概率 20% → 10%
+       - 3 血硬砖台词加 40% 概率，不再是每块必喊
+       以上全部还要再过 showTaunt 内部 8 秒全局冷却 */
+    if(G.combo > 0 && G.combo % 8 === 0) {
+      if(Math.random() < 0.1) showTaunt('boss');
       else showTaunt('combo');
     }
-    if(brick.maxHp === 3) showTaunt('hard');
+    if(brick.maxHp === 3 && Math.random() < 0.4) showTaunt('hard');
 
     recordPeak();
+
+    G.speedMultiplier = Math.min(MAX_SPEED / BASE_SPEED, G.speedMultiplier + SPEED_INCREASE_RATE);
 
     if(Math.random() < 0.06){
       spawnPowerup(brick.x + brick.w / 2, brick.y + brick.h / 2);
@@ -1354,6 +1428,7 @@
     G.trail = [];
     G.stuckSamples = [];
     G.combo = 0;
+    G.hitStop = 0;
     G.extraBalls = [];
     G.powerups = [];
     G.bullets = [];
@@ -1368,6 +1443,7 @@
     G.laserCooldown = 0;
     G.ball.held = false;
     G.ball.heldOffset = 0;
+    G.speedMultiplier = 1.0;
   }
 
   function resetGame(){
@@ -1378,6 +1454,7 @@
     G._nextBossTaunt = 0;
     if(comboHudEl) comboHudEl.classList.remove('show');
         if(tauntTimer){ clearTimeout(tauntTimer); tauntTimer = null; }
+    _lastTauntAt = 0;
     clearSfxTimers();
     if(tauntEl) tauntEl.classList.remove('show');
     buildLegend(); // 重置时刷新图例解锁状态
@@ -1392,7 +1469,7 @@
   function launchBall(){
     if(G.overTimer) return;   /* 清关过渡期拒绝输入，防止刷分 */
     if(G.state === 'ready'){
-      let speed = BASE_SPEED * Math.pow(1.10, G.level - 1);
+      let speed = BASE_SPEED * Math.pow(1.10, G.level - 1) * G.speedMultiplier;
       speed *= (0.95 + Math.random() * 0.10);   // 每关微随机球速
       
       /* 修复 ready 状态下吃道具导致发射双重加速：
@@ -1423,7 +1500,8 @@
     const b = G.ball;
     if(!b.held) return;
     b.held = false;
-    let speed = BASE_SPEED * Math.pow(1.10, G.level - 1);
+    G.trail = []; // 新增：释放瞬间重置残影，避免从挡板位置拉出一条长线
+    let speed = BASE_SPEED * Math.pow(1.10, G.level - 1) * G.speedMultiplier;
     speed *= (0.95 + Math.random() * 0.10);
     if(G.effects.slowBall > 0) speed *= 0.65;
     if(G.effects.fastBall > 0) speed *= 1.4;
@@ -1461,12 +1539,14 @@
     }
     recordPeak();
     updateHUD('life');
+    /* 掉球 / 剩一条命是关键负反馈，天然次数少（一局最多 3 次），
+       用 force 绕过 8 秒冷却，保证玩家一定看到 */
     if(G.lives <= 0){
-      showTaunt('lose');
+      showTaunt('lose', true);
       setState('over');
     } else {
-      if(G.lives === 1) showTaunt('lowLife');
-      else showTaunt('lose');
+      if(G.lives === 1) showTaunt('lowLife', true);
+      else showTaunt('lose', true);
       resetBallAndPaddle();
       setState('ready');
     }
@@ -1507,32 +1587,74 @@
   function spawnBurst(brick, count){
     const cx = brick.x + brick.w / 2;
     const cy = brick.y + brick.h / 2;
-    const n = count || 9;
+    const baseN = count || 14;
+    const comboBonus = Math.min(20, Math.floor(G.combo / 2));
+    const n = baseN + comboBonus;
+    
+    // 新增：生成高亮爆闪（中心白斑）
+    G.particles.push({
+      x: cx, y: cy, vx: 0, vy: 0,
+      life: 0.15, maxLife: 0.15,
+      size: brick.w * 0.8, color: '#ffffff', type: 'flash'
+    });
+
     for(let i = 0; i < n; i++){
       const ang = Math.random() * Math.PI * 2;
-      const sp  = 90 + Math.random() * 190;
-      const life = 0.5 + Math.random() * 0.5;
-      G.particles.push({
-        x: cx, y: cy,
-        vx: Math.cos(ang) * sp,
-        vy: Math.sin(ang) * sp,
-        life: life,
-        maxLife: life,
-        size: 2.5 + Math.random() * 3.5,
-        color: brick.color
-      });
+      const isSpark = Math.random() < 0.5;
+      
+      if (isSpark) {
+        // 火花：速度极快，寿命极短
+        const sp = 300 + Math.random() * 400;
+        const life = 0.3 + Math.random() * 0.3;
+        G.particles.push({
+          x: cx, y: cy,
+          vx: Math.cos(ang) * sp,
+          vy: Math.sin(ang) * sp,
+          life: life, maxLife: life,
+          size: 0.8 + Math.random() * 1.2, // 线条更细
+          color: '#ffffff', // 纯白，用发光带出颜色
+          type: 'spark'
+        });
+      } else {
+        // 碎块：有自转，受重力影响
+        const sp = 80 + Math.random() * 180;
+        const life = 0.6 + Math.random() * 0.4;
+        G.particles.push({
+          x: cx, y: cy,
+          vx: Math.cos(ang) * sp,
+          vy: Math.sin(ang) * sp,
+          life: life, maxLife: life,
+          size: 3 + Math.random() * 4,
+          color: brick.color,
+          type: 'debris',
+          rot: Math.random() * Math.PI * 2,       // 初始旋转角度
+          vrot: (Math.random() - 0.5) * 25        // 旋转角速度
+        });
+      }
     }
-    G.rings.push({ x: cx, y: cy, r: 4, maxR: 34, life: 1, color: brick.color, w: 2.2 });
+    G.rings.push({ x: cx, y: cy, r: 4, maxR: 45, life: 1, color: brick.color, w: 3 });
   }
 
   function addFloater(x, y, text, color){
-    G.floaters.push({ x, y, text, color: color || '#fbbf24', life: 1, maxLife: 1, vy: -42 });
+    G.floaters.push({ 
+      x, y, text, color: color || '#fbbf24', 
+      life: 1, maxLife: 1, vy: -42,
+      scale: 1.6 
+    });
   }
 
-  /* 显示赛博旁白 */
+  /* 显示赛博旁白
+     - 全局最小间隔 8 秒：冷却期内非 force 台词直接吞掉，避免刷屏
+     - force=true 仅用于掉球 / 剩一条命等关键负反馈，绕过冷却
+     - 台词库为四川话版本 */
   let tauntTimer = null;
-  function showTaunt(type) {
+  let _lastTauntAt = 0;
+  const TAUNT_MIN_INTERVAL = 8000;
+  function showTaunt(type, force) {
     if (!tauntEl || !TAUNTS[type]) return;
+    const now = performance.now();
+    if(!force && now - _lastTauntAt < TAUNT_MIN_INTERVAL) return;
+    _lastTauntAt = now;
     const text = pickTaunt(type);
     if(!text) return;
     tauntEl.textContent = text;
@@ -1555,8 +1677,18 @@
     for(let i = G.particles.length - 1; i >= 0; i--){
       const p = G.particles[i];
       p.x += p.vx * dt; p.y += p.vy * dt;
-      p.vy += 420 * dt;
-      p.vx *= (1 - 0.9 * dt);
+      
+      // 火花受重力小、阻力大；碎块受重力大
+      if (p.type === 'spark') {
+        p.vy += 150 * dt;
+        p.vx *= (1 - 3.5 * dt); 
+        p.vy *= (1 - 3.5 * dt);
+      } else if (p.type === 'debris') {
+        p.vy += 600 * dt;
+        p.vx *= (1 - 0.5 * dt);
+        if (p.rot !== undefined) p.rot += p.vrot * dt; // 更新旋转
+      }
+
       p.life -= dt;
       if(p.life <= 0) {
         G.particles[i] = G.particles[G.particles.length - 1];
@@ -1568,7 +1700,8 @@
       const r = G.rings[i];
       r.r += 260 * dt;
       r.life -= 2.6 * dt;
-      if(r.life <= 0) {
+      // 强制限制最大半径，彻底杜绝飞出屏幕的诡异大圆弧
+      if(r.life <= 0 || r.r > r.maxR * 2) {
         G.rings[i] = G.rings[G.rings.length - 1];
         G.rings.pop();
       }
@@ -1578,6 +1711,10 @@
       const f = G.floaters[i];
       f.y += f.vy * dt;
       f.life -= 1.6 * dt;
+      if (f.scale > 1) {
+        f.scale -= 4 * dt;
+        if (f.scale < 1) f.scale = 1;
+      }
       if(f.life <= 0) {
         G.floaters[i] = G.floaters[G.floaters.length - 1];
         G.floaters.pop();
@@ -1627,7 +1764,7 @@
       const half = G.paddle.w / 2;
       const px1 = G.paddle.x - half, px2 = G.paddle.x + half;
       if(b.x >= px1 - BALL_R * 0.5 && b.x <= px2 + BALL_R * 0.5){
-        const speed = Math.hypot(b.vx, b.vy) || BASE_SPEED;
+        const speed = Math.hypot(b.vx, b.vy) || (BASE_SPEED * G.speedMultiplier);
         const t = Math.max(-1, Math.min(1, (b.x - G.paddle.x) / half));
         const angle = t * MAX_BOUNCE_ANGLE;
         b.vx = Math.sin(angle) * speed;
@@ -1656,6 +1793,7 @@
           b.held = true;
           /* 记录接住瞬间相对挡板中心的横向偏移，释放时据此决定角度 */
           b.heldOffset = Math.max(-half, Math.min(half, b.x - G.paddle.x));
+          G.trail = []; // 新增：接住瞬间清空飞行残影
         }
       }
     }
@@ -1722,11 +1860,12 @@
     updatePaddle(dt);
     updateEffects(dt);
 
-    /* 职场恐吓：每过 45~60 秒，有概率突然弹出摸鱼警告 */
-    if(!G._nextBossTaunt) G._nextBossTaunt = performance.now() + 45000 + Math.random() * 15000;
+    /* 职场恐吓：从 45~60 秒拉长到 100~160 秒一次，
+       且受 showTaunt 全局冷却过滤，实际出现会更稀疏 */
+    if(!G._nextBossTaunt) G._nextBossTaunt = performance.now() + 100000 + Math.random() * 60000;
     if(performance.now() > G._nextBossTaunt){
       showTaunt('boss');
-      G._nextBossTaunt = performance.now() + 45000 + Math.random() * 15000;
+      G._nextBossTaunt = performance.now() + 100000 + Math.random() * 60000;
     }
 
     /* 主球 */
@@ -1756,13 +1895,17 @@
                若它残留在某砖的穿透免疫集合里将永远无法被清理。
                先将其从所有砖块 Set 中移除，再由 G.ball 接管位置与速度。 */
             for(const br of G.bricks){
-              if(br._piercedSet && br._piercedSet.size > 0) br._piercedSet.delete(next);
+              if(br._piercedSet && br._piercedSet.size > 0){
+                br._piercedSet.clear();
+              }
             }
             G.ball.x = next.x;
             G.ball.y = next.y;
             G.ball.vx = next.vx;
             G.ball.vy = next.vy;
             G.ball.stuck = false;
+            G.ball.held = false;
+            G.ball.heldOffset = 0;
             G.trail = [];
           } else {
             loseLife();
@@ -1773,7 +1916,7 @@
         if(G.state !== 'playing') return;
       }
 
-      if(!G.ball.stuck){
+      if(!G.ball.stuck && !G.ball.held){
         const last = G.trail[G.trail.length - 1];
         if(!last || Math.hypot(G.ball.x - last.x, G.ball.y - last.y) > 4){
           G.trail.push({ x: G.ball.x, y: G.ball.y });
@@ -1916,6 +2059,16 @@
     return g;
   }
 
+  function getBallColors() {
+    if (G.effects.fastBall > 0 || G.effects.pierce > 0 || G.combo >= 20) {
+      return { core: '#fef08a', mid: '#f97316', edge: '#dc2626', trail: '#ef4444', glow: '#ef4444' };
+    }
+    if (G.combo >= 10) {
+      return { core: '#fef3c7', mid: '#fde047', edge: '#eab308', trail: '#fbbf24', glow: '#fbbf24' };
+    }
+    return { core: '#e0f2fe', mid: '#7dd3fc', edge: '#0ea5e9', trail: '#38bdf8', glow: '#38bdf8' };
+  }
+
   function drawStars(now, dt){
     ctx.save();
     for(const s of G.stars){
@@ -2013,9 +2166,57 @@
       roundRect(ctx, 0.6, 0.6, b.w - 1.2, b.h - 1.2, 3.6);
       ctx.stroke();
 
-      ctx.fillStyle = hexA(b.color, 0.55);
-      roundRect(ctx, 4, 2, b.w - 8, 2, 1);
-      ctx.fill();
+      if(b.w > 8){
+        ctx.fillStyle = hexA(b.color, 0.55);
+        roundRect(ctx, 4, 2, b.w - 8, 2, 1);
+        ctx.fill();
+      }
+
+      if (b.cracks && b.hp < b.maxHp) {
+        ctx.save();
+        roundRect(ctx, 0, 0, b.w, b.h, 4);
+        ctx.clip();
+        
+        // 用 miter 让折线的转角变得极其锐利
+        ctx.lineCap = 'butt';
+        ctx.lineJoin = 'miter';
+
+        // 1. 深色沟壑
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)'; 
+        ctx.lineWidth = b.hp === 1 ? 2.2 : 1.2; 
+        ctx.beginPath();
+        for (const cr of b.cracks) {
+          if (!cr.isMain) continue;
+          ctx.moveTo(cr.x1, cr.y1);
+          ctx.lineTo(cr.x2, cr.y2);
+        }
+        ctx.stroke();
+
+        // 2. 极细的分支裂纹（颜色浅一点，体现深度）
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        for (const cr of b.cracks) {
+          if (cr.isMain) continue;
+          ctx.moveTo(cr.x1, cr.y1);
+          ctx.lineTo(cr.x2, cr.y2);
+        }
+        ctx.stroke();
+
+        // 3. 高光折射（仅画主裂缝，错位产生 3D 裂口感）
+        ctx.translate(-0.5, -0.5);
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)'; // 提高一点亮度
+        ctx.lineWidth = 0.6;
+        ctx.beginPath();
+        for (const cr of b.cracks) {
+          if (!cr.isMain) continue;
+          ctx.moveTo(cr.x1, cr.y1);
+          ctx.lineTo(cr.x2, cr.y2);
+        }
+        ctx.stroke();
+
+        ctx.restore();
+      }
 
       /* 耐久数字角标 */
       if(isArmored){
@@ -2051,9 +2252,45 @@
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     for(const p of G.particles){
-      ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
-      ctx.fillStyle = p.color;
-      ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+      const alpha = Math.max(0, p.life / p.maxLife);
+      ctx.globalAlpha = alpha;
+
+      if (p.type === 'flash') {
+        // 爆闪白斑：从大到小、快速消失
+        const r = p.size * (1 - alpha * 0.5);
+        const rg = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
+        rg.addColorStop(0, 'rgba(255,255,255,1)');
+        rg.addColorStop(0.5, 'rgba(255,255,255,0.5)');
+        rg.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = rg;
+        ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI*2); ctx.fill();
+      } else if (p.type === 'spark') {
+        // 火花：带有拖尾的光点
+        ctx.fillStyle = p.color;
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 4;
+        const tailX = p.x - p.vx * 0.02;
+        const tailY = p.y - p.vy * 0.02;
+        const rg = ctx.createLinearGradient(p.x, p.y, tailX, tailY);
+        rg.addColorStop(0, '#ffffff');
+        rg.addColorStop(1, 'rgba(254,240,138,0)');
+        ctx.strokeStyle = rg;
+        ctx.lineWidth = p.size;
+        ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(tailX, tailY); ctx.stroke();
+      } else if (p.type === 'debris') {
+        // 碎块：带自转的矩形
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        if (p.rot) ctx.rotate(p.rot);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
+        // 加一点边缘高光
+        ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(-p.size/2, -p.size/2, p.size, p.size);
+        ctx.restore();
+      }
     }
     ctx.restore();
   }
@@ -2068,22 +2305,27 @@
       ctx.fillStyle = f.color;
       ctx.shadowColor = f.color;
       ctx.shadowBlur = 10;
-      ctx.fillText(f.text, f.x, f.y);
+      ctx.save();
+      ctx.translate(f.x, f.y);
+      if (f.scale) ctx.scale(f.scale, f.scale);
+      ctx.fillText(f.text, 0, 0);
+      ctx.restore();
     }
     ctx.restore();
   }
 
   function drawBallTrail(){
     if(!G.trail.length) return;
+    const c = getBallColors();
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     for(let i = 0; i < G.trail.length; i++){
       const t = i / G.trail.length;
       const pt = G.trail[i];
-      ctx.globalAlpha = t * t * 0.55;
-      ctx.fillStyle = '#38bdf8';
+      ctx.globalAlpha = t * t * 0.65;
+      ctx.fillStyle = c.trail;
       ctx.beginPath();
-      ctx.arc(pt.x, pt.y, BALL_R * (0.3 + t * 0.7), 0, Math.PI * 2);
+      ctx.arc(pt.x, pt.y, BALL_R * (0.2 + t * 0.8), 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.restore();
@@ -2092,13 +2334,16 @@
   function drawBall(){
     const b = G.ball;
     if(!b.stuck && !b.held){
+      const c = getBallColors();
+      const pulse = Math.sin(performance.now() * 0.01) * 4;
+      
       ctx.save();
-      ctx.shadowColor = '#38bdf8';
-      ctx.shadowBlur = 24;
-      const rg = ctx.createRadialGradient(b.x - 2, b.y - 2, 0, b.x, b.y, BALL_R);
-      rg.addColorStop(0, '#e0f2fe');
-      rg.addColorStop(0.5, '#7dd3fc');
-      rg.addColorStop(1, '#0ea5e9');
+      ctx.shadowColor = c.glow;
+      ctx.shadowBlur = 20 + pulse;
+      const rg = ctx.createRadialGradient(b.x - BALL_R*0.3, b.y - BALL_R*0.3, 0, b.x, b.y, BALL_R);
+      rg.addColorStop(0, c.core);
+      rg.addColorStop(0.4, c.mid);
+      rg.addColorStop(1, c.edge);
       ctx.fillStyle = rg;
       ctx.beginPath();
       ctx.arc(b.x, b.y, BALL_R, 0, Math.PI * 2);
@@ -2174,19 +2419,41 @@
 
   function drawBullets(){
     ctx.save();
-    ctx.shadowColor = '#ef4444';
-    ctx.shadowBlur = 12;
+    ctx.globalCompositeOperation = 'lighter';
     for(const b of G.bullets){
-      ctx.fillStyle = '#ef4444';
-      ctx.fillRect(b.x - 1.5, b.y - 10, 3, 14);
-      ctx.fillStyle = '#fef3c7';
-      ctx.fillRect(b.x - 1, b.y - 8, 2, 6);
+      const lg = ctx.createLinearGradient(b.x, b.y - 14, b.x, b.y + 4);
+      lg.addColorStop(0, '#ef4444');
+      lg.addColorStop(0.5, '#fef3c7');
+      lg.addColorStop(1, '#ef4444');
+      
+      ctx.fillStyle = lg;
+      ctx.beginPath();
+      ctx.moveTo(b.x, b.y - 16);
+      ctx.lineTo(b.x + 2.5, b.y - 6);
+      ctx.lineTo(b.x + 2.5, b.y + 2);
+      ctx.lineTo(b.x, b.y + 4);
+      ctx.lineTo(b.x - 2.5, b.y + 2);
+      ctx.lineTo(b.x - 2.5, b.y - 6);
+      ctx.closePath();
+      ctx.fill();
+      
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(b.x - 0.5, b.y - 10, 1, 12);
     }
     ctx.restore();
   }
 
   function drawPowerups(now){
     for(const pu of G.powerups){
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const lg = ctx.createLinearGradient(pu.x, 0, pu.x, pu.y + 20);
+      lg.addColorStop(0, 'rgba(0,0,0,0)');
+      lg.addColorStop(1, hexA(pu.tpl.color, 0.25));
+      ctx.fillStyle = lg;
+      ctx.fillRect(pu.x - 15, 0, 30, pu.y + 20);
+      ctx.restore();
+
       const t = now * 0.004 + pu.phase;
       const scale = 1 + 0.1 * Math.sin(t);
       const size = pu.w * scale;
@@ -2271,10 +2538,18 @@
     ctx.save();
     ctx.translate(G.paddle.x - pw / 2, y);
 
+    let warningGlow = 0;
+    if (G.ball && !G.ball.stuck && !G.ball.held && G.ball.vy > 0) {
+      const dist = PADDLE_Y - G.ball.y;
+      if (dist < 150 && dist > 0) {
+        warningGlow = 15 * (1 - dist / 150);
+      }
+    }
+
     const wide   = G.effects.paddleWide > 0;
     const narrow = G.effects.paddleNarrow > 0;
     ctx.shadowColor = wide ? '#fbbf24' : (narrow ? '#dc2626' : '#38bdf8');
-    ctx.shadowBlur = wide ? 26 : (narrow ? 22 : 18);
+    ctx.shadowBlur = (wide ? 26 : (narrow ? 22 : 18)) + warningGlow;
 
     ctx.fillStyle = getPaddleGrad(wide ? 'wide' : (narrow ? 'narrow' : 'normal'), pw);
     roundRect(ctx, 0, 0, pw, h, h / 2);
@@ -2305,6 +2580,15 @@
     ctx.globalCompositeOperation = 'lighter';
     ctx.fillStyle = getCenterGlow();
     ctx.fillRect(0, 0, W, H);
+    
+    if (G.combo > 10) {
+      const intensity = Math.min(0.15, (G.combo - 10) * 0.01);
+      const rg = ctx.createRadialGradient(W/2, H/2, Math.min(W,H)*0.4, W/2, H/2, Math.max(W,H)*0.7);
+      rg.addColorStop(0, 'rgba(0,0,0,0)');
+      rg.addColorStop(1, 'rgba(239,68,68,' + intensity + ')');
+      ctx.fillStyle = rg;
+      ctx.fillRect(0, 0, W, H);
+    }
     ctx.restore();
   }
 
@@ -2354,9 +2638,10 @@
     ctx.save();
     ctx.scale(cw / W, ch / H);
 
-    if(G.shake > 0.2){
-      const sx = (Math.random() - 0.5) * G.shake;
-      const sy = (Math.random() - 0.5) * G.shake;
+    const shakeAmount = (G.state === 'paused' || G.state === 'over') ? 0 : G.shake;
+    if(shakeAmount > 0.2){
+      const sx = (Math.random() - 0.5) * shakeAmount;
+      const sy = (Math.random() - 0.5) * shakeAmount;
       ctx.translate(sx, sy);
     }
 
@@ -2384,8 +2669,14 @@
   let lastT = performance.now();
 
   function loop(now){
-    const dt = Math.min(0.05, (now - lastT) / 1000);
+    let dt = Math.min(0.05, (now - lastT) / 1000);
     lastT = now;
+
+    // 顿帧逻辑
+    if (G.hitStop > 0) {
+      G.hitStop -= dt;
+      dt *= 0.05;
+    }
 
     if(G.state === 'playing'){
       update(dt);
@@ -2568,7 +2859,13 @@
       G.soundOn = !G.soundOn;
       btnSound.classList.toggle('on', G.soundOn);
       btnSound.textContent = G.soundOn ? '🔊 音效' : '🔈 音效';
-      if(G.soundOn){ ensureAudio(); tone(660, 0.08, 'sine', 0.05); }
+      if(G.soundOn){ 
+        ensureAudio(); 
+        const origVol = G.volume;
+        if(G.volume === 0) G.volume = 35; // 如果音量是0，临时借用默认音量发声作为反馈
+        tone(660, 0.08, 'sine', 0.05); 
+        G.volume = origVol; // 恢复
+      }
     });
   }
 

@@ -53,25 +53,24 @@ function sweepSetValue(key, v){
     progOut.textContent = fmtMap[key](v);
   }
 
-  // 自动感知：扫掠时如果包含该参数的面板被折叠，自动展开
+  // 静默展开对应参数所在的折叠面板（不切换 Tab）
+  // 说明：原来这里会 tabBtn.click() 强制切 Tab。由于 sweepSetValue 在播放期间
+  // 每帧都会被 tick() 调用，一旦触发 click 会反复触发，导致 Tab 闪烁，且会打断
+  // 用户在「自检」Tab 里对扫掠过程的观察。现在只展开 <details>，不动 Tab。
   if(S.sweep.playing) {
     const isModelParam = ['L1','L2','L3','h1','h2','h3','Lc','bc','hc','bb','hb','r','As','braceI'].includes(key);
     const isLoadParam  = ['q1','q2','q3','qc1','qc2','qc3','H1','H2','H3','P1','P2','P3','tempAll','tempGrad','settleDy','betaF','betaJ'].includes(key);
-    
+
     const openDetails = (id) => { 
       const el = document.getElementById(id); 
       if(el && !el.open) el.open = true; 
     };
 
     if (isModelParam) {
-      const tabBtn = document.querySelector('#tabBar button[data-tab="model"]');
-      if(tabBtn && !tabBtn.classList.contains('on')) tabBtn.click();
       if (key === 'As' || key === 'braceI') openDetails('details-model-brace');
       else if (['bc','hc','bb','hb','r'].includes(key)) openDetails('details-model-mat');
       else openDetails('details-model-topo');
     } else if (isLoadParam) {
-      const tabBtn = document.querySelector('#tabBar button[data-tab="load"]');
-      if(tabBtn && !tabBtn.classList.contains('on')) tabBtn.click();
       if (['tempAll','tempGrad','settleDy'].includes(key)) openDetails('details-load-other');
       else if (['H1','H2','H3'].includes(key)) openDetails('details-load-horz');
       else openDetails('details-load-vert');
