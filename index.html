@@ -803,6 +803,14 @@ var _hmt = _hmt || [];
             <span class="val" style="color:#cbd5e1;font-weight:400">逐层逐跨</span>
           </div>
           <div id="r-rhoBox"></div>
+          
+          <div class="rRow" style="padding-top:8px; margin-top:6px; border-top:1px dashed #334155;">
+            <span class="lbl" style="color:#cbd5e1;font-weight:600;">体系判定</span>
+            <span class="val" id="r-systemType" style="color:#38bdf8;font-weight:600;">—</span>
+          </div>
+          <div class="rRow" style="padding-bottom:4px;">
+            <span class="lbl" id="r-systemDesc" style="font-size:10px;color:#94a3b8;line-height:1.4;">—</span>
+          </div>
         </div>
 
 
@@ -1150,6 +1158,7 @@ var _hmt = _hmt || [];
             <h3>十二、界面速览</h3>
             <ul>
               <li><strong>左栏 Tab 与读数面板</strong>：「自检」放 30+ 个预设工况，「模型」放拓扑 / 几何 / 截面 / 支撑，「荷载」放均布 / 悬挑 / 水平力 / 二阶效应；右侧读数面板显示截面尺寸、内柱刚度比 r、逐层逐跨 ρ、水平力分配、刚度贡献分解。原「左栏摘要卡」已合并进读数面板（避免与左栏重复）。</li>
+              <li><strong>体系判定（林同炎概念）</strong>：读数面板的「模型」组中，工具会根据当前的梁柱线刚度比 ρ 与梁端刚度 β<sub>j</sub>，自动判定当前的结构体系（如：强柱弱梁、典型刚接框架、铰接排架等）。帮助工程师在建模阶段快速识别变形主导模式（弯曲型 vs 剪切型）及抗震隐患（如强梁弱柱）。</li>
               <li><strong>左栏 Tab</strong>：「自检」内置 30+ 个预设工况（A 弯矩与刚度 / B 轴力与框架 / C 变形与侧移 / D 水平力与二阶 / E 支撑系统 / F 非荷载作用），「模型」放拓扑 / 几何 / 截面 / 支撑，「荷载」放均布 / 悬挑 / 水平力 / 二阶效应。快捷键 <code>1</code> / <code>2</code> / <code>3</code> 切换。</li>
               <li><strong>内力图卡（右上角工具条）</strong>：
                 <ul style="margin-top:3px">

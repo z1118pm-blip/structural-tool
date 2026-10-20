@@ -138,6 +138,12 @@ const SELF_TEST_CASES = [
     state: { nBay: 2, nLev: 2, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 400, hc: 400, bb: 250, hb: 500, r: 1, q1: 0, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 0, H2: 0, H3: 0, Hmode: 'none', settleDy: 0, settleCol: 0, frameMat: 'conc', braceMat: 'steel', As: 2000, braceOnlyTension: false, braceMap: {}, braceTensionMap: {}, brushBrace: 'none', betaF: 1, betaJ: 1, forceType: 'M', elFilter: 'all', showVals: true, showIds: false, showPDelta: false, displayMode: 'all', mScale: 0.6, dScale: 10 }
   },
 
+  {
+    id: 'system-stiffness-match',
+    sweep: 'betaJ',
+    state: { nBay: 2, nLev: 2, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 400, hc: 400, bb: 250, hb: 500, r: 1, q1: 0, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 50, H2: 0, H3: 0, Hmode: 'none', betaF: 1, betaJ: 1, forceType: 'M', elFilter: 'all', showVals: false, showIds: false, showPDelta: false, displayMode: 'all', mScale: 5, dScale: 100 },
+    toast: '扫掠梁端刚度 β_j。注意看右侧读数面板的「体系判定」：从刚接的剪切型框架，退化为半刚接，最终变为完全铰接的排架体系。同时观察结构侧移的剧增。'
+  },
   /* ===== 新增卡（v0.1.6 功能扩充）===== */
 
   /* ⑰ 悬挑长度平方效应：与 ⑥ 的"线性荷载"对照，看 M ∝ L_c² */
@@ -457,6 +463,7 @@ function runSelfTest(caseId){
       }
     };
 
+    addNewCard('A. 弯矩与刚度', `<div class="selfTestCard" data-selftest="system-stiffness-match"><div class="stcTitle">体系刚度匹配与演化</div><div class="stcDesc">两层两跨 · 水平力。扫掠梁端刚度 β_j (0→1)，观察右侧「体系判定」从"铰接排架"逐渐变为"典型刚接框架"，理解林同炎对刚度匹配的定性判断。</div><span class="stcAction">▶ 播放</span></div>`);
     addNewCard('A. 弯矩与刚度', `<div class="selfTestCard" data-selftest="p-moment"><div class="stcTitle">集中力弯矩尖角</div><div class="stcDesc">单层单跨 · 跨中集中力。扫掠 P₁ (0→200)，观察集中力作用点处弯矩图的"尖角"，以及跨中正弯矩的线性增长。</div><span class="stcAction">▶ 播放</span></div>`);
     addNewCard('A. 弯矩与刚度', `<div class="selfTestCard" data-selftest="anti-rho"><div class="stcTitle">反弯点 vs ρ 联动</div><div class="stcDesc">两层两跨 · 纯水平力。扫掠梁高 h<sub>b</sub>，注意看「反弯点 x/h vs ρ」小图（可点击⤢浮动拖到图旁）。梁高增加使梁线刚度上升，各柱反弯点逐渐向 x/h=0.5 靠拢。</div><span class="stcAction">▶ 播放</span></div>`);
     addNewCard('D. 水平力与二阶', `<div class="selfTestCard" data-selftest="pdelta-h1"><div class="stcTitle">P-Δ 层高敏感性</div><div class="stcDesc">两层单跨 · 柔性框架 · 开启P-Δ。扫掠一层的 h₁ (2.5→7)，看层高增加时 N_cr 平方级下降，导致 B 值急剧放大并逼近失稳。</div><span class="stcAction">▶ 播放</span></div>`);

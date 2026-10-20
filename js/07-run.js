@@ -66,6 +66,47 @@ function updateReadout(model){
         const valEl = document.getElementById('rho-val-' + lv);
         if(valEl && valEl.textContent !== vals) valEl.textContent = vals;
       }
+
+      /* ===== 林同炎概念：刚度匹配与体系判断 ===== */
+      let sumRho = 0, countRho = 0;
+      for (const row of model.rho) {
+        for (const val of row) { sumRho += val; countRho++; }
+      }
+      const avgRho = countRho > 0 ? (sumRho / countRho) : 1;
+      
+      let sysType = "—";
+      let sysDesc = "—";
+      let sysColor = "#cbd5e1";
+      
+      if (p.betaJ <= BETA_HINGE) {
+        sysType = "铰接排架体系";
+        sysDesc = "梁端不传弯矩，侧向刚度完全依赖支撑或柱脚固接。";
+        sysColor = "#f87171";
+      } else if (p.betaJ < BETA_FIXED) {
+        sysType = "半刚接框架";
+        sysDesc = "节点传递部分弯矩，侧向刚度介于刚接与排架之间。";
+        sysColor = "#fbbf24";
+      } else {
+        if (avgRho < 0.5) {
+          sysType = "强柱弱梁 (弯曲型)";
+          sysDesc = "柱线刚度占优，整体侧移由柱轴向变形主导。";
+          sysColor = "#38bdf8";
+        } else if (avgRho <= 2.0) {
+          sysType = "典型刚接框架 (剪切型)";
+          sysDesc = "梁柱刚度匹配，整体侧移由梁柱弯曲变形主导。";
+          sysColor = "#4ade80";
+        } else {
+          sysType = "强梁弱柱 (剪切型)";
+          sysDesc = "梁线刚度显著偏大，地震下需警惕柱端过早形成塑性铰。";
+          sysColor = "#f87171";
+        }
+      }
+
+      setTxt('r-systemType', sysType);
+      const sysEl = document.getElementById('r-systemType');
+      if (sysEl) sysEl.style.color = sysColor;
+      setTxt('r-systemDesc', sysDesc);
+      /* ======================================= */
     }
   }
 

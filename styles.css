@@ -257,6 +257,7 @@ input[type=range]:hover::-webkit-slider-thumb{
 #readout .rRow{display:flex;justify-content:space-between;gap:8px;padding:2px 0}
 #readout .rRow .lbl{color:#94a3b8;white-space:nowrap}
 #readout .rRow .val{color:#f8fafc;font-weight:600;text-align:right;word-break:break-word;font-family:'JetBrains Mono',monospace}
+#readout #r-systemDesc { display: block; width: 100%; text-align: left; }
 #readout .rFoot{
   margin-top:12px;padding-top:8px;border-top:1px dashed #334155;
   font-size:10px;color:#64748b;
