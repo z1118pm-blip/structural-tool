@@ -20,33 +20,7 @@ function internalAt(res, x, type){
   return momentAt(res, x);
 }
 
-/* 截面正应力：σ(x) = N/A ± M/W。返回 [左边缘, 右边缘]，单位 kPa。
-   柱：A = bc·hc，W = bc·hc²/6；梁：A = bb·hb，W = bb·hb²/6；
-   支撑只有 N/As，两端同值。
-   符号：拉为正；M 按 momentAt 的符号，左边缘取 -M/W，右边缘取 +M/W。 */
-function stressAt(res, x, p){
-  const el = res.el;
-  const N = axialAt(res, x);
-  const M = momentAt(res, x);
-  if(el.kind === 'brace'){
-    const As = (p.As || 2000) / 1e6;
-    const s = N / As;
-    return [s, s];
-  }
-  let A, W;
-  if(el.kind === 'col'){
-    const bcM = p.bc / 1000, hcM = p.hc / 1000;
-    A = bcM * hcM;
-    W = bcM * hcM * hcM / 6;
-  } else {
-    const bbM = p.bb / 1000, hbM = p.hb / 1000;
-    A = bbM * hbM;
-    W = bbM * hbM * hbM / 6;
-  }
-  const sAxial = N / A;
-  const sBend = M / W;
-  return [sAxial - sBend, sAxial + sBend];
-}
+/* （已移除未使用的 stressAt 函数，截面应力计算统一由 07-run.js 的 drawProbeCanvas 处理） */
 
 /* 单元内部任意点的位移。
    当前实现：Hermite 形函数（端点位移 + 端点转角，由整体求解精确给出）
@@ -90,11 +64,15 @@ function elemDisp(res, x){
   if (w !== 0) {
     vly += (w * x*x * (L-x)*(L-x)) / (24 * EI);
   }
-  /* 温度梯度特解：截面内外温差使杆产生均匀曲率 κ = α·ΔT/h，
-     变形近似为抛物线 v(x) = κ/2 · x·(L−x)，两端位移为零。
-     注意：只有「结构外围构件」才承受截面温差，内部构件 tempGradEff 未定义，附加项自动为 0。 */
+  /* 温度梯度特解：截面内外温差使杆产生均匀曲率 κ = α·ΔT/h。
+     附加项必须满足 v(0)=v'(0)=v(L)=v'(L)=0（端点位移和转角均为零），
+     否则会在 Hermite 插值已经严格保证的端点转角上叠加额外转角，
+     导致相邻梁柱在节点处出现切线折角，与刚接节点假定不一致。
+     采用 κ·x²(L−x)²/(24L²) 形式：端点函数值与一阶导数严格为 0，
+     二阶导数在端点处为 κ/6（因包含了刚端约束），变形曲线平滑且不影响求解器端点结果。 */
   if (!el.isCant && el.kind !== 'brace' && el.tempGradEff) {
-    vly += el.tempGradEff * x * (L - x) / 2;
+    const u = x * (L - x);
+    vly += el.tempGradEff * u * u / (24 * L * L);
   }
 
   return [cs*ulx - sn*vly, sn*ulx + cs*vly];

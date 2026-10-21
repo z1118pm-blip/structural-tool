@@ -1380,7 +1380,7 @@ function renderPSpanEditors(onlyLev){
       const mapObj = S.pLoadMap[key] || {};
       const P = mapObj.P != null ? mapObj.P : (S['P'+lv] || 0);
       let a = mapObj.a != null ? mapObj.a : (S['L'+c] / 2);
-      a = Math.max(0.5, Math.min(S['L'+c] - 0.5, a));
+      a = Math.max(0.01, Math.min(S['L'+c] - 0.01, a));
       // 同步修正内存中的非法状态，避免后续分享或重算时使用错误值
       if (mapObj.a != null && mapObj.a !== a) {
         S.pLoadMap[key].a = a;
@@ -1391,7 +1391,7 @@ function renderPSpanEditors(onlyLev){
         <div class="head"><span>第 ${c} 跨 P (位置 a)${dot}</span><b id="v-P-${key}">${P.toFixed(0)} kN / ${a.toFixed(1)} m</b></div>
         <input type="range" class="pSpanEditRangeP" min="0" max="200" step="5" value="${P}" data-spankey="${key}" data-sub="P">
         <div style="height:4px"></div>
-        <input type="range" class="pSpanEditRangeA" min="0.5" max="${S['L'+c]-0.5}" step="0.1" value="${a}" data-spankey="${key}" data-sub="a">
+        <input type="range" class="pSpanEditRangeA" min="0.01" max="${(S['L'+c]-0.01).toFixed(2)}" step="0.01" value="${a}" data-spankey="${key}" data-sub="a">
       </div>`;
     }
     html += `<button type="button" class="spanEditClear" data-lev="${lv}" data-type="P">清除本层覆盖</button>`;

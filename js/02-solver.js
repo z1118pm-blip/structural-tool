@@ -156,7 +156,12 @@ function localEqLoad(el, p){
 
     /* 均匀升温：产生固端轴力。
        不能用 el.EA（axialMode='rigid' 时含 1e6 放大），否则温度轴力被错误放大。
-       用真实截面刚度重算。 */
+       用真实截面刚度重算。
+       注意：集中力打断梁的两个子单元必须使用原梁真实 EA，不能按子段长度缩放。
+       子段两端固端轴力方向相反，打断节点处会自动抵消；若缩放 EA，则两段在
+       打断节点处净固端轴力 = EA·α·ΔT·(2a/L−1)，集中力偏离跨中时不再为零，
+       会向中间节点注入虚构的固端轴力，污染整根梁的温度轴力分配。
+       悬挑梁也没有 el.bay，若沿用旧逻辑会错误回退到 p.L1 触发缩放。 */
     {
       const E_frame_real = (p.frameMat === 'steel') ? E_STEEL : E_CONC;
       const bcM = p.bc/1000, hcM = p.hc/1000;
@@ -168,12 +173,6 @@ function localEqLoad(el, p){
         realEA = E_frame_real * Ac * kc;
       } else {
         realEA = E_frame_real * Ab;
-        // 修复：如果该梁是集中力打断的子单元，其轴力刚度应取原梁的长度比例
-        // 否则打断点两端的固端力会把原总温升力翻倍
-        const trueL = p['L' + (el.bay || 1)];
-        if (trueL && el.L < trueL - 1e-4) {
-          realEA = realEA * (el.L / trueL); 
-        }
       }
       pFeN = -realEA * alpha * tempAll;
     }
@@ -199,7 +198,8 @@ function localEqLoad(el, p){
           pFeTI = 0; pFeTJ = 0;
         } else {
           /* 梁端热梯度产生向下凹的固端弯矩，以匹配柱顶转角。
-             两端柔度不同时，i/j 端的释放系数分别用 (1+6αJ)/Δ 与 (1+6αI)/Δ。 */
+             温度梯度是均匀曲率（对称荷载），其固端弯矩释放系数为 (1+4α)/Δ，
+             而非均布荷载（反对称）的 (1+6α)/Δ。 */
           const baseT = (el.EI * alpha * tempGrad * gradFactor / h);
           const alI = (el.alphaI != null) ? el.alphaI : (el.alpha || 0);
           const alJ = (el.alphaJ != null) ? el.alphaJ : (el.alpha || 0);
@@ -207,8 +207,8 @@ function localEqLoad(el, p){
             pFeTI = baseT; pFeTJ = baseT;
           } else {
             const D = (1 + 4*alI)*(1 + 4*alJ) - 4*alI*alJ;
-            pFeTI = baseT * (1 + 6*alJ) / D;
-            pFeTJ = baseT * (1 + 6*alI) / D;
+            pFeTI = baseT * (1 + 4*alJ) / D;
+            pFeTJ = baseT * (1 + 4*alI) / D;
           }
         }
       } else {
@@ -546,6 +546,8 @@ let isSymmetric = (
 );
 if(nBay >= 2 && Math.abs(p.L1 - p.L2) > 1e-6) isSymmetric = false;
 if(nBay >= 3 && Math.abs(p.L2 - p.L3) > 1e-6) isSymmetric = false;
+if(nLev >= 2 && Math.abs(p.h1 - p.h2) > 1e-6) isSymmetric = false;
+if(nLev >= 3 && Math.abs(p.h2 - p.h3) > 1e-6) isSymmetric = false;
 /* 荷载/温度/支撑不对称时，禁止强制柱顶水平位移为 0，否则会抹掉真实侧移。
    保守策略：只要存在任一可能破坏对称性的因素，就关闭对称约束。 */
 if(isSymmetric){
@@ -578,7 +580,12 @@ if(p.Hmode === 'rigid'){
   for(let lv=1; lv<=nLev; lv++) masterUx[lv] = nid(0, lv)*3;
   for(let idx=0; idx<nodes.length; idx++){
     const nd = nodes[idx];
-    if(nd.lev < 1 || nd.cant) continue; // 悬挑端属于自由端，不参与楼板刚性缩并
+    /* 悬挑端属于自由端，不参与楼板刚性缩并；
+       梁内集中力打断生成的计算子节点（isSub）位于梁内部，
+       其水平位移应允许梁的轴向变形，不应绑定到同层柱顶主节点，
+       否则相当于在梁内部插入一个水平刚性约束，会锁死梁的轴向变形，
+       污染梁轴力、柱剪力分配和整体侧向刚度。 */
+    if(nd.lev < 1 || nd.cant || nd.isSub) continue;
     reduce[idx*3] = masterUx[nd.lev];
   }
   /* 缩并 K、F：所有贡献累加到主 DOF */

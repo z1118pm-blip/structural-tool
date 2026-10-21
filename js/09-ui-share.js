@@ -1,5 +1,7 @@
 "use strict";
 
+let PROBE_HOVER = null;
+
 (function bindProbeClear(){
   const btn = document.getElementById('btnProbeClear');
   if(btn) {
@@ -182,7 +184,6 @@ function exportCanvasPNG(canvasId, baseName){
 })();
 
 /* 内力图探针拾取与悬停高亮 */
-let PROBE_HOVER = null;
 (function bindProbeClick(){
   const cv = document.getElementById('cvForce');
   if(!cv) return;

@@ -671,16 +671,24 @@
       
       if (ratioChanged) {
         // 强行将存活砖块按新的网格重新排布
+        const brickLayout = computeBrickLayout(); // 性能优化：提到循环外计算一次
+        // 找出当前砖块中最大的原始行号，用于按比例映射，防止行数变少时砖块重叠
+        let oldMaxRow = 1;
         for (const b of G.bricks) {
-          /* 直接读建关时保存的网格坐标，避免用固定 90*oldS 反推导致矮窗口错位 */
+          if (b.gridRow > oldMaxRow) oldMaxRow = b.gridRow;
+        }
+
+        for (const b of G.bricks) {
           const col = (b.gridCol != null) ? b.gridCol : 0;
           const row = (b.gridRow != null) ? b.gridRow : 0;
 
           const safeCol = Math.max(0, Math.min(BRICK_COLS - 1, col));
           b.x = BRICK_MARGIN_X + safeCol * (BRICK_W + BRICK_GAP);
 
-          const brickLayout = computeBrickLayout();
-          const safeRow = Math.max(0, Math.min(brickLayout.rows - 1, row));
+          // 按比例映射行号，而不是简单粗暴地钳制（防止所有底行砖块挤成一行）
+          let mappedRow = Math.floor((row / oldMaxRow) * brickLayout.rows);
+          const safeRow = Math.max(0, Math.min(brickLayout.rows - 1, mappedRow));
+          
           b.y = brickLayout.marginTop + safeRow * (BRICK_H + BRICK_GAP);
 
           /* 重排后行号变了，音效音调要跟着更新 */
@@ -1177,24 +1185,32 @@
     } else if(tpl.id === 'darkVision'){
       G.effects.darkVision = tpl.duration;
     } else if(tpl.id === 'multiball'){
-      /* 球被粘住时先释放主球：否则 atan2(0,0)=0，额外球水平向右飞出，
-         主球仍 held 不动，与额外球方向不一致 */
-      if(G.ball.held) releaseHeldBall();
-      const baseSpeed = Math.hypot(G.ball.vx, G.ball.vy) || (BASE_SPEED * G.speedMultiplier);
-      const baseAng = G.ball.stuck ? -Math.PI / 2 : Math.atan2(G.ball.vy, G.ball.vx);
-      for(let i = 0; i < 2; i++){
-        const ang = baseAng + (i === 0 ? -0.35 : 0.35);
-        G.extraBalls.push({
-          x: G.ball.x, y: G.ball.y,
-          vx: Math.cos(ang) * baseSpeed,
-          vy: Math.sin(ang) * baseSpeed,
-          stuck: false
-        });
-      }
-      if(G.ball.stuck){
-        G.ball.vx = Math.cos(baseAng) * baseSpeed;
-        G.ball.vy = Math.sin(baseAng) * baseSpeed;
-        G.ball.stuck = false;
+      /* ready 状态下主球尚未发射，loop() 的 ready 分支不更新球物理位置。
+         若在此直接把 G.ball.stuck 置为 false 并赋速，主球会脱离挡板悬浮不动，
+         额外球也同样静止，直到玩家再次 launchBall 才恢复——形成"悬浮球"异常。
+         因此 ready 状态下暂存待生成数量，等 launchBall 时一并生成。 */
+      if(G.state === 'ready'){
+        G.pendingMultiball = (G.pendingMultiball || 0) + 2;
+      } else {
+        /* 球被粘住时先释放主球：否则 atan2(0,0)=0，额外球水平向右飞出，
+           主球仍 held 不动，与额外球方向不一致 */
+        if(G.ball.held) releaseHeldBall();
+        const baseSpeed = Math.hypot(G.ball.vx, G.ball.vy) || (BASE_SPEED * G.speedMultiplier);
+        const baseAng = G.ball.stuck ? -Math.PI / 2 : Math.atan2(G.ball.vy, G.ball.vx);
+        for(let i = 0; i < 2; i++){
+          const ang = baseAng + (i === 0 ? -0.35 : 0.35);
+          G.extraBalls.push({
+            x: G.ball.x, y: G.ball.y,
+            vx: Math.cos(ang) * baseSpeed,
+            vy: Math.sin(ang) * baseSpeed,
+            stuck: false
+          });
+        }
+        if(G.ball.stuck){
+          G.ball.vx = Math.cos(baseAng) * baseSpeed;
+          G.ball.vy = Math.sin(baseAng) * baseSpeed;
+          G.ball.stuck = false;
+        }
       }
     } else if(tpl.id === 'extraLife'){
       G.lives += 1;
@@ -1432,6 +1448,7 @@
     G.extraBalls = [];
     G.powerups = [];
     G.bullets = [];
+    G.pendingMultiball = 0;
     for(const k in G.effects) G.effects[k] = 0;
     /* 直接归零 effects.pierce 绕过了 updateEffects 里的清理路径，
        loseLife 后旧球引用会残留在砖块 _piercedSet 上，
@@ -1489,6 +1506,28 @@
       G.shake = 3;
       tone(440, 0.08, 'sine', 0.05);
       startBgm(false);
+
+      /* 延迟生效的多球道具：ready 状态拾取时暂存的数量，发射时统一生成。
+         角度按主球飞行方向左右张开，每次拾取生成 2 个额外球，
+         第 2 次拾取时张开幅度按 0.35/0.70 递增，避免完全重叠。 */
+      if(G.pendingMultiball > 0){
+        const n = G.pendingMultiball;
+        G.pendingMultiball = 0;
+        const baseSpeed = Math.hypot(G.ball.vx, G.ball.vy);
+        const baseAng = Math.atan2(G.ball.vy, G.ball.vx);
+        for(let i = 0; i < n; i++){
+          const side = (i % 2 === 0) ? -1 : 1;
+          const mag = 0.35 * (Math.floor(i / 2) + 1);
+          const ang = baseAng + side * mag;
+          G.extraBalls.push({
+            x: G.ball.x, y: G.ball.y,
+            vx: Math.cos(ang) * baseSpeed,
+            vy: Math.sin(ang) * baseSpeed,
+            stuck: false
+          });
+        }
+      }
+
       setState('playing');
     } else if(G.state === 'paused'){
       setState('playing');
@@ -2904,6 +2943,8 @@
     if(e.target && e.target.id === 'btnLegend') return;
     lg.classList.remove('show');
   }, true);
+
+// window.G = G; // 已注释，防止全局污染
 
   /* ===================== 初始化 ===================== */
   function init(){

@@ -262,8 +262,9 @@ function drawSupports(ctx, model, toS, base, isDeform, deformF){
       ctx.restore();
       
       // 2. 计算下沉后的支座位置（向下偏移 20px）
-      /* 下沉距离与沉降量成比例（1mm→0.6px，上限 60px），便于直观对比 */
-      const dropPx = Math.min(60, Math.max(6, (model.p.settleDy || 0) * 0.6));
+      /* 下沉距离与沉降量成比例（1mm→0.6px，上限 60px），便于直观对比。
+         取消 6px 的强行下限，防止 1mm 和 10mm 的沉降在视觉上无法区分。 */
+      const dropPx = Math.min(60, Math.max(1, (model.p.settleDy || 0) * 0.6));
       const syDrop = sy + dropPx;
       
       // 3. 画红色虚线和箭头连接

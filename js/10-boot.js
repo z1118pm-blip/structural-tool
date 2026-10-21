@@ -221,11 +221,13 @@ const SELF_TEST_CASES = [
   {
     id: 'temp-axial',
     sweep: 'tempAll',
+    sweepRange: [0, 50], // 指定扫掠区间
     state: { nBay: 2, nLev: 1, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 400, hc: 400, bb: 250, hb: 500, r: 1, q1: 0, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, P1:0, P2:0, P3:0, pLoadMap:{}, H1: 0, H2: 0, H3: 0, Hmode: 'none', tempAll: 0, tempGrad: 0, betaF: 1, betaJ: 1, forceType: 'N', elFilter: 'all', showVals: true, showIds: false, showPDelta: false, displayMode: 'force', mScale: 5, dScale: 100 }
   },
   {
     id: 'temp-grad',
     sweep: 'tempGrad',
+    sweepRange: [0, 30], // 指定扫掠区间
     state: { nBay: 2, nLev: 1, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 400, hc: 400, bb: 250, hb: 500, r: 1, q1: 0, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, P1:0, P2:0, P3:0, pLoadMap:{}, H1: 0, H2: 0, H3: 0, Hmode: 'none', tempAll: 0, tempGrad: 0, betaF: 1, betaJ: 1, forceType: 'M', elFilter: 'all', showVals: true, showIds: false, showPDelta: false, displayMode: 'all', mScale: 5, dScale: 100 }
   }
 ];
@@ -410,7 +412,8 @@ function runSelfTest(caseId){
       } else {
         sweepReset();
       }
-      sweepPlay(true);
+      // 将卡片的 sweepRange 传递给 sweepPlay
+      sweepPlay(true, tc.sweepRange);
     });
   });
 }

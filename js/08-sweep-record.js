@@ -102,7 +102,7 @@ function sweepReset(){
   run();
 }
 
-function sweepPlay(loop){
+function sweepPlay(loop, forcedRange){
   if(S.sweep.playing) return; // 防重入：如果已在播放，直接忽略
   
   // 修复：如果在延迟启动的间隙用户关闭了扫掠条，拒绝启动
@@ -128,6 +128,12 @@ function sweepPlay(loop){
   S.sweep.t0       = performance.now();
   S.sweep.playing  = true;
   S.sweep.loop     = loop !== false;
+
+  // ====== 新增：记录强制区间 ======
+  S.sweep.forcedMin = (forcedRange && forcedRange[0] != null) ? forcedRange[0] : min;
+  S.sweep.forcedMax = (forcedRange && forcedRange[1] != null) ? forcedRange[1] : max;
+  // ================================
+
   sweepUpdatePlayBtn();
 
   /* 播放时长倍率：默认 1（3s 单程）；自检场景设为 2（6s 单程，放慢一倍） */
@@ -145,8 +151,8 @@ function sweepPlay(loop){
     let t = (now - S.sweep.t0) / DUR;
     if(t >= 1){
       if(S.sweep.loop){
-        S.sweep.startVal = min;
-        S.sweep.span     = max - min;
+        S.sweep.startVal = S.sweep.forcedMin; // 使用强制区间最小值
+        S.sweep.span     = S.sweep.forcedMax - S.sweep.forcedMin;
         S.sweep.t0       = now;
         t = 0;
       } else {
