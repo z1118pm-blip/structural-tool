@@ -85,11 +85,12 @@ function drawInternal(canvas, model, dprOverride){
     ctx.font = 'bold 11px ui-sans-serif,system-ui,sans-serif';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     
-    let maxRx = 0, maxRy = 0;
+    let maxRx = 0, maxRy = 0, maxMR = 0;
     for(let c=0; c<model.nCol; c++){
       const nd = model.nid(c, 0);
       maxRx = Math.max(maxRx, Math.abs(model.R[nd*3]));
       maxRy = Math.max(maxRy, Math.abs(model.R[nd*3+1]));
+      maxMR = Math.max(maxMR, Math.abs(model.R[nd*3+2]));
     }
     const maxVal = Math.max(maxRx, maxRy, 1e-6); 
     const Lbase = Math.min(W,H) * 0.12;
@@ -131,7 +132,8 @@ function drawInternal(canvas, model, dprOverride){
 
       // 画弯矩反力（支座下方的 270° 大圆弧箭头）
       if (Math.abs(m) > 1e-4) {
-        const r = 13;
+        /* 圆弧半径按 |m|/maxMR 缩放，避免数值变化时视觉不变（如支座沉降自检看不出弯矩增长）。 */
+        const r = 8 + Math.min(10, (Math.abs(m) / Math.max(maxMR, 1e-6)) * 10);
         const cx = sx, cy = sy + 22; // 圆心下移
         
         const startA = -Math.PI/2; // 12点钟起点
@@ -219,6 +221,9 @@ function drawInternal(canvas, model, dprOverride){
       const ni = BASE.nodes[el.i], nj = BASE.nodes[el.j];
       const nx = -el.sn, ny = -el.cs;
       const base = [], curve = [];
+      /* BASE 虚线的支撑轴力也必须按 5 倍放大，与当前实线比例一致，
+         否则冻结对比时支撑虚线被压扁到几乎不可见。 */
+      const refDiv = (el.kind === 'brace') ? (FSTYLE.ref / 5) : FSTYLE.ref;
       for(let k=0;k<=NP;k++){
         const x = el.L*k/NP;
         const val = internalAt(res, x, type);
@@ -226,7 +231,7 @@ function drawInternal(canvas, model, dprOverride){
         const bx = ni.x + (nj.x-ni.x)*xi, by = ni.y + (nj.y-ni.y)*xi;
         const [sx,sy] = toS(bx,by);
         base.push([sx, sy]);
-        const off = -(val/FSTYLE.ref)*targetPx*model.p.mScale;
+        const off = -(val/refDiv)*targetPx*model.p.mScale;
         curve.push([sx + nx*off, sy + ny*off]);
       }
       ctx.beginPath();
@@ -286,6 +291,7 @@ function drawInternal(canvas, model, dprOverride){
     ctx.font = 'bold 10.5px ui-sans-serif,system-ui,sans-serif';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     const NZ = 0.05;
+    const drawnBraceLabels = new Set();
     for(const res of model.results){
       const el = res.el;
       if(filter === 'col'  && el.kind !== 'col')  continue;
@@ -298,12 +304,30 @@ function drawInternal(canvas, model, dprOverride){
       const dxu = jx - ix, dyu = jy - iy;
       const Lu = Math.hypot(dxu, dyu) || 1;
       const ux = dxu/Lu, uy = dyu/Lu;
+      if(el.kind === 'brace'){
+        /* X 撑两根斜杆中点完全重合，用 Set 去重避免文字叠在一起。 */
+        const midX = (ix + jx) / 2, midY = (iy + jy) / 2;
+        const posKey = Math.round(midX) + '_' + Math.round(midY);
+        if(drawnBraceLabels.has(posKey)) continue;
+        drawnBraceLabels.add(posKey);
+        const vMid = axialAt(res, el.L / 2);
+        if(Math.abs(vMid) > NZ){
+          const txt = vMid.toFixed(1);
+          const tw = ctx.measureText(txt).width;
+          ctx.fillStyle = T.bg;
+          ctx.fillRect(midX - tw/2 - 3, midY - 7.5, tw + 6, 15);
+          ctx.fillStyle = forceStyleOf(type, el.kind).color;
+          ctx.fillText(txt, midX, midY);
+        }
+        continue;
+      }
       if(el.kind === 'col'){
         let side;
         if(ni.col === 0) side = -1; // 最左柱：文字移到外侧(左)
         else if(ni.col === model.nCol - 1) side = 1; // 最右柱：文字移到外侧(右)
         else side = (ni.col % 2 === 1) ? -1 : 1; // 中间柱：交替左右
-        const off = 28; // 加大横向偏移，避开梁端文字
+        /* 偏移随 mScale 对数增长，避免 mScale 放大时曲线穿过文字。 */
+        const off = 28 + 12 * Math.log2(Math.max(1, model.p.mScale));
         if(Math.abs(v0) > NZ) ctx.fillText(v0.toFixed(1), ix + side*off, iy + 12); // 底端向下错
         if(Math.abs(vL) > NZ) ctx.fillText(vL.toFixed(1), jx + side*off, jy - 12); // 顶端向上错，避开梁
       } else {
@@ -423,7 +447,11 @@ function drawInternal(canvas, model, dprOverride){
           /* 反弯点位置数值：柱标 x/h（从柱底），梁标 x/L（从左端）；悬挑与支撑跳过 */
           if(el.kind !== 'brace' && !el.isCant){
             const unit = (el.kind === 'col') ? 'h' : 'L';
-            const txt  = xi.toFixed(2) + unit;
+            /* 打断梁子段：xi 是子段内比例，需加上整跨偏移后归一化到整跨。 */
+            const xRatioFull = (el.startOffset != null && el.spanL)
+              ? (el.startOffset + xz) / el.spanL
+              : xi;
+            const txt  = xRatioFull.toFixed(2) + unit;
             ctx.font = 'bold 9.5px "JetBrains Mono", ui-monospace, monospace';
             ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
             const tw = ctx.measureText(txt).width;
@@ -494,8 +522,12 @@ function drawInternal(canvas, model, dprOverride){
     const ni = model.nodes[el.i], nj = model.nodes[el.j];
     const [ax, ay] = toS(ni.x, ni.y);
     const [ex, ey] = toS(nj.x, nj.y);
-    const bx = ni.x + (nj.x - ni.x) * xr;
-    const by = ni.y + (nj.y - ni.y) * xr;
+    /* xr 统一存整跨比例；对打断梁子段需反算到子段局部比例再定位。 */
+    const xrLocal = (el.startOffset != null && el.spanL)
+      ? Math.max(0, Math.min(1, (xr * el.spanL - el.startOffset) / el.L))
+      : Math.max(0, Math.min(1, xr));
+    const bx = ni.x + (nj.x - ni.x) * xrLocal;
+    const by = ni.y + (nj.y - ni.y) * xrLocal;
     const [sx, sy] = toS(bx, by);
 
     ctx.save();

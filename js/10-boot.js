@@ -170,6 +170,48 @@ const SELF_TEST_CASES = [
     state: { nBay: 1, nLev: 1, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 400, hc: 400, bb: 250, hb: 500, r: 1, q1: 0, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 0, H2: 0, H3: 0, Hmode: 'none', frameMat: 'conc', braceMat: 'steel', As: 2000, braceOnlyTension: false, braceMap: {'1-1':'/'}, braceTensionMap: {'1-1':true}, brushBrace: '/', betaF: 1, betaJ: 1, forceType: 'N', elFilter: 'brace', showVals: true, showIds: false, showPDelta: false, displayMode: 'force', mScale: 3, dScale: 100 }
   },
 
+  /* ===== 新增：三层刚度突变 / 软弱层 ===== */
+  {
+    id: 'stiffness-jump-mid-braced',
+    sweep: 'H1',
+    state: {
+      nBay: 2, nLev: 3, hasCant: false,
+      L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5,
+      bc: 400, hc: 400, bb: 250, hb: 500, r: 1,
+      q1: 0, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0,
+      H1: 0, H2: 30, H3: 30, Hmode: 'none',
+      frameMat: 'conc', braceMat: 'steel', As: 2000,
+      braceMap: { '2-1': 'X', '2-2': 'X' },
+      braceTensionMap: {},
+      brushBrace: 'X',
+      betaF: 1, betaJ: 1,
+      forceType: 'M', elFilter: 'all',
+      showVals: false, showIds: false, showPDelta: false,
+      displayMode: 'deform', mScale: 1, dScale: 300
+    },
+    toast: '仅第2层设支撑：上下层柔性、中间层刚性，侧移沿高度呈"沙漏"分布。扫掠 H₁ 看整体侧移；切到变形图观察层间位移角在第1、3层放大。'
+  },
+  {
+    id: 'weak-story-mid-unbraced',
+    sweep: 'H1',
+    state: {
+      nBay: 2, nLev: 3, hasCant: false,
+      L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5,
+      bc: 400, hc: 400, bb: 250, hb: 500, r: 1,
+      q1: 0, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0,
+      H1: 0, H2: 30, H3: 30, Hmode: 'none',
+      frameMat: 'conc', braceMat: 'steel', As: 2000,
+      braceMap: { '1-1': 'X', '1-2': 'X', '3-1': 'X', '3-2': 'X' },
+      braceTensionMap: {},
+      brushBrace: 'X',
+      betaF: 1, betaJ: 1,
+      forceType: 'M', elFilter: 'all',
+      showVals: false, showIds: false, showPDelta: false,
+      displayMode: 'deform', mScale: 1, dScale: 300
+    },
+    toast: '仅第2层无支撑：上下层有撑、中间层裸框架。扫掠 H₁，看层间位移角如何向第2层集中——这就是"软弱层"的力学本质。'
+  },
+
   /* “强柱弱梁”卡片已移除 */
 
   /* ㉔a 满跨布置基线（静态卡 + 自动冻结） */
@@ -258,8 +300,8 @@ function _freezeCurrentModel(){
     p: { ...MODEL.p,
          braceMap: { ...MODEL.p.braceMap },
          braceTensionMap: { ...MODEL.p.braceTensionMap },
-         qSpanMap: { ...(MODEL.p.qSpanMap || {}) },
-         pLoadMap: { ...(MODEL.p.pLoadMap || {}) } }
+         qSpanMap: JSON.parse(JSON.stringify(MODEL.p.qSpanMap || {})),
+         pLoadMap: JSON.parse(JSON.stringify(MODEL.p.pLoadMap || {})) }
   };
   const btnFz  = document.getElementById('btnFreeze');
   if(btnFz)  btnFz.classList.add('on');
@@ -269,11 +311,13 @@ function _freezeCurrentModel(){
 
 function runSelfTest(caseId){
   const tc = SELF_TEST_CASES.find(c => c.id === caseId);
-  if(!tc) return;
+  if(!tc){
+    if(typeof showToast === 'function') showToast('未找到自检工况：' + caseId);
+    return;
+  }
 
-  /* 1. 关闭使用说明模态框 */
-  const helpModal = document.getElementById('modalHelp');
-  if(helpModal) helpModal.classList.remove('open');
+  /* 1. 关闭所有模态框（帮助 / 分享 / 打赏），避免遮挡自检画面 */
+  document.querySelectorAll('.modal.open').forEach(m => m.classList.remove('open'));
 
   /* 2. 停止可能正在播放的扫掠 */
   if(S.sweep.playing) sweepStop();
@@ -295,6 +339,7 @@ function runSelfTest(caseId){
   S.braceTensionMap = {};
   S.qSpanMap = {};
   S.pLoadMap = {};
+  S.supportMap = {};
   S.P1 = 0; S.P2 = 0; S.P3 = 0;
   S.tempAll = 0; S.tempGrad = 0; S.tempT0 = 20;
   S.brushBrace = 'none';
@@ -326,6 +371,7 @@ function runSelfTest(caseId){
   if(typeof renderPSpanEditors === 'function') renderPSpanEditors();
   if(typeof renderBraceGrid === 'function') renderBraceGrid();
   if(typeof renderSpanEditors === 'function') renderSpanEditors();
+  if(typeof renderSupportMapPanel === 'function') renderSupportMapPanel();
 
   /* 2.6 prelude：先加载一个工况、可选冻结为基线，再加载主工况。
      专供 ㉔b/㉔c 使用：先算满跨、冻结为灰色基线，再算不利布置、与基线对比。
@@ -494,6 +540,8 @@ function runSelfTest(caseId){
     </div>`);
     addNewCard('F. 非荷载作用', `<div class="selfTestCard" data-selftest="temp-axial"><div class="stcTitle">均匀升温的轴力</div><div class="stcDesc">单层两跨 · 无外荷载。扫掠均匀升温 ΔT (0→50℃)，看超静定框架因膨胀受阻产生的内部轴力。</div><span class="stcAction">▶ 播放</span></div>`);
     addNewCard('F. 非荷载作用', `<div class="selfTestCard" data-selftest="temp-grad"><div class="stcTitle">单侧温差的反弯点</div><div class="stcDesc">单层两跨 · 无外荷载。扫掠截面温差 ΔT，看梁柱因温度梯度产生弯曲，及框架侧移带来的二阶附加内力。</div><span class="stcAction">▶ 播放</span></div>`);
+    addNewCard('E. 支撑系统', `<div class="selfTestCard" data-selftest="stiffness-jump-mid-braced"><div class="stcTitle">刚度突变 · 仅中间层设支撑</div><div class="stcDesc">三层两跨 · 仅第2层两跨设 X 撑，上下层无撑。扫掠 H₁，看侧移沿高度呈"沙漏"分布：上下层柔、中间层刚，层间位移角在第1、3层放大。</div><span class="stcAction">▶ 播放</span></div>`);
+    addNewCard('E. 支撑系统', `<div class="selfTestCard" data-selftest="weak-story-mid-unbraced"><div class="stcTitle">软弱层 · 仅中间层无支撑</div><div class="stcDesc">三层两跨 · 第1、3层两跨设 X 撑，唯独第2层裸框架。扫掠 H₁，看层间位移角如何向第2层集中——这就是"软弱层"的力学本质，也是抗震设计中最危险的竖向刚度突变。</div><span class="stcAction">▶ 播放</span></div>`);
 
     // 3. 统一重排所有卡片的序号（从 ① 开始按大类递增）
     panel.querySelectorAll('.stCatGroup').forEach(det => {

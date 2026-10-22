@@ -7,7 +7,7 @@ const E_CONC = 3.0e7;
 const E_STEEL = 2.06e8;
 
 // 全局版本号：以后升级版本只需修改这里，全站自动联动
-const APP_VERSION = 'v0.1.6.5';
+const APP_VERSION = 'v0.1.7.1';
 
 // ⚠️ 重要：线上部署地址。本地 file:// 打开时，分享二维码指向这里。
 // 如果你更换了 GitHub 仓库名或部署到自定义域名，请务必同步修改此处的 URL，否则本地生成的分享二维码会失效。
@@ -47,6 +47,13 @@ const S = {
   /* 温度荷载：tempAll 为全结构均匀升温，tempGrad 为截面单侧温差，tempT0 为合拢/安装温度 */
   tempAll:0, tempGrad:0, tempT0:20,
   settleDy:0, settleCol:0,
+  /* 每柱独立支座定义：{ '0': { type:'fixed'|'pin'|'roller'|'spring', dy:0, rot:0 }, ... }
+     - type 为 'spring' 或缺失时回退到 betaF 全局判定；
+     - dy 单位 mm，正=沉降向下，负=上抬向上（抗浮）；
+     - rot 单位 rad，正=逆时针，用于模拟基础转动造成的柱底强迫转角。 */
+  supportMap:{},
+  /* 移动荷载：单跨竖向集中力、单跨内从左到右循环 */
+  movingLoad:{ enabled:false, lev:1, bay:1, P:0, t:0.5, playing:false, speed:1, rafId:null, t0:0 },
   axialMode:'real',
   frameMat:'conc',
   braceMat:'steel',

@@ -247,7 +247,9 @@ function updateReadout(model){
         } else {
           if(hasBrace){
             try{
-              const mNB = analyze({ ...p, braceMap: {}, braceTensionMap: {}, settleDy: 0, settleCol: 0 });
+              /* 求“去支撑刚度”时，需清除非荷载作用产生的初始侧移，否则刚度会被严重污染 */
+              const pPureNB = { ...p, braceMap: {}, braceTensionMap: {}, settleDy: 0, settleCol: 0, tempAll: 0, tempGrad: 0, supportMap: {} };
+              const mNB = analyze(pPureNB);
               let uAvg = 0;
               for(let c=0;c<mNB.nCol;c++) uAvg += mNB.U[mNB.nid(c, mNB.nLev)*3];
               uAvg /= mNB.nCol;
@@ -263,7 +265,9 @@ function updateReadout(model){
                 anyTension = true; break;
               }
             }
-            const mNM = anyTension ? analyzeTensionOnly({ ...p, betaJ: 0, settleDy: 0, settleCol: 0 }) : analyze({ ...p, betaJ: 0, settleDy: 0, settleCol: 0 });
+            /* 求“去梁刚度”时，必须临时清空集中力，否则会触发 solver 的“全铰接+集中力=机构”的安全拦截 */
+            const pPureStiff = { ...p, betaJ: 0, settleDy: 0, settleCol: 0, P1: 0, P2: 0, P3: 0, pLoadMap: {} };
+            const mNM = anyTension ? analyzeTensionOnly(pPureStiff) : analyze(pPureStiff);
             let uAvg = 0;
             for(let c=0;c<mNM.nCol;c++) uAvg += mNM.U[mNM.nid(c, mNM.nLev)*3];
             uAvg /= mNM.nCol;
@@ -495,7 +499,7 @@ function drawProbeCanvas(model){
   const infoEl = document.getElementById('r-probeInfo');
   const btnClear = document.getElementById('btnProbeClear');
 
-  if(!S.probe || S.probe.elIndex === null || S.probe.elIndex >= model.els.length){
+  if(!S.probe || S.probe.elIndex === null || S.probe.elIndex < 0 || S.probe.elIndex >= model.els.length){
     if(infoEl) { infoEl.textContent = '在右侧内力图上点击任意杆件以分析截面应力。'; infoEl.style.color = '#64748b'; }
     if(btnClear) btnClear.style.display = 'none';
     ctx.fillStyle = '#64748b';
@@ -515,11 +519,31 @@ function drawProbeCanvas(model){
   if(btnClear) btnClear.style.display = 'inline-block';
 
   const el = res.el;
-  const x = el.L * Math.max(0, Math.min(1, S.probe.xRatio));
+  /* S.probe.xRatio 现在统一存“整跨比例”；对打断梁子段需反算局部比例。 */
+  const xRatioLocal = (el.startOffset != null && el.spanL)
+    ? (S.probe.xRatio * el.spanL - el.startOffset) / el.L
+    : S.probe.xRatio;
+  const xRatioClamped = Math.max(0, Math.min(1, xRatioLocal));
+  const x = el.L * xRatioClamped;
   const N = axialAt(res, x);
   const M = momentAt(res, x);
 
   if(el.kind === 'brace') {
+    const isInactive = model.inactiveBraces && model.inactiveBraces.has(el.braceUid);
+    if(isInactive){
+      /* 失效支撑：明确提示已退出工作，避免用户误以为轴力恒为 0 是计算错误。 */
+      if(infoEl) { infoEl.textContent = '该支撑在「仅受拉」迭代中已退出工作，轴力 N=0'; infoEl.style.color = '#94a3b8'; }
+      ctx.fillStyle = '#475569';
+      ctx.strokeStyle = '#475569';
+      ctx.lineWidth = 4; ctx.lineCap = 'round';
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath(); ctx.moveTo(W/2, 30); ctx.lineTo(W/2, H-30); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.font = 'bold 12px sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('已退出工作', W/2, H/2);
+      return;
+    }
     if(infoEl) { infoEl.textContent = '支撑为二力杆，全截面均匀受拉/压'; infoEl.style.color = '#38bdf8'; }
     ctx.strokeStyle = N > 0 ? '#38bdf8' : '#ef4444';
     ctx.lineWidth = 6; ctx.lineCap = 'round';
@@ -780,8 +804,18 @@ function drawAntiRhoCanvas(model){
     }
     if(found == null) continue;
     const lev = el.lev;
-    const bayIdx = Math.min(el.col, model.nBay - 1);
-    const rho = model.rho && model.rho[lev-1] ? model.rho[lev-1][bayIdx] : null;
+    let rho;
+    if(el.col === 0){
+      rho = model.rho[lev-1] ? model.rho[lev-1][0] : null;
+    } else if(el.col === model.nBay){
+      rho = model.rho[lev-1] ? model.rho[lev-1][model.nBay-1] : null;
+    } else {
+      /* 中柱：取左右跨 rho 平均，避免强行归到右跨造成小图误导。 */
+      const row = model.rho[lev-1] || [];
+      const left = row[el.col - 1];
+      const right = row[el.col];
+      rho = (left != null && right != null) ? (left + right) / 2 : (left != null ? left : right);
+    }
     if(rho == null || !isFinite(rho)) continue;
     const px = xOf(rho), py = yOf(found);
     ctx.fillStyle = '#38bdf8';
@@ -869,6 +903,11 @@ function run(){
     const badge = document.getElementById('solveBadge');
     if(badge) badge.classList.remove('on');
     return;
+  }
+
+  /* 拓扑变化或集中力打断后单元数可能变化，探针索引可能越界或指向错误子单元。 */
+  if(S.probe && S.probe.elIndex != null && S.probe.elIndex >= MODEL.els.length){
+    S.probe = { elIndex: null, xRatio: 0.5 };
   }
 
   MODEL.maxF = getMaxInternal(MODEL, MODEL.p.forceType, MODEL.p.elFilter);
@@ -973,6 +1012,32 @@ function applyTopoState(){
   /* 拓扑变化时，清空探针，防止索引残留导致靶心乱飘 */
   if (typeof S.probe !== 'undefined') S.probe = { elIndex: null, xRatio: 0.5 };
   
+  /* 清理越界的逐跨荷载数据，防止 3跨改1跨 时残留幽灵荷载 */
+  if (S.qSpanMap) {
+    for(const k in S.qSpanMap) {
+      const parts = k.split('-');
+      if (parseInt(parts[0]) > S.nLev || parseInt(parts[1]) > S.nBay) delete S.qSpanMap[k];
+    }
+  }
+  if (S.pLoadMap) {
+    for(const k in S.pLoadMap) {
+      const parts = k.split('-');
+      if (parseInt(parts[0]) > S.nLev || parseInt(parts[1]) > S.nBay) delete S.pLoadMap[k];
+    }
+  }
+  if (S.braceMap) {
+    for(const k in S.braceMap) {
+      const parts = k.split('-');
+      if (parseInt(parts[0]) > S.nLev || parseInt(parts[1]) > S.nBay) delete S.braceMap[k];
+    }
+  }
+  if (S.braceTensionMap) {
+    for(const k in S.braceTensionMap) {
+      const parts = k.split('-');
+      if (parseInt(parts[0]) > S.nLev || parseInt(parts[1]) > S.nBay) delete S.braceTensionMap[k];
+    }
+  }
+
   try{ window.dispatchEvent(new CustomEvent('structura-topo-change')); } catch(e){}
   updateSweepOptions();
 }
@@ -1083,6 +1148,8 @@ function updateTabInd(){
 (function bindTabKeys(){
   const order = ['selftest','model','load'];
   document.addEventListener('keydown', e=>{
+    /* 模态框打开时，1/2/3 不应穿透切换底层 Tab。 */
+    if(document.querySelector('.modal.open')) return;
     const t = e.target;
     if(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
     const idx = parseInt(e.key) - 1;
@@ -1214,6 +1281,45 @@ function bindRange(id, key, fmt){
 
     // 移除全局 dragRaf 的抢占，改用防抖/节流或直接同步渲染
     if(typeof scheduleRender === 'function') scheduleRender(); else run();
+
+    /* 保险：最后一次 input 后 200ms 内若已跑过 run()，
+       updateReadout 会因 _lastSliderInput 仍在 200ms 窗口内而跳过刚度分解；
+       之后无定时器再触发 run()，会永久卡在“—（拖动中）”。
+       这里补一个 220ms 的保险定时器，确保拖动停止后补算一次完整读数。 */
+    if(S._stiffDecompTimer) clearTimeout(S._stiffDecompTimer);
+    S._stiffDecompTimer = setTimeout(()=>{
+      S._stiffDecompTimer = null;
+      if(typeof scheduleRender === 'function') scheduleRender(); else run();
+    }, 220);
+
+    /* P2-22：拖动主滑块时同步扫掠进度条，避免下次播放起点与用户预期不符。 */
+    if(key === S.sweep.param){
+      const progEl = document.getElementById('sweepProgress');
+      const progOut = document.getElementById('v-sweepProgress');
+      const pEl = document.getElementById(key);
+      if(progEl && pEl){
+        progEl.min = pEl.min;
+        progEl.max = pEl.max;
+        progEl.step = pEl.step;
+        progEl.value = pEl.value;
+        updateRangeProgress(progEl);
+      }
+      if(progOut && fmtMap[key]) progOut.textContent = fmtMap[key](parseFloat(pEl.value));
+    }
+
+    /* P2-30：拖动跨长时修正该跨上 pLoadMap.a，防止越界被 solver 静默钳制到端点。 */
+    if(key === 'L1' || key === 'L2' || key === 'L3'){
+      const col = parseInt(key[1]);
+      const L = S[key];
+      for(const kk of Object.keys(S.pLoadMap || {})){
+        const parts = kk.split('-');
+        if(parseInt(parts[1]) === col){
+          const obj = S.pLoadMap[kk];
+          if(obj && (obj.a == null || obj.a >= L)) obj.a = L / 2;
+        }
+      }
+      if(typeof renderPSpanEditors === 'function') renderPSpanEditors(1);
+    }
   });
   S[key] = parseFloat(el.value);
   out.textContent = fmt(S[key]);
@@ -1391,7 +1497,7 @@ function renderPSpanEditors(onlyLev){
         <div class="head"><span>第 ${c} 跨 P (位置 a)${dot}</span><b id="v-P-${key}">${P.toFixed(0)} kN / ${a.toFixed(1)} m</b></div>
         <input type="range" class="pSpanEditRangeP" min="0" max="200" step="5" value="${P}" data-spankey="${key}" data-sub="P">
         <div style="height:4px"></div>
-        <input type="range" class="pSpanEditRangeA" min="0.01" max="${(S['L'+c]-0.01).toFixed(2)}" step="0.01" value="${a}" data-spankey="${key}" data-sub="a">
+        <input type="range" class="pSpanEditRangeA" min="${(0.1*S['L'+c]).toFixed(2)}" max="${(0.9*S['L'+c]).toFixed(2)}" step="0.01" value="${a}" data-spankey="${key}" data-sub="a">
       </div>`;
     }
     html += `<button type="button" class="spanEditClear" data-lev="${lv}" data-type="P">清除本层覆盖</button>`;
@@ -1565,6 +1671,245 @@ function renderSpanEditors(onlyLev){
     run();
   });
 })();
+
+/* =====================================================================
+   支座类型与强迫位移面板（每柱独立）
+   - 键为柱列号，值为 { type, dy, rot }
+   - supportMap 未覆盖的柱仍回退到 betaF 全局滑块
+   ===================================================================== */
+function renderSupportMapPanel(){
+  const wrap = document.getElementById('supportMapPanel');
+  if(!wrap) return;
+  const nCol = (S.nBay || 1) + 1;
+  let html = '';
+  for(let c = 0; c < nCol; c++){
+    const key = String(c);
+    const entry = (S.supportMap && S.supportMap[key]) || {};
+    const type = entry.type || 'spring';
+    const dy = entry.dy || 0;
+    const rot = entry.rot || 0;
+    let label;
+    if(c === 0) label = '左柱';
+    else if(c === nCol - 1) label = '右柱';
+    else if(c === 1 && nCol === 3) label = '中柱';
+    else label = (c + 1) + '号柱';
+    
+    html += `
+      <div class="ctrl">
+        <div class="head"><span>${label} · 支座类型</span></div>
+        <select class="sweepSel supportTypeSel" data-col="${c}">
+          <option value="spring"${type === 'spring' ? ' selected' : ''}>跟随 βf（默认）</option>
+          <option value="fixed"${type === 'fixed' ? ' selected' : ''}>固接</option>
+          <option value="pin"${type === 'pin' ? ' selected' : ''}>铰接</option>
+          <option value="roller"${type === 'roller' ? ' selected' : ''}>滚轴（仅竖向约束）</option>
+        </select>
+      </div>
+      <div class="ctrl">
+        <div class="head"><span>${label} · 竖向位移 (mm)</span><b id="v-support-dy-${c}">${dy.toFixed(0)}</b></div>
+        <input type="range" class="supportDyRange" data-col="${c}" min="-100" max="100" step="1" value="${dy}">
+      </div>
+      <div class="ctrl">
+        <div class="head"><span>${label} · 强迫转角 (mrad)</span><b id="v-support-rot-${c}">${(rot * 1000).toFixed(1)}</b></div>
+        <input type="range" class="supportRotRange" data-col="${c}" min="-10" max="10" step="0.1" value="${(rot * 1000).toFixed(1)}">
+      </div>
+    `;
+  }
+  wrap.innerHTML = html;
+  
+  /* 类型下拉 */
+  wrap.querySelectorAll('.supportTypeSel').forEach(sel => {
+    sel.addEventListener('change', () => {
+      if(S.sweep && S.sweep.playing) sweepStop();
+      const c = sel.dataset.col;
+      const v = sel.value;
+      if(!S.supportMap) S.supportMap = {};
+      if(!S.supportMap[c]) S.supportMap[c] = {};
+      S.supportMap[c].type = v;
+      run();
+    });
+  });
+  
+  /* 竖向位移滑块 */
+  wrap.querySelectorAll('.supportDyRange').forEach(inp => {
+    updateRangeProgress(inp);
+    inp.addEventListener('input', () => {
+      if(S.sweep && S.sweep.playing) sweepStop();
+      const c = inp.dataset.col;
+      const v = parseFloat(inp.value);
+      if(!isFinite(v)) return;
+      if(!S.supportMap) S.supportMap = {};
+      if(!S.supportMap[c]) S.supportMap[c] = {};
+      S.supportMap[c].dy = v;
+      const out = document.getElementById('v-support-dy-' + c);
+      if(out) out.textContent = v.toFixed(0);
+      updateRangeProgress(inp);
+      if(dragRaf) return;
+      dragRaf = requestAnimationFrame(()=>{ dragRaf = null; run(); });
+    });
+  });
+  
+  /* 强迫转角滑块（显示 mrad，存储 rad） */
+  wrap.querySelectorAll('.supportRotRange').forEach(inp => {
+    updateRangeProgress(inp);
+    inp.addEventListener('input', () => {
+      if(S.sweep && S.sweep.playing) sweepStop();
+      const c = inp.dataset.col;
+      const vMrad = parseFloat(inp.value);
+      if(!isFinite(vMrad)) return;
+      const vRad = vMrad / 1000;
+      if(!S.supportMap) S.supportMap = {};
+      if(!S.supportMap[c]) S.supportMap[c] = {};
+      S.supportMap[c].rot = vRad;
+      const out = document.getElementById('v-support-rot-' + c);
+      if(out) out.textContent = vMrad.toFixed(1);
+      updateRangeProgress(inp);
+      if(dragRaf) return;
+      dragRaf = requestAnimationFrame(()=>{ dragRaf = null; run(); });
+    });
+  });
+}
+
+/* 首次渲染 */
+renderSupportMapPanel();
+
+/* 拓扑变化时重渲染（柱数变了要重建面板） */
+window.addEventListener('structura-topo-change', renderSupportMapPanel);
+
+/* =====================================================================
+   移动荷载（需求 3）
+   ===================================================================== */
+let movingLoadRaf = null;
+
+function updateMovingLoadBtn() {
+  const btn = document.getElementById('btnMovingLoadPlay');
+  const btnStop = document.getElementById('btnMovingLoadStop');
+  if (!btn || !btnStop) return;
+  if (S.movingLoad.playing) {
+    btn.textContent = '■ 暂停';
+    btn.classList.add('playing');
+    btnStop.style.display = 'block';
+  } else {
+    btn.textContent = '▶ 播放';
+    btn.classList.remove('playing');
+    btnStop.style.display = 'none';
+  }
+}
+
+function movingLoadStop() {
+  S.movingLoad.playing = false;
+  if (movingLoadRaf) {
+    cancelAnimationFrame(movingLoadRaf);
+    movingLoadRaf = null;
+  }
+  updateMovingLoadBtn();
+}
+
+function movingLoadPlay() {
+  if (S.movingLoad.playing) return;
+  if (S.sweep.playing) sweepStop();
+  S.movingLoad.playing = true;
+  S.movingLoad.t0 = performance.now();
+  S.movingLoad.startT = S.movingLoad.t;
+  if (S.movingLoad.t >= 0.999) S.movingLoad.t = 0;
+
+  const tick = (now) => {
+    if (!S.movingLoad.playing) return;
+    const elapsed = (now - S.movingLoad.t0) / 1000;
+    /* 速度 1.0 时，单程约 2 秒 */
+    let t = S.movingLoad.startT + elapsed * 0.5 * (S.movingLoad.speed || 1);
+    t = t % 1;
+    S.movingLoad.t = t;
+    const input = document.getElementById('movingLoadT');
+    const out = document.getElementById('v-movingLoadT');
+    if (input) { input.value = t; updateRangeProgress(input); }
+    if (out) out.textContent = (t * 100).toFixed(0) + '%';
+    run();
+    movingLoadRaf = requestAnimationFrame(tick);
+  };
+  movingLoadRaf = requestAnimationFrame(tick);
+  updateMovingLoadBtn();
+}
+
+function renderMovingLoadUI() {
+  const wrap = document.getElementById('details-load-moving');
+  if (!wrap) return;
+  /* 拓扑变化时，若当前选中的层/跨越界，钳制到合法范围 */
+  if (S.movingLoad) {
+    S.movingLoad.lev = Math.max(1, Math.min(S.nLev, S.movingLoad.lev || 1));
+    S.movingLoad.bay = Math.max(1, Math.min(S.nBay, S.movingLoad.bay || 1));
+  }
+
+  const levSel = document.getElementById('movingLoadLev');
+  const baySel = document.getElementById('movingLoadBay');
+  const enableSeg = document.getElementById('segMovingLoadEnable');
+  if (levSel && levSel.options.length !== S.nLev) {
+    let html = '';
+    for (let i = 1; i <= S.nLev; i++) html += `<option value="${i}">第 ${i} 层</option>`;
+    levSel.innerHTML = html;
+  }
+  if (baySel && baySel.options.length !== S.nBay) {
+    let html = '';
+    for (let i = 1; i <= S.nBay; i++) html += `<option value="${i}">第 ${i} 跨</option>`;
+    baySel.innerHTML = html;
+  }
+
+  if (levSel) levSel.value = S.movingLoad.lev;
+  if (baySel) baySel.value = S.movingLoad.bay;
+  const pEl = document.getElementById('movingLoadP');
+  if (pEl) {
+    pEl.value = S.movingLoad.P;
+    document.getElementById('v-movingLoadP').textContent = S.movingLoad.P + ' kN';
+    updateRangeProgress(pEl);
+  }
+  const tEl = document.getElementById('movingLoadT');
+  if (tEl) {
+    tEl.value = S.movingLoad.t;
+    document.getElementById('v-movingLoadT').textContent = (S.movingLoad.t * 100).toFixed(0) + '%';
+    updateRangeProgress(tEl);
+  }
+  updateMovingLoadBtn();
+
+  const btnPlay = document.getElementById('btnMovingLoadPlay');
+  const btnStop = document.getElementById('btnMovingLoadStop');
+  if (btnPlay && !btnPlay._bound) {
+    btnPlay._bound = true;
+    btnPlay.addEventListener('click', () => {
+      if (S.movingLoad.playing) movingLoadStop();
+      else movingLoadPlay();
+    });
+    btnStop.addEventListener('click', () => movingLoadStop());
+    document.getElementById('movingLoadLev').addEventListener('change', (e) => {
+      S.movingLoad.lev = parseInt(e.target.value);
+      run();
+    });
+    document.getElementById('movingLoadBay').addEventListener('change', (e) => {
+      S.movingLoad.bay = parseInt(e.target.value);
+      run();
+    });
+    document.getElementById('movingLoadP').addEventListener('input', (e) => {
+      S.movingLoad.P = parseFloat(e.target.value);
+      /* P > 0 自动生效，P = 0 自动关闭 */
+      S.movingLoad.enabled = S.movingLoad.P > 0;
+      document.getElementById('v-movingLoadP').textContent = S.movingLoad.P + ' kN';
+      updateRangeProgress(e.target);
+      if (S.movingLoad.playing) return;
+      run();
+    });
+    document.getElementById('movingLoadT').addEventListener('input', (e) => {
+      S.movingLoad.t = parseFloat(e.target.value);
+      document.getElementById('v-movingLoadT').textContent = (S.movingLoad.t * 100).toFixed(0) + '%';
+      updateRangeProgress(e.target);
+      if (S.movingLoad.playing) return;
+      run();
+    });
+    /* 移除启用开关绑定 */
+  }
+}
+
+/* 拓扑变化时重新渲染移动荷载面板 */
+window.addEventListener('structura-topo-change', renderMovingLoadUI);
+/* 初始化 */
+renderMovingLoadUI();
 
 (function bindFrameMat() {
   const seg = document.getElementById('segFrameMat');

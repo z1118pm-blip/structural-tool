@@ -104,6 +104,7 @@ function sweepReset(){
 
 function sweepPlay(loop, forcedRange){
   if(S.sweep.playing) return; // 防重入：如果已在播放，直接忽略
+  if(typeof movingLoadStop === 'function') movingLoadStop();
   
   // 修复：如果在延迟启动的间隙用户关闭了扫掠条，拒绝启动
   const bar = document.getElementById('sweepBar');

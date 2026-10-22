@@ -356,7 +356,14 @@ function analyze(p, opts = {}){
       /* 解析集中力参数 */
       let P = pDefault;
       let a = L / 2;
-      if (pLoadMap[spanKey]) {
+      const movingLoad = p.movingLoad || {};
+      const isMovingTarget = movingLoad.enabled && movingLoad.lev === lv && movingLoad.bay === c + 1;
+      if (isMovingTarget) {
+        /* 移动荷载优先级高于 pLoadMap */
+        P = movingLoad.P || 0;
+        const t = (movingLoad.t != null) ? movingLoad.t : 0.5;
+        a = Math.max(0.001, Math.min(L - 0.001, t * L));
+      } else if (pLoadMap[spanKey]) {
         if (pLoadMap[spanKey].P != null) P = pLoadMap[spanKey].P;
         if (pLoadMap[spanKey].a != null) a = pLoadMap[spanKey].a;
       }
@@ -380,11 +387,13 @@ function analyze(p, opts = {}){
            j 端是集中力打断点（内部节点，强制刚接 alphaJ=0）。
            集中力打断点不是梁端，不应有半刚接弹簧。 */
         els.push({i, j: midIndex, L: a, cs:dx/L, sn:dy/L, EA:EAb, EI:EIb, w:-q, q,
-                  kind:'beam', alphaI:alphaJ, alphaJ:0, hinge:beamHinge, lev:lv, bay:c+1, qSpan:q});
+                  kind:'beam', alphaI:alphaJ, alphaJ:0, hinge:beamHinge, lev:lv, bay:c+1, qSpan:q,
+                  startOffset: 0, spanL: L});
         /* 右子单元：i 端是集中力打断点（强制刚接 alphaI=0），
            j 端接柱（保留半刚接 alphaJ 作为 alphaJ）。 */
         els.push({i: midIndex, j, L: L - a, cs:dx/L, sn:dy/L, EA:EAb, EI:EIb, w:-q, q,
-                  kind:'beam', alphaI:0, alphaJ:alphaJ, hinge:beamHinge, lev:lv, bay:c+1, qSpan:q});
+                  kind:'beam', alphaI:0, alphaJ:alphaJ, hinge:beamHinge, lev:lv, bay:c+1, qSpan:q,
+                  startOffset: a, spanL: L});
       } else {
         /* 无集中力：标准单单元 */
         els.push({i,j,L,cs:dx/L,sn:dy/L,EA:EAb,EI:EIb,w:-q,q,
@@ -491,42 +500,107 @@ function analyze(p, opts = {}){
   }
   for(let lv=1;lv<=nLev;lv++) applyFloorH(lv, p['H'+lv]);
 
-  /* ---- 柱脚：nCol 个 ---- */
+  /* ---- 柱脚：nCol 个，按 supportMap 每柱独立类型 ---- */
   const fixed=new Set();
   const rotSpring = new Float64Array(ndof);
   const hFloor1 = Y[1] - Y[0];
+  const supportMapSolver = (p.supportMap && typeof p.supportMap === 'object') ? p.supportMap : {};
+  
+  /* 解析某柱的有效支座类型：supportMap 优先，否则回退 betaF */
+  const getSupportType = (c) => {
+    const entry = supportMapSolver[String(c)];
+    if(entry && entry.type){
+      if(entry.type === 'fixed' || entry.type === 'pin' || entry.type === 'roller' || entry.type === 'spring'){
+        return entry.type;
+      }
+    }
+    if(p.betaF >= BETA_FIXED) return 'fixed';
+    if(p.betaF <= BETA_HINGE) return 'pin';
+    return 'spring';
+  };
+  
+  let anyHorizSupport = false;
   for(let c=0;c<nCol;c++){
     const n = nid(c,0);
-    fixed.add(n*3);
-    fixed.add(n*3+1);
     const thz = n*3 + 2;
-    if(p.betaF >= BETA_FIXED){
+    const supType = getSupportType(c);
+    const entry = supportMapSolver[String(c)] || {};
+    const hasForcedRot = entry.rot != null && Math.abs(entry.rot) > 1e-9;
+    
+    if(supType === 'roller'){
+      /* 滚轴：仅约束竖向 uy，水平 ux 自由，转动 rz 自由 */
+      fixed.add(n*3+1);
+    } else {
+      /* 固接 / 铰接 / 弹簧：约束 ux、uy */
+      fixed.add(n*3);
+      fixed.add(n*3+1);
+      anyHorizSupport = true;
+      
+      if(supType === 'fixed'){
+        fixed.add(thz);
+      } else if(supType === 'spring'){
+        if(p.betaF > BETA_HINGE){
+          const kc = isMidCol(c) ? p.r : 1.0;
+          const EIcol = EIc * kc;
+          const Rf = (4*EIcol/hFloor1) * p.betaF / (1 - p.betaF);
+          rotSpring[thz] = Rf;
+        }
+      }
+      /* supType === 'pin'：rz 自由 */
+    }
+    
+    /* 强迫转角：无论什么支座类型，都把 rz 固定为指定值 */
+    if(hasForcedRot){
       fixed.add(thz);
-    } else if(p.betaF > BETA_HINGE){
-      const kc = isMidCol(c) ? p.r : 1.0;
-      const EIcol = EIc * kc;
-      const Rf = (4*EIcol/hFloor1) * p.betaF / (1 - p.betaF);
-      rotSpring[thz] = Rf;
+      rotSpring[thz] = 0;
     }
   }
+  
+  if(!anyHorizSupport && nCol > 0){
+    throw new Error('所有柱底均为滚轴支座，水平方向无约束，结构为机构。请至少设置一根柱为固接或铰接以提供水平约束。');
+  }
+  
   for(let i=0;i<ndof;i++){
     if(rotSpring[i] > 0) K[i][i] += rotSpring[i];
   }
 
 /* =====================================================================
-   支座沉降：非零已知位移（仅单柱竖向）
-   - fixedDisp 记录 DOF 索引 → 位移值（米）
-   - 组装 RHS 时减 K_fc·U_c，求解后把值写回 U
-   - 有沉降时跳过"单跨对称约束"和"浮点噪声清理"，避免掩盖沉降效应
+   支座强迫位移：竖向沉降/上抬 + 强迫转角（每柱独立）
+   - supportMap[col].dy / .rot 每柱独立；
+   - 兼容旧 settleCol/settleDy：当 supportMap 未覆盖该柱 dy 时生效；
+   - fixedDisp 记录 DOF 索引 → 位移值（米 / 弧度）；
+   - 组装 RHS 时减 K_fc·U_c，求解后把值写回 U；
+   - 有强迫位移时跳过"单跨对称约束"和"浮点噪声清理"。
    ===================================================================== */
 const fixedDisp = new Map();
-const settleDyVal = parseFloat(p.settleDy) || 0;
-const hasSettlement = (settleDyVal > 1e-6);
-if (hasSettlement) {
-  const sc = Math.max(0, Math.min(nCol - 1, p.settleCol | 0));
-  const nSettle = nid(sc, 0);
-  fixedDisp.set(nSettle*3 + 1, -settleDyVal * 1e-3);  // uy 向下为负
+
+/* 优先读取 supportMap 每柱独立位移 */
+for(let c=0;c<nCol;c++){
+  const entry = supportMapSolver[String(c)];
+  if(!entry) continue;
+  const n = nid(c, 0);
+  if(entry.dy != null && Math.abs(entry.dy) > 1e-6){
+    /* dy>0 沉降=向下=uy为负；dy<0 上抬=向上=uy为正 */
+    fixedDisp.set(n*3+1, -entry.dy * 1e-3);
+  }
+  if(entry.rot != null && Math.abs(entry.rot) > 1e-9){
+    fixedDisp.set(n*3+2, entry.rot);   // 强迫转角（rad）
+  }
 }
+
+/* 兼容旧 settleCol/settleDy：当 supportMap 未覆盖该柱 dy 时生效 */
+const settleDyVal = parseFloat(p.settleDy) || 0;
+if(Math.abs(settleDyVal) > 1e-6){
+  const sc = Math.max(0, Math.min(nCol - 1, p.settleCol | 0));
+  const entry = supportMapSolver[String(sc)];
+  const alreadyHasDy = entry && entry.dy != null && Math.abs(entry.dy) > 1e-6;
+  if(!alreadyHasDy){
+    const nSettle = nid(sc, 0);
+    fixedDisp.set(nSettle*3 + 1, -settleDyVal * 1e-3);
+  }
+}
+
+const hasSettlement = fixedDisp.size > 0;
 
 /* =====================================================================
    【核心修复：消除数值虚假侧移 - 求解前约束】
@@ -551,11 +625,41 @@ if(nLev >= 3 && Math.abs(p.h2 - p.h3) > 1e-6) isSymmetric = false;
 /* 荷载/温度/支撑不对称时，禁止强制柱顶水平位移为 0，否则会抹掉真实侧移。
    保守策略：只要存在任一可能破坏对称性的因素，就关闭对称约束。 */
 if(isSymmetric){
-  if(Object.keys(p.qSpanMap || {}).length > 0) isSymmetric = false;
-  if(Object.keys(p.pLoadMap || {}).length > 0) isSymmetric = false;
+  /* 只统计“真正非零”的逐跨覆盖：用户点开按跨指定面板但全填 0 时，
+     不应打破对称约束，否则纯竖向荷载下会冒出浮点噪声侧移。 */
+  const hasNonZeroQSpan = Object.keys(p.qSpanMap || {}).some(k => Math.abs(parseFloat(p.qSpanMap[k]) || 0) > 1e-9);
+  const hasNonZeroPLoad = Object.keys(p.pLoadMap || {}).some(k => {
+    const v = p.pLoadMap[k] || {};
+    return Math.abs(parseFloat(v.P) || 0) > 1e-9;
+  });
+  if(hasNonZeroQSpan) isSymmetric = false;
+  if(hasNonZeroPLoad) isSymmetric = false;
   if((p.P1 || 0) > 0 || (p.P2 || 0) > 0 || (p.P3 || 0) > 0) isSymmetric = false;
   if(Math.abs(p.tempAll || 0) > 1e-9 || Math.abs(p.tempGrad || 0) > 1e-9) isSymmetric = false;
   if(Object.keys(p.braceMap || {}).some(k => p.braceMap[k] && p.braceMap[k] !== 'none')) isSymmetric = false;
+  /* supportMap 各柱类型/位移/转角不同 → 打破对称约束 */
+  if(p.supportMap && Object.keys(p.supportMap).length > 0){
+    const getTypeSym = (c) => {
+      const e = p.supportMap[String(c)];
+      if(e && e.type && ['fixed','pin','roller','spring'].includes(e.type)) return e.type;
+      if(p.betaF >= BETA_FIXED) return 'fixed';
+      if(p.betaF <= BETA_HINGE) return 'pin';
+      return 'spring';
+    };
+    const e0 = p.supportMap['0'] || {};
+    const firstType = getTypeSym(0);
+    const firstDy   = e0.dy || 0;
+    const firstRot  = e0.rot || 0;
+    for(let c=1;c<nCol;c++){
+      const e = p.supportMap[String(c)] || {};
+      if(getTypeSym(c) !== firstType ||
+         Math.abs((e.dy || 0) - firstDy) > 1e-6 ||
+         Math.abs((e.rot || 0) - firstRot) > 1e-9){
+        isSymmetric = false;
+        break;
+      }
+    }
+  }
 }
 
 if (isSymmetric && !hasSettlement) {
@@ -763,7 +867,11 @@ for(let i=0;i<ndof;i++) if(!fixedR.has(i) && reduce[i] === i) free.push(i);
     const row = [];
     for(let c=0;c<nBay;c++){
       const Lc = X[c+1] - X[c];
-      row.push((EIb / Lc) / (EIc / hlv));
+      /* 内柱 EI 为边柱的 r 倍：按跨内两端柱平均线刚度计算 rho。 */
+      const kcL = isMidCol(c) ? p.r : 1.0;
+      const kcR = isMidCol(c+1) ? p.r : 1.0;
+      const EIcAvg = EIc * (kcL + kcR) / 2;
+      row.push((EIb / Lc) / (EIcAvg / hlv));
     }
     rho.push(row);
   }
@@ -808,11 +916,11 @@ function analyzeTensionOnly(p) {
     }
     
     // 振荡检测：若新失效集与历史某次完全相同，说明在两点间反复横跳。
-    // 继续迭代只会重复相同解，直接退出，避免跑满 15 次卡住主线程。
     const fp = [...nextInactiveBraces].sort().join('|');
     if(seenFingerprints.has(fp)){
-      inactiveBraces = nextInactiveBraces;
-      break;
+      console.warn(hasTemp ? '温度工况下仅受拉支撑振荡' : '仅受拉支撑迭代出现振荡，输出最后一轮近似解。');
+      converged = false; // 标记为未收敛
+      break;             // 跳出循环，不再抛错导致整个界面崩溃
     }
     seenFingerprints.add(fp);
     

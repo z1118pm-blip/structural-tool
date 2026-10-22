@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Structura · 结构量级估算</title>
+<link rel="stylesheet" href="styles-est.css">
+</head>
+<body>
+<div id="app">
+  <!-- 左侧数据控制台 -->
+  <div id="panel">
+    <div class="brand" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+      <h1 style="margin-bottom:0;">📐 结构量级估算</h1>
+      <div style="display:flex; gap:8px;">
+        <button type="button" class="backBtn" style="font-family:inherit; cursor:pointer;" onclick="document.getElementById('modal-usage').classList.add('open')">📖 使用说明</button>
+        <a href="index.html" class="backBtn">← 返回分析工具</a>
+      </div>
+    </div>
+
+    <!-- 开发中警告横幅 -->
+    <div style="background: rgba(250,204,21,0.12); border: 1px dashed rgba(250,204,21,0.6); color: #facc15; font-size: 11.5px; padding: 8px 12px; border-radius: 6px; margin-bottom: 16px; display: flex; align-items: center; gap: 6px; line-height: 1.4;">
+      <span style="font-size: 14px;">🚧</span>
+      <span><b>本工具尚在开发中</b>，内部逻辑可能随时更新变动，相关结果请谨慎参考、注意辨别。</span>
+    </div>
+
+    <!-- 左侧 Tab 导航 -->
+    <div class="panel-tabs">
+      <button type="button" class="panel-tab on" onclick="switchPanelTab('basic', this)">📐 基础参数</button>
+      <button type="button" class="panel-tab" onclick="switchPanelTab('load', this)">⚖️ 荷载与细部</button>
+      <button type="button" class="panel-tab" onclick="switchPanelTab('result', this)">📊 结果与导出</button>
+    </div>
+
+    <!-- Tab 1: 基础参数 -->
+    <div id="panel-tab-basic" class="panel-tab-content" style="display: flex;">
+    <div class="group">
+      <div class="gtitle">基本参数</div>
+      <div class="row row-col"><span>结构类型</span>
+        <select id="in-structType">
+          <option value="frame" selected>框架结构</option>
+          <option value="frameShear">框架-剪力墙</option>
+          <option value="wall">剪力墙结构</option>
+          <option value="masonry">砌体结构</option>
+          <option value="steel">钢结构</option>
+        </select>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 8px;">
+        <!-- 层数 -->
+        <div class="slider-group">
+          <div class="slider-head"><span>层数 n</span><input type="number" id="in-nLev" value="5" min="1" max="50"></div>
+          <input type="range" id="range-nLev" min="1" max="50" step="1" value="5" class="slider-track">
+        </div>
+        <!-- 层高 -->
+        <div class="slider-group">
+          <div class="slider-head"><span>层高 h (m)</span><input type="number" id="in-h" value="3.6" min="2" max="6" step="0.1"></div>
+          <input type="range" id="range-h" min="2" max="6" step="0.1" value="3.6" class="slider-track">
+        </div>
+        <!-- 总长 L -->
+        <div class="slider-group">
+          <div class="slider-head"><span>总长 L (m)</span><input type="number" id="in-L" value="30" min="10" max="100" step="1"></div>
+          <input type="range" id="range-L" min="10" max="100" step="1" value="30" class="slider-track">
+        </div>
+        <!-- 总宽 B -->
+        <div class="slider-group">
+          <div class="slider-head"><span>总宽 B (m)</span><input type="number" id="in-B" value="15" min="10" max="100" step="1"></div>
+          <input type="range" id="range-B" min="10" max="100" step="1" value="15" class="slider-track">
+        </div>
+      </div>
+      <div id="masonry-warn" class="masonry-warn" style="display:none;"></div>
+      <div class="grid-2">
+        <div class="slider-group">
+          <div class="slider-head"><span>基本风压 w₀ (kN/m²)</span><input type="number" id="in-w0" value="0.3" min="0" max="1" step="0.05"></div>
+          <input type="range" id="range-w0" min="0" max="1" step="0.05" value="0.3" class="slider-track">
+        </div>
+        <div class="row row-col"><span>地面粗糙度</span>
+          <select id="in-terrain">
+            <option value="A">A类</option>
+            <option value="B" selected>B类</option>
+            <option value="C">C类</option>
+            <option value="D">D类</option>
+          </select>
+        </div>
+      </div>
+      <div class="row"><span>抗震设防</span>
+        <select id="in-intensity">
+          <optgroup label="多遇地震（小震，常规设计）">
+            <option value="6">6度 (0.05g)</option>
+            <option value="7-0.10" selected>7度 (0.10g)</option>
+            <option value="7-0.15">7度半 (0.15g)</option>
+            <option value="8-0.20">8度 (0.20g)</option>
+            <option value="8-0.30">8度半 (0.30g)</option>
+            <option value="9">9度 (0.40g)</option>
+          </optgroup>
+          <optgroup label="设防地震（中震，性能化设计）">
+            <option value="6-mid">6度中震 (0.12g)</option>
+            <option value="7-mid">7度中震 (0.23g)</option>
+            <option value="7-0.15-mid">7度半中震 (0.34g)</option>
+            <option value="8-mid">8度中震 (0.45g)</option>
+            <option value="8-0.30-mid">8度半中震 (0.68g)</option>
+            <option value="9-mid">9度中震 (0.90g)</option>
+          </optgroup>
+        </select>
+      </div>
+      <div class="grid-2" style="margin-top: 4px;">
+        <div class="row row-col"><span>场地类别</span>
+          <select id="in-siteClass">
+            <option value="I0">I₀类</option>
+            <option value="I1">I₁类</option>
+            <option value="II" selected>II类</option>
+            <option value="III">III类</option>
+            <option value="IV">IV类</option>
+          </select>
+        </div>
+        <div class="row row-col"><span>设计地震分组</span>
+          <select id="in-seismicGroup">
+            <option value="1">第一组</option>
+            <option value="2" selected>第二组</option>
+            <option value="3">第三组</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="slider-group" id="group-C_period">
+          <div class="slider-head"><span id="label-C_period">周期估算系数 C</span><input type="number" id="in-C_period" value="0.020" min="0.008" max="0.025" step="0.001"></div>
+          <input type="range" id="range-C_period" min="0.008" max="0.025" step="0.001" value="0.020" class="slider-track">
+        </div>
+        <div class="slider-group" id="group-psiT">
+          <div class="slider-head"><span>周期折减系数 ψ_T</span><input type="number" id="in-psiT" value="0.65" min="0.5" max="1.0" step="0.05"></div>
+          <input type="range" id="range-psiT" min="0.5" max="1.0" step="0.05" value="0.65" class="slider-track">
+        </div>
+      </div>
+
+    </div>
+    </div> <!-- 结束 Tab 1 -->
+
+    <!-- Tab 2: 荷载与细部 -->
+    <div id="panel-tab-load" class="panel-tab-content" style="display: none;">
+    <div class="group">
+      <div class="gtitle">荷载指标</div>
+      <div class="slider-group">
+        <div class="slider-head"><span>楼面活载标准值 qk (kN/m²)</span><input type="number" id="in-qk" value="2.0" min="1.5" max="10.0" step="0.5"></div>
+        <input type="range" id="range-qk" min="1.5" max="10.0" step="0.5" value="2.0" class="slider-track">
+      </div>
+    </div>
+
+    <div class="group" style="border-top: 1px dashed #334155; padding-top: 20px;">
+      <div class="gtitle" style="display:flex; justify-content:space-between; align-items:center;">
+        重力荷载综合指标
+        <div style="display:flex; gap: 6px; align-items: center;">
+          <button type="button" id="btn-gk-reset" style="display:none; background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.5); color:#38bdf8; font-size:10px; padding:2px 6px; border-radius:4px; cursor:pointer; font-family:inherit; transition:all 0.2s;">↩️ 恢复默认</button>
+          <span id="gk-tag" style="font-size:10px; color:#38bdf8; background:rgba(56,189,248,0.1); padding:2px 6px; border-radius:4px; font-weight:normal;">依据规范默认</span>
+        </div>
+      </div>
+      <div class="slider-group">
+        <div class="slider-head">
+          <span>楼层综合恒载 gk (kN/m²)</span>
+          <input type="number" id="in-gkBase" value="11.0" min="5" max="30" step="0.5">
+        </div>
+        <input type="range" id="range-gkBase" min="5" max="30" step="0.5" value="11.0" class="slider-track">
+        <div style="font-size:10px; color:#64748b; margin-top:4px;" id="gk-hint">纯恒载：9~12（高规 5.1.8 总重力 12~14 扣除活载）</div>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="gtitle" style="display:flex; justify-content:space-between; align-items:center;">
+        <span>📐 细部参数拆解（可选项）</span>
+      </div>
+      
+      <div id="group-slab" class="grid-2">
+        <div class="slider-group">
+          <div class="slider-head"><span>板厚 (mm)</span><input type="number" id="in-tSlab" value="100" min="80" max="200" step="10"></div>
+          <input type="range" id="range-tSlab" min="80" max="200" step="10" value="100" class="slider-track">
+        </div>
+        <div class="slider-group">
+          <div class="slider-head"><span>建筑做法 (kN/m²)</span><input type="number" id="in-qArch" value="1.5" min="0.5" max="3.0" step="0.1"></div>
+          <input type="range" id="range-qArch" min="0.5" max="3.0" step="0.1" value="1.5" class="slider-track">
+        </div>
+      </div>
+
+      <!-- 平面柱网（框架 / 框剪 / 钢结构共享） -->
+      <div id="group-plan" class="grid-2" style="margin-top:10px;">
+        <div class="slider-group">
+          <div class="slider-head"><span>柱网 Lx (m)</span><input type="number" id="in-Lx" value="8" min="4" max="15" step="0.1"></div>
+          <input type="range" id="range-Lx" min="4" max="15" step="0.1" value="8" class="slider-track">
+        </div>
+        <div class="slider-group">
+          <div class="slider-head"><span>柱网 Ly (m)</span><input type="number" id="in-Ly" value="8" min="4" max="15" step="0.1"></div>
+          <input type="range" id="range-Ly" min="4" max="15" step="0.1" value="8" class="slider-track">
+        </div>
+      </div>
+
+      <!-- 混凝土框架/框剪专属 -->
+      <div id="group-frame" class="grid-2" style="margin-top:10px;">
+        <div class="slider-group" id="col-bBeam">
+          <div class="slider-head"><span>梁宽 (mm)</span><input type="number" id="in-bBeam" value="250" min="200" max="400" step="50"></div>
+          <input type="range" id="range-bBeam" min="200" max="400" step="50" value="250" class="slider-track">
+        </div>
+        <div class="slider-group" id="col-hBeam">
+          <div class="slider-head"><span>梁高 (mm)</span><input type="number" id="in-hBeam" value="600" min="400" max="1000" step="50"></div>
+          <input type="range" id="range-hBeam" min="400" max="1000" step="50" value="600" class="slider-track">
+        </div>
+        
+        <div class="row row-col" id="col-steelBeamMain" style="display:none; grid-column: span 2;">
+          <span>主梁型号 (HN 热轧H型钢)</span>
+          <select id="in-steelBeamMain">
+            <option value="HN300x150">HN300x150 (37.3 kg/m)</option>
+            <option value="HN350x175">HN350x175 (50.0 kg/m)</option>
+            <option value="HN400x200" selected>HN400x200 (66.0 kg/m)</option>
+            <option value="HN450x200">HN450x200 (76.5 kg/m)</option>
+            <option value="HN500x200">HN500x200 (89.7 kg/m)</option>
+            <option value="HN600x200">HN600x200 (106.0 kg/m)</option>
+            <option value="HN700x300">HN700x300 (185.0 kg/m)</option>
+          </select>
+        </div>
+
+        <div class="slider-group" id="col-tWall">
+          <div class="slider-head"><span>填充墙厚度 (mm)</span><input type="number" id="in-tWall" value="200" min="100" max="370" step="10"></div>
+          <input type="range" id="range-tWall" min="100" max="370" step="10" value="200" class="slider-track">
+        </div>
+        <div class="slider-group" id="col-qWallDensity">
+          <div class="slider-head"><span>砌块容重 (kN/m³)</span><input type="number" id="in-qWallDensity" value="19.0" min="5" max="25" step="0.5"></div>
+          <input type="range" id="range-qWallDensity" min="5" max="25" step="0.5" value="19.0" class="slider-track">
+        </div>
+        <div class="slider-group" id="col-wallRatio">
+          <div class="slider-head"><span>填充墙满布率 (%)</span><input type="number" id="in-wallRatio" value="50" min="0" max="100" step="5"></div>
+          <input type="range" id="range-wallRatio" min="0" max="100" step="5" value="50" class="slider-track">
+        </div>
+      </div>
+
+      <!-- 次梁参数 -->
+      <div id="group-secBeam" class="grid-2" style="margin-top:10px;">
+        <div class="row row-col" style="grid-column: span 2;">
+          <span>楼盖梁系模型</span>
+          <select id="in-beamModel">
+            <option value="none">无次梁（仅主梁）</option>
+            <option value="cross" selected>十字次梁（双向各1道）</option>
+            <option value="single-X">单向次梁（沿X向布置）</option>
+            <option value="single-Y">单向次梁（沿Y向布置）</option>
+            <option value="grid">井字次梁（双向多道）</option>
+          </select>
+        </div>
+        <div class="slider-group" id="col-bSecBeam">
+          <div class="slider-head"><span>次梁宽 (mm)</span><input type="number" id="in-bSecBeam" value="200" min="150" max="400" step="50"></div>
+          <input type="range" id="range-bSecBeam" min="150" max="400" step="50" value="200" class="slider-track">
+        </div>
+        <div class="slider-group" id="col-hSecBeam">
+          <div class="slider-head"><span>次梁高 (mm)</span><input type="number" id="in-hSecBeam" value="500" min="300" max="800" step="50"></div>
+          <input type="range" id="range-hSecBeam" min="300" max="800" step="50" value="500" class="slider-track">
+        </div>
+        
+        <div class="row row-col" id="col-steelBeamSec" style="display:none; grid-column: span 2;">
+          <span>次梁型号 (HN 热轧H型钢)</span>
+          <select id="in-steelBeamSec">
+            <option value="HN200x100">HN200x100 (21.7 kg/m)</option>
+            <option value="HN250x125">HN250x125 (29.7 kg/m)</option>
+            <option value="HN300x150" selected>HN300x150 (37.3 kg/m)</option>
+            <option value="HN350x175">HN350x175 (50.0 kg/m)</option>
+            <option value="HN400x200">HN400x200 (66.0 kg/m)</option>
+          </select>
+        </div>
+
+        <div class="slider-group" style="grid-column: span 2;">
+          <div class="slider-head"><span>次梁目标间距 (m)</span><input type="number" id="in-secBeamSpacing" value="2.5" min="1.5" max="4.0" step="0.1"></div>
+          <input type="range" id="range-secBeamSpacing" min="1.5" max="4.0" step="0.1" value="2.5" class="slider-track">
+        </div>
+      </div>
+
+      <!-- 轴压比配柱专属 -->
+      <div id="group-col" class="slider-group" style="margin-top: 10px;">
+        <div class="slider-head">
+          <span id="label-muN">预估轴压比 (配柱)</span>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <b id="r-colSize" style="font-family:'JetBrains Mono', monospace; color:#38bdf8; font-size:13px; min-width: 110px; text-align:right;">—</b>
+            <span id="r-colCalc" style="font-size:10px; color:#64748b; white-space:nowrap;">(需 0)</span>
+            <input type="number" id="in-muN" value="0.8" step="0.05" max="0.9" min="0.5" inputmode="decimal" style="width: 62px; min-width: 62px;">
+          </div>
+        </div>
+        <input type="range" id="range-muN" min="0.5" max="0.9" step="0.05" value="0.8" class="slider-track">
+      </div>
+      
+      <!-- 钢柱专属 -->
+      <div id="group-steel-col" class="slider-group" style="margin-top: 10px; display:none;">
+        <div class="slider-head"><span>钢柱壁厚 (mm)</span><input type="number" id="in-steelColThk" value="20" min="4" max="40" step="2"></div>
+        <input type="range" id="range-steelColThk" min="4" max="40" step="2" value="20" class="slider-track">
+      </div>
+
+      <!-- 剪力墙专属 -->
+      <div id="group-cw" class="grid-2" style="margin-top:10px; display:none;">
+        <div class="slider-group">
+          <div class="slider-head"><span>墙厚 (mm)</span><input type="number" id="in-cwThk" value="200" min="160" max="400" step="10"></div>
+          <input type="range" id="range-cwThk" min="160" max="400" step="10" value="200" class="slider-track">
+        </div>
+        <div class="slider-group">
+          <div class="slider-head"><span>含墙率 (m/m²)</span><input type="number" id="in-cwRatio" value="0.15" min="0.05" max="0.30" step="0.01"></div>
+          <input type="range" id="range-cwRatio" min="0.05" max="0.30" step="0.01" value="0.15" class="slider-track">
+        </div>
+      </div>
+
+      <!-- 砌体专属 -->
+      <div id="group-masonry" class="grid-2" style="margin-top:10px; display:none;">
+        <div class="slider-group">
+          <div class="slider-head"><span>墙厚 (mm)</span><input type="number" id="in-masThk" value="240" min="120" max="370" step="10"></div>
+          <input type="range" id="range-masThk" min="120" max="370" step="10" value="240" class="slider-track">
+        </div>
+        <div class="slider-group">
+          <div class="slider-head"><span>含墙率 (m/m²)</span><input type="number" id="in-masRatio" value="0.30" min="0.15" max="0.45" step="0.01"></div>
+          <input type="range" id="range-masRatio" min="0.15" max="0.45" step="0.01" value="0.30" class="slider-track">
+        </div>
+      </div>
+
+      <!-- 钢结构专属 (墙) -->
+      <div id="group-steel" class="grid-2" style="margin-top:10px; display:none;">
+        <div class="slider-group" style="grid-column: span 2;">
+          <div class="slider-head"><span>轻质墙线载 (kN/m)</span><input type="number" id="in-qWallSteel" value="3.0" min="0" max="8" step="0.5"></div>
+          <input type="range" id="range-qWallSteel" min="0" max="8" step="0.5" value="3.0" class="slider-track">
+        </div>
+      </div>
+
+      <!-- 警告统一由基本参数区的 #masonry-warn 显示，此处不再重复 -->
+    </div>
+    </div> <!-- 结束 Tab 2 -->
+
+    <!-- Tab 3: 结果与导出 -->
+    <div id="panel-tab-result" class="panel-tab-content" style="display: none;">
+    <div class="group summary-group" style="margin-top:0; border-top:none; padding-top:0;">
+      <div class="gtitle" style="display:flex; justify-content:space-between; align-items:center;">
+        宏观数据汇总
+        <button type="button" class="btnDetail" onclick="showDetail('all')">📝 完整计算书</button>
+      </div>
+      <div class="grid-2">
+        <div class="valRow row-col"><span>单层恒载 Gk</span><b id="r-gk">—</b></div>
+        <div class="valRow row-col"><span>单层活载 Qk</span><b id="r-qk">—</b></div>
+        <div class="valRow row-col" style="grid-column: span 2;"><span>全楼重力荷载代表值 GE</span><b id="r-GE">—</b></div>
+        <div class="valRow row-col" style="grid-column: span 2; background: rgba(56,189,248,0.05); border-radius:4px; padding: 6px 8px; margin: 4px 0;">
+          <span>总重力 gk+qk (高规 5.1.8)</span><b id="r-g-std" style="font-size: 13px;">—</b>
+        </div>
+        <div class="valRow row-col"><span>X向风剪力 VwX</span><b id="r-VwX">—</b></div>
+        <div class="valRow row-col"><span>Y向风剪力 VwY</span><b id="r-VwY">—</b></div>
+        <div class="valRow row-col"><span>震剪力 FEk</span><b id="r-FEk">—</b></div>
+        <div class="valRow row-col"><span>基本周期 T₁</span><b id="r-T1">—</b></div>
+        <div class="valRow row-col"><span>折减周期 T_calc</span><b id="r-Tcalc">—</b></div>
+        <div class="valRow row-col"><span>特征周期 T_g</span><b id="r-Tg">—</b></div>
+        <div class="valRow row-col"><span>地震影响系数 α₁</span><b id="r-alpha1">—</b></div>
+      </div>
+      <div class="valRow highlight-row" style="margin-top: 10px; border-bottom: none; display: flex; flex-direction: column; align-items: flex-start; gap: 6px;">
+        <div style="display:flex; justify-content:space-between; width:100%;">
+          <span>X向控制工况</span><b id="r-control-x">—</b>
+        </div>
+        <div style="display:flex; justify-content:space-between; width:100%;">
+          <span>Y向控制工况</span><b id="r-control-y">—</b>
+        </div>
+      </div>
+    </div>
+    </div> <!-- 结束 Tab 3 -->
+  </div>
+
+  <!-- 右侧视图区 -->
+  <div id="result">
+    <div class="result-header">
+      <span class="watermark">◆ STRUCTURA / ESTIMATION MODULE</span>
+      <div class="hint">
+        <span class="warn-tag" style="background:#facc15;color:#000;margin-right:4px;">DEV</span> 
+        <span style="color:#facc15;font-weight:700;">功能尚不稳定，请辨别使用。</span>
+        <span style="color:#334155;margin:0 6px;">|</span>
+        <span class="warn-tag">WARNING</span> 仅作为概念阶段的量级参考，严禁用于施工图设计。
+      </div>
+    </div>
+    
+    <div class="charts-grid">
+      <div class="chart-box"><div id="svg-plan"></div></div>
+      <div class="chart-box"><div id="svg-elevation"></div></div>
+      
+      <!-- 风荷载图卡片（带 Tab） -->
+      <div class="chart-box">
+        <div class="chart-tabs">
+          <button type="button" class="chart-tab on" data-group="dir" onclick="switchTab('wind', 'dirX', this)">X向</button>
+          <button type="button" class="chart-tab" data-group="dir" onclick="switchTab('wind', 'dirY', this)">Y向</button>
+          <span style="color:#334155; margin:0 4px;">|</span>
+          <button type="button" class="chart-tab on" data-group="view" onclick="switchTab('wind', 'dist', this)">分布图</button>
+          <button type="button" class="chart-tab" data-group="view" onclick="switchTab('wind', 'shear', this)">剪力图</button>
+        </div>
+        <div id="svg-wind"></div>
+      </div>
+
+      <!-- 地震作用图卡片（带 Tab） -->
+      <div class="chart-box">
+        <div class="chart-tabs">
+          <button type="button" class="chart-tab on" data-group="view" onclick="switchTab('seis', 'dist', this)">分布图</button>
+          <button type="button" class="chart-tab" data-group="view" onclick="switchTab('seis', 'shear', this)">剪力图</button>
+        </div>
+        <div id="svg-seismic"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 使用说明模态框 -->
+<div id="modal-usage" class="modal">
+  <div class="modal-content" style="width: min(800px, 90vw); max-height: 85vh;">
+    <div class="modal-header">
+      <h3>使用说明 · 假设与定位</h3>
+      <button class="close-btn" onclick="document.getElementById('modal-usage').classList.remove('open')">×</button>
+    </div>
+    
+    <div class="usage-tabs">
+      <button class="usage-tab on" onclick="switchUsageTab('position', this)">工具与定位</button>
+      <button class="usage-tab" onclick="switchUsageTab('assumption', this)">参数与假设</button>
+      <button class="usage-tab" onclick="switchUsageTab('limit', this)">局限与声明</button>
+    </div>
+
+    <div class="modal-body">
+      <!-- Tab 1 -->
+      <div id="usage-tab-position" class="usage-tab-content" style="display: block;">
+        <div class="tip-box tip-blue" style="margin-bottom: 16px;">
+          <div style="color: #eab308; font-weight: 700; margin-bottom: 6px; font-size: 14px;">【致读者：结构工程师的最后主战场】</div>
+          <p style="margin-bottom: 8px;">随着 AI 技术的狂飙突进，AI 快速完成建模、出图已是可望且可即的现实。在这个时代，结构工程师的核心价值究竟何在？</p>
+          <p style="margin-bottom: 8px;">答案在于：<b>精准判断 AI 生成的结构方案，引导 AI 进行迭代优化，并为最终的结构安全兜底负责。</b>这将成为结构工程师不可替代的最后主战场。</p>
+          <p>本工具的初衷，并非替代任何计算软件，而是为了帮你磨砺力学直觉、完善概念设计能力。因为<b>软件可以算得很快，但判断对错与承担责任，永远属于人。</b></p>
+        </div>
+        
+        <h4 style="color:#38bdf8; margin: 16px 0 8px;">📌 双轨制荷载估算（V2 核心逻辑）</h4>
+        <ul class="usage-list">
+          <li><b>宏观打底（开箱即用）</b>：内置了《高规》5.1.8 条文说明及行业经验的不同结构体系综合恒载基准值。不填细部参数也能立刻得出合理的量级结果。</li>
+          <li><b>细部拆解（精准修正）</b>：展开细部参数后，系统会根据所选结构类型（框架、框剪、剪力墙、砌体、钢结构）自动切换计算模型。比如砌体会自动剔除梁柱，改用“墙厚×含墙率×容重+抹灰”的真实逻辑重算。</li>
+          <li><b>物理校验尺</b>：若 AI 给出的柱截面、用钢量与你在此工具中调出的合理区间严重背离，即说明需要人工复核。</li>
+        </ul>
+      </div>
+
+      <!-- Tab 2 -->
+      <div id="usage-tab-assumption" class="usage-tab-content" style="display: none;">
+        
+        <div class="tip-box tip-yellow" style="margin-bottom: 16px;">
+          <b>💡 核心理念：</b>软件算得快，但判断对错属于人。本工具所有公式均为显式表达，旨在帮您快速建立量级直觉。
+        </div>
+
+        <h4 style="color:#38bdf8; margin: 0 0 8px;">⚖️ 1. 重力荷载估算逻辑</h4>
+        <ul class="usage-list" style="margin-bottom: 16px;">
+          <li><b>宏观基准 vs 细部累加</b>：宏观基准（g<sub>k</sub>）提供纯恒载量级（不含活载）。一旦拖动细部参数，系统自动切换为“细部累加”。</li>
+          <li><b>总重力校验</b>：结果区展示 g<sub>std</sub> = g<sub>k</sub> + q<sub>k</sub>。根据《高规》5.1.8 条文说明，框架总重力约 12~14 kN/m²，剪力墙约 13~16 kN/m²，在此区间内校验尺亮绿灯。</li>
+          <li><b>框架结构</b>：全部竖向轴力由框架柱承担。填充墙重量仅沿<strong>框架主梁</strong>摊派，默认次梁上方不砌墙，避免因梁系布置改变导致墙重突变。</li>
+          <li><b>框剪结构</b>：除填充墙外，额外按“墙厚 × 25 × 层高 × 含墙率”计入剪力墙自重。配柱时，框架柱仅承担本柱网内的竖向重力荷载（不含剪力墙自重），剪力墙仅起到分担水平荷载的作用。</li>
+          <li><b>剪力墙结构</b>：全剪力墙承重。无梁柱折算，恒载由楼板自重、建筑做法及剪力墙自重组成（墙厚 × 25 × 层高 × 含墙率）。</li>
+          <li><b>砌体结构</b>：由砌体墙承重。恒载由楼板、建筑做法、砌体墙自重（墙厚 × 18 × 层高 × 含墙率）及双面抹灰组成。因刚度极大，地震作用按底部剪力法直接取 α<sub>1</sub> = α<sub>max</sub>，不计算周期。</li>
+          <li><b>钢结构</b>：采用“构件级算量”。<b>主次梁</b>选择常用 HN 型钢型号（查表得线重度），按周边均摊及排布规则求总长算重。<b>钢柱</b>采用“轴压比（强度）+长细比（稳定）双控”反算箱形截面（Q355，f=305 MPa）：先由轴压比求所需面积，再按容许长细比 [λ]=120 校验最小边长，取大值后校验宽厚比 a/t ≤ 45。加上组合楼板、做法及轻质围护墙，摊入面积。</li>
+          <li><b>轴力折减</b>：配柱轴力按 1.3恒 + 1.5活 组合，<strong>未考虑活载折减</strong>（GB50009 5.1.2），算出的柱截面偏安全。</li>
+        </ul>
+
+        <h4 style="color:#38bdf8; margin: 16px 0 8px;">📐 2. 构件自重与配柱反算</h4>
+        <ul class="usage-list" style="margin-bottom: 16px;">
+          <li><b>梁自重摊派</b>：扣除板厚后的净高 × 梁宽 × 25 kN/m³。<br>
+          &nbsp;&nbsp;👉 <b>框架主梁</b>：位于柱网边界，由相邻柱网共同分担。本柱网只计取“一个长边 + 一个短边”的重量（即分摊长度 = Lx + Ly）。<br>
+          &nbsp;&nbsp;👉 <b>楼盖次梁</b>：位于柱网内部，完全属于本柱网。按您选择的布置模型（十字、单向、井字），排了几根就累加几根的长度。</li>
+          <li><b>墙体与抹灰</b>：墙体线荷载 = 墙厚 × 容重 × 净高。<b>所有墙体（含框架填充墙、砌体墙）均已计入双面抹灰</b>（按 0.8 kN/m² 考虑）。抹灰重量与墙体自重一样，都会随着设定的“满布率/含墙率”同步折减，确保与实际砌筑量匹配。</li>
+          <li><b>配柱反算原理</b>：依据预估轴压比 μ<sub>N</sub>，采用 C30 混凝土（f<sub>c</sub>=14.3 MPa）。轴力 N = (1.3 × 单层恒载 + 1.5 × 活载) × 受荷面积 × 层数。反算面积 A<sub>c</sub> = N / (μ<sub>N</sub> · f<sub>c</sub>)，开方得边长并向上取整至 50mm，且不小于 300mm 构造要求。</li>
+          <li><b>受荷面积封顶</b>：若柱网 Lx×Ly 大于单层建筑面积，梁墙分母按单层面积封顶；但配柱与柱自重仍按原始柱网面积反算，防止截面偏小。</li>
+        </ul>
+
+        <h4 style="color:#38bdf8; margin: 16px 0 8px;">🌀 3. 周期与地震作用推导</h4>
+        <ul class="usage-list" style="margin-bottom: 16px;">
+          <li><b>周期估算经验系数 C</b>：依据《高规》附录 C，框架取 0.02，框剪取 0.018，剪力墙取 0.015；钢结构取 0.085 且指数 p 取 0.75（T₁ = C·H<sup>p</sup>）。</li>
+          <li><b>周期折减系数 ψ<sub>T</sub></b>：考虑填充墙刚度对计算周期的缩短效应。框架默认 0.65，框剪 0.75，剪力墙 0.95。</li>
+          <li><b>反应谱计算</b>：依据 GB50011，特征周期 T<sub>g</sub> 由场地类别和分组查表。地震影响系数 α₁ 由 T<sub>calc</sub>（折减后周期）代入反应谱公式求出（下降段指数 γ=0.9）。</li>
+          <li><b>顶部附加力 ΔF<sub>n</sub></b>：当 T<sub>calc</sub> > 1.4 T<sub>g</sub> 时，按 GB50011 5.2.1 在顶层附加地震力，附加系数 δ<sub>n</sub> = 0.08 T<sub>calc</sub> + 0.07（不超过 0.15）。</li>
+        </ul>
+
+        <h4 style="color:#38bdf8; margin: 16px 0 8px;">🌬️ 4. 风荷载参数取值</h4>
+        <ul class="usage-list">
+          <li><b>体型与高度系数</b>：依据 GB50009-2012 表 8.3.1，矩形平面建筑总高 ≤24m 时体型系数 μ<sub>s</sub> 取 1.3，>24m 时取 1.4。风压高度变化系数 μ<sub>z</sub> 按 GB50009 表 8.2.1 线性插值。</li>
+          <li><b>风振系数 β<sub>z</sub></b>：高度 ≤30m 时取 1.0；超过 30m 后按高度线性放大，最大封顶 1.8（估算值）。</li>
+          <li><b>风压计算</b>：w<sub>k</sub> = β<sub>z</sub> · μ<sub>s</sub> · μ<sub>z</sub> · w<sub>0</sub>。计算书中的 10m 参考风压，严格按 10m 高度处的 μ<sub>z</sub> 且 β<sub>z</sub>=1.0 计算。</li>
+        </ul>
+
+      </div>
+
+      <!-- Tab 3 -->
+      <div id="usage-tab-limit" class="usage-tab-content" style="display: none;">
+        <div class="tip-box tip-red" style="margin-bottom: 16px;">
+          <b>⚠️ 关键声明：</b> 本工具目前处于持续更新阶段，计算结果仅作为概念阶段的量级参考，<b>严禁用于施工图设计。</b>
+        </div>
+        
+        <h4 style="color:#38bdf8; margin: 16px 0 8px;">🚫 无法替代的复杂因素</h4>
+        <ul class="usage-list">
+          <li>不能替代 SATWE / YJK / ETABS 等整体有限元分析；</li>
+          <li>未考虑结构平面不规则、竖向不规则引起的扭转效应；</li>
+          <li>未考虑楼板面内变形、地基基础沉降、温度收缩应力；</li>
+          <li>砌体结构仅做重力与底部总剪力估算，未进行墙段抗震验算。</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 计算书模态框 -->
+<div id="modal-detail" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 id="modal-title">计算书详情</h3>
+      <button class="close-btn" onclick="document.getElementById('modal-detail').classList.remove('open')">×</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<script src="js-est/01-est-state.js"></script>
+<script src="js-est/02-est-load.js"></script>
+<script src="js-est/03-est-wind.js"></script>
+<script src="js-est/04-est-seismic.js"></script>
+<script src="js-est/05-est-ui.js"></script>
+</body>
+</html>

@@ -89,7 +89,7 @@ function drawBeamEndConn(ctx, ax, ay, bx, by, kind, T){
   const coilLen  = 12;
   const nCoils   = 3;
   const amp      = 3;
-  const px = -ny, py = nx; // 杆轴垂直方向
+  const px = -ny, py = nx; // 杆轴垂直方向，避免方向反转
   const sx = ax + nx*startOff, sy = ay + ny*startOff;
   ctx.beginPath();
   ctx.moveTo(sx, sy);
@@ -180,32 +180,55 @@ function drawFrameLines(ctx, model, toS, color, lwBase, dashed, useSectionWidth)
   ctx.restore();
 }
 
-function drawSingleSupport(ctx, sx, sy, base, T, colW) {
-  const topY = (base >= BETA_FIXED) ? sy + 9
-             : (base <= BETA_HINGE) ? sy + 11
-             :                        sy + 4;
+function drawSingleSupport(ctx, sx, sy, type, T, colW) {
+  /* 兼容旧调用：传 betaF 数值时按阈值转成 type */
+  if(typeof type === 'number'){
+    type = type >= BETA_FIXED ? 'fixed' : (type <= BETA_HINGE ? 'pin' : 'spring');
+  }
+  
   ctx.strokeStyle = T.support;
-  ctx.lineWidth   = colW;
-  ctx.beginPath();
-  ctx.moveTo(sx, sy);
-  ctx.lineTo(sx, topY);
-  ctx.stroke();
-  ctx.strokeStyle = T.support;
-  ctx.lineWidth = 1.6;
-  if(base >= BETA_FIXED){
+  ctx.lineWidth = colW;
+  
+  if(type === 'fixed'){
+    const topY = sy + 9;
+    ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx, topY); ctx.stroke();
+    ctx.lineWidth = 1.6;
     ctx.beginPath(); ctx.moveTo(sx-11, sy+9); ctx.lineTo(sx+11, sy+9); ctx.stroke();
     for(let k=-9;k<=9;k+=6){
       ctx.beginPath(); ctx.moveTo(sx+k, sy+9); ctx.lineTo(sx+k-5, sy+16); ctx.stroke();
     }
-  } else if(base <= BETA_HINGE){
-    ctx.beginPath(); ctx.moveTo(sx-11, sy+11); ctx.lineTo(sx+11, sy+11); ctx.stroke();
+  } else if(type === 'pin'){
+    const topY = sy + 11;
+    ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx, topY); ctx.stroke();
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(sx, topY);
+    ctx.lineTo(sx-8, topY+8);
+    ctx.lineTo(sx+8, topY+8);
+    ctx.closePath();
+    ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(sx-11, topY+8); ctx.lineTo(sx+11, topY+8); ctx.stroke();
     for(let k=-9;k<=9;k+=6){
-      ctx.beginPath(); ctx.moveTo(sx+k, sy+11); ctx.lineTo(sx+k-5, sy+18); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(sx+k, topY+8); ctx.lineTo(sx+k-5, topY+15); ctx.stroke();
     }
-    ctx.beginPath(); ctx.arc(sx, sy, 4.5, 0, Math.PI*2);
-    ctx.fillStyle = T.supportFill; ctx.fill();
-    ctx.strokeStyle = T.support; ctx.lineWidth = 1.6; ctx.stroke();
+  } else if(type === 'roller'){
+    const topY = sy + 11;
+    ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx, topY); ctx.stroke();
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(sx, topY);
+    ctx.lineTo(sx-8, topY+8);
+    ctx.lineTo(sx+8, topY+8);
+    ctx.closePath();
+    ctx.stroke();
+    ctx.beginPath(); ctx.arc(sx-5, topY+11, 3, 0, Math.PI*2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(sx+5, topY+11, 3, 0, Math.PI*2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(sx-11, topY+14); ctx.lineTo(sx+11, topY+14); ctx.stroke();
+    /* 水平滑动指示双箭头 */
+    ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(sx-14, topY+14); ctx.lineTo(sx+14, topY+14); ctx.stroke();
   } else {
+    /* spring：弹簧符号 */
     const y0 = sy + 4;
     const yBottom = sy + 22;
     ctx.beginPath();
@@ -228,79 +251,165 @@ function drawSingleSupport(ctx, sx, sy, base, T, colW) {
   }
 }
 
-function drawSupports(ctx, model, toS, base, isDeform, deformF){
+function drawSupports(ctx, model, toS, base, isDeform, deformF, W, H){
   const T = theme();
   const nCol = model.nCol || 3;
   const nLev = model.nLev || 2;
   const colW = 2.5;
-
-  const hasSettle = (parseFloat(model.p.settleDy) > 1e-6);
-  const settleCol = hasSettle ? Math.max(0, Math.min(nCol - 1, model.p.settleCol | 0)) : -1;
+  const supportMap = model.p.supportMap || {};
+  
+  /* 旧字段兼容：单柱沉降 */
+  const hasLegacySettle = (Math.abs(parseFloat(model.p.settleDy) || 0) > 1e-6);
+  const legacySettleCol = hasLegacySettle ? Math.max(0, Math.min(nCol - 1, model.p.settleCol | 0)) : -1;
 
   for(let c=0;c<nCol;c++){
     const n = model.nodes[c*(nLev+1)];
-    let sx, sy;
+    const entry = supportMap[String(c)] || {};
     
+    /* 有效支座类型：supportMap 优先，否则回退 betaF */
+    let supType = entry.type;
+    if(!supType || !['fixed','pin','roller','spring'].includes(supType)){
+      supType = base >= BETA_FIXED ? 'fixed' : (base <= BETA_HINGE ? 'pin' : 'spring');
+    }
+    
+    /* 竖向位移（mm）：supportMap 优先，否则旧 settleDy */
+    let dyMm = entry.dy != null ? entry.dy : 0;
+    if(Math.abs(dyMm) < 1e-6 && hasLegacySettle && c === legacySettleCol){
+      dyMm = parseFloat(model.p.settleDy) || 0;
+    }
+    
+    /* 强迫转角（rad） */
+    const rotRad = entry.rot || 0;
+    const hasDy  = Math.abs(dyMm) > 1e-6;
+    const hasRot = Math.abs(rotRad) > 1e-6;
+
+    let sx, sy;
     if (isDeform) {
-      // 变形图：支座跟随节点位移（按放大系数 F 放大）
       const ux = model.U[c*(nLev+1)*3];
       const uy = model.U[c*(nLev+1)*3+1];
-      [sx, sy] = toS(n.x + (deformF || 0) * ux, n.y + (deformF || 0) * uy);
+      const [osx, osy] = toS(n.x, n.y);
+      const [dsx, dsy] = toS(n.x + (deformF || 0) * ux, n.y + (deformF || 0) * uy);
+      const outOfBounds = (W != null && H != null) &&
+                          (dsx < 4 || dsx > W - 4 || dsy < 4 || dsy > H - 4);
+      if(outOfBounds){
+        sx = osx; sy = osy;
+        ctx.save();
+        ctx.strokeStyle = T.support;
+        ctx.globalAlpha = 0.4;
+        ctx.setLineDash([3, 3]);
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(osx, osy);
+        ctx.lineTo(dsx, dsy);
+        ctx.stroke();
+        ctx.restore();
+      } else {
+        sx = dsx; sy = dsy;
+      }
     } else {
-      // 受力/荷载图：原位
       [sx, sy] = toS(n.x, n.y);
     }
 
-    const isSettledCol = (c === settleCol);
-
-    if (!isDeform && isSettledCol) {
-      // 1. 画半透明虚线支座（原位）
+    if (!isDeform && (hasDy || hasRot)) {
+      /* 1. 原位虚线支座 */
       ctx.save();
       ctx.globalAlpha = 0.3;
       ctx.setLineDash([3, 3]);
-      drawSingleSupport(ctx, sx, sy, base, T, colW);
+      drawSingleSupport(ctx, sx, sy, supType, T, colW);
       ctx.restore();
       
-      // 2. 计算下沉后的支座位置（向下偏移 20px）
-      /* 下沉距离与沉降量成比例（1mm→0.6px，上限 60px），便于直观对比。
-         取消 6px 的强行下限，防止 1mm 和 10mm 的沉降在视觉上无法区分。 */
-      const dropPx = Math.min(60, Math.max(1, (model.p.settleDy || 0) * 0.6));
-      const syDrop = sy + dropPx;
+      /* 2. 竖向位移偏移（dy>0 向下，dy<0 向上） */
+      const scHint = Math.abs(toS(0, 1)[1] - toS(0, 0)[1]) || 30;
+      const maxDrop = Math.max(60, scHint * 2.5);
+      const dyPx = hasDy ? Math.max(-maxDrop, Math.min(maxDrop, dyMm * 0.6)) : 0;
+      const syDrop = sy + dyPx;
       
-      // 3. 画红色虚线和箭头连接
-      ctx.save();
-      ctx.strokeStyle = '#ef4444';
-      ctx.fillStyle = '#ef4444';
-      ctx.lineWidth = 1.5;
-      ctx.setLineDash([2, 2]);
+      /* 3. 连接箭头（区分沉降/上抬） */
+      if(hasDy){
+        const arrowColor = dyMm > 0 ? '#ef4444' : '#22c55e';
+        ctx.save();
+        ctx.strokeStyle = arrowColor;
+        ctx.fillStyle = arrowColor;
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([2, 2]);
+        
+        ctx.beginPath(); ctx.moveTo(sx - 8, sy + 2); ctx.lineTo(sx - 8, syDrop - 2); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(sx + 8, sy + 2); ctx.lineTo(sx + 8, syDrop - 2); ctx.stroke();
+        
+        ctx.setLineDash([]);
+        ctx.beginPath(); ctx.moveTo(sx, sy + 2); ctx.lineTo(sx, syDrop - 5); ctx.stroke();
+        
+        if(dyMm > 0){
+          ctx.beginPath();
+          ctx.moveTo(sx, syDrop);
+          ctx.lineTo(sx - 4, syDrop - 6);
+          ctx.lineTo(sx + 4, syDrop - 6);
+          ctx.closePath();
+          ctx.fill();
+        } else {
+          ctx.beginPath();
+          ctx.moveTo(sx, syDrop);
+          ctx.lineTo(sx - 4, syDrop + 6);
+          ctx.lineTo(sx + 4, syDrop + 6);
+          ctx.closePath();
+          ctx.fill();
+        }
+        
+        ctx.font = 'bold 10.5px ui-sans-serif,system-ui,sans-serif';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        const sign = dyMm > 0 ? '↓' : '↑';
+        ctx.fillText(`${sign} ${Math.abs(Math.round(dyMm))}mm`, sx + 14, (sy + syDrop)/2);
+        ctx.restore();
+      }
       
-      ctx.beginPath(); ctx.moveTo(sx - 8, sy + 2); ctx.lineTo(sx - 8, syDrop - 2); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(sx + 8, sy + 2); ctx.lineTo(sx + 8, syDrop - 2); ctx.stroke();
+      /* 4. 新位置实心支座 */
+      drawSingleSupport(ctx, sx, syDrop, supType, T, colW);
       
-      ctx.setLineDash([]);
-      ctx.beginPath(); ctx.moveTo(sx, sy + 2); ctx.lineTo(sx, syDrop - 5); ctx.stroke();
-      
-      ctx.beginPath();
-      ctx.moveTo(sx, syDrop);
-      ctx.lineTo(sx - 4, syDrop - 6);
-      ctx.lineTo(sx + 4, syDrop - 6);
-      ctx.closePath();
-      ctx.fill();
-      
-      // 添加文字标注
-      ctx.font = 'bold 10.5px ui-sans-serif,system-ui,sans-serif';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(`↓ ${Math.round(model.p.settleDy)}mm`, sx + 14, (sy + syDrop)/2);
-      ctx.restore();
-      
-      // 4. 在下方画实心新支座
-      drawSingleSupport(ctx, sx, syDrop, base, T, colW);
+      /* 5. 强迫转角弧线 */
+      if(hasRot) drawForcedRotation(ctx, sx, syDrop, rotRad, T);
     } else {
-      // 正常画支座
-      drawSingleSupport(ctx, sx, sy, base, T, colW);
+      drawSingleSupport(ctx, sx, sy, supType, T, colW);
+      if(!isDeform && hasRot) drawForcedRotation(ctx, sx, sy, rotRad, T);
     }
   }
+}
+
+function drawForcedRotation(ctx, sx, sy, rotRad, T){
+  /* 在柱底画一个逆时针/顺时针弧形箭头，标注转角值 */
+  ctx.save();
+  const color = rotRad > 0 ? '#a855f7' : '#f97316';
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = 1.8;
+  
+  const r = 18;
+  const cx = sx;
+  const cy = sy - 4;
+  const start = -Math.PI / 2;
+  const arcSpan = Math.min(Math.PI * 0.8, Math.abs(rotRad) * 30);
+  const end = rotRad > 0 ? start - arcSpan : start + arcSpan;
+  
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, start, end, rotRad > 0);
+  ctx.stroke();
+  
+  const tipX = cx + r * Math.cos(end);
+  const tipY = cy + r * Math.sin(end);
+  const a = rotRad > 0 ? (end - Math.PI/2) : (end + Math.PI/2);
+  ctx.beginPath();
+  ctx.moveTo(tipX, tipY);
+  ctx.lineTo(tipX - 6 * Math.cos(a - 0.4), tipY - 6 * Math.sin(a - 0.4));
+  ctx.lineTo(tipX - 6 * Math.cos(a + 0.4), tipY - 6 * Math.sin(a + 0.4));
+  ctx.closePath();
+  ctx.fill();
+  
+  ctx.font = 'bold 10px ui-sans-serif,system-ui,sans-serif';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  const txt = (rotRad > 0 ? '+' : '') + (rotRad * 1000).toFixed(1) + 'mrad';
+  ctx.fillText(txt, cx - r - 6, cy);
+  ctx.restore();
 }
 
 function drawLoadDiagram(canvas, model, dprOverride){
@@ -424,7 +533,7 @@ function drawLoadDiagram(canvas, model, dprOverride){
       }
       labelMidY = (yBeam + yUp) / 2;
     }
-    drawUDL(ctx, toS, model.nodes[el.i], model.nodes[el.j], q, showLabel, labelTxt, placeAbove, labelMidY);
+    drawUDL(ctx, toS, model.nodes[el.i], model.nodes[el.j], q, showLabel, labelTxt, placeAbove, labelMidY, el.spanL != null ? el.spanL : null);
   }
   /* 绘制集中力（求解器中已将其所在梁打断为子节点） */
   for(let i=0; i<model.nodes.length; i++){
@@ -563,13 +672,23 @@ function drawSectionInfo(ctx, model, W, T){
   ctx.restore();
 }
 
-function drawUDL(ctx, toS, ni, nj, q, showLabel, labelTxt, placeAbove, labelMidY){
+function drawUDL(ctx, toS, ni, nj, q, showLabel, labelTxt, placeAbove, labelMidY, spanL){
   const T = theme();
   const [x1,y1] = toS(ni.x, ni.y);
   const [x2,y2] = toS(nj.x, nj.y);
   const arrowLen = 16 + Math.min(20, q/25);
   const screenLen = Math.hypot(x2-x1, y2-y1);
-  const N = Math.max(2, Math.min(12, Math.round(screenLen / 30)));
+  /* 打断梁子段：按整跨长度估算全场箭头总数，再按子段占比分配，
+     避免极端偏心时左密右疏。spanL 由调用方传入（整跨世界长度）。 */
+  let N;
+  if(spanL != null && spanL > 1e-9){
+    const subWorldLen = Math.hypot(nj.x - ni.x, nj.y - ni.y) || 1e-9;
+    const fullScreenLen = screenLen * (spanL / subWorldLen);
+    const totalN = Math.max(2, Math.min(12, Math.round(fullScreenLen / 30)));
+    N = Math.max(1, Math.round(totalN * (subWorldLen / spanL)));
+  } else {
+    N = Math.max(2, Math.min(12, Math.round(screenLen / 30)));
+  }
   ctx.strokeStyle = T.udl; ctx.lineWidth = 1.4;
   ctx.beginPath(); ctx.moveTo(x1, y1 - arrowLen); ctx.lineTo(x2, y2 - arrowLen); ctx.stroke();
   ctx.beginPath();

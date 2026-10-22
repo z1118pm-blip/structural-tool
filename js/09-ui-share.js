@@ -96,14 +96,20 @@ let PROBE_HOVER = null;
       if(btnD) btnD.classList.remove('on');
     } else {
       if(!MODEL) return;
+      /* R 图不绘制冻结虚线，冻结后切回 M 图会突现来路不明的虚线。
+         R 图下拒绝冻结并提示。 */
+      if(MODEL.p.forceType === 'R'){
+        if(typeof showToast === 'function') showToast('反力图 R 不支持冻结对比，请先切到 M / N / V 图再冻结。');
+        return;
+      }
       BASE = {
         nodes: MODEL.nodes, els: MODEL.els,
         results: MODEL.results, U: MODEL.U,
         p: { ...MODEL.p,
              braceMap: { ...MODEL.p.braceMap },
              braceTensionMap: { ...MODEL.p.braceTensionMap },
-             qSpanMap: { ...(MODEL.p.qSpanMap || {}) },
-             pLoadMap: { ...(MODEL.p.pLoadMap || {}) } }
+             qSpanMap: JSON.parse(JSON.stringify(MODEL.p.qSpanMap || {})),
+             pLoadMap: JSON.parse(JSON.stringify(MODEL.p.pLoadMap || {})) }
       };
       if(btn) btn.classList.add('on');
       if(btnD) btnD.classList.add('on');
@@ -218,7 +224,13 @@ function exportCanvasPNG(canvasId, baseName){
       
       if(dist < minDist){
         minDist = dist;
-        closest = { elIndex: i, dist: dist, xRatio: t };
+        const el = MODEL.els[i];
+        /* 打断梁子段：把子段内比例 t 换算成整跨比例，
+           与 drawProbeCanvas / 反弯点标注统一口径。 */
+        const xRatioFull = (el.startOffset != null && el.spanL)
+          ? (el.startOffset + t * el.L) / el.spanL
+          : t;
+        closest = { elIndex: i, dist: dist, xRatio: xRatioFull };
       }
     }
     return closest;
@@ -227,7 +239,8 @@ function exportCanvasPNG(canvasId, baseName){
   cv.addEventListener('pointermove', (e) => {
     const h = getClosest(e);
     if(h) {
-      if(!PROBE_HOVER || PROBE_HOVER.elIndex !== h.elIndex || Math.abs(PROBE_HOVER.xRatio - h.xRatio) > 0.005) {
+      /* 阈值从 0.005 放宽到 0.05，避免沿杆件缓慢移动时产生大量无意义重绘。 */
+      if(!PROBE_HOVER || PROBE_HOVER.elIndex !== h.elIndex || Math.abs(PROBE_HOVER.xRatio - h.xRatio) > 0.05) {
         PROBE_HOVER = h;
         redrawOnly('force');
       }
@@ -247,6 +260,11 @@ function exportCanvasPNG(canvasId, baseName){
   });
 
   cv.addEventListener('click', (e) => {
+    /* R 图不绘制探针，点击后切回 M 图会突现靶心。R 图下拒绝并提示。 */
+    if(MODEL && MODEL.p.forceType === 'R'){
+      if(typeof showToast === 'function') showToast('反力图 R 不支持截面探针，请先切到 M / N / V 图。');
+      return;
+    }
     const h = getClosest(e);
     if(h){
       S.probe = { elIndex: h.elIndex, xRatio: h.xRatio };
@@ -326,7 +344,7 @@ const SHARE_KEYS = [
   'q1','q2','q3','qSpanMap','P1','P2','P3','pLoadMap',
   'qc1','qc2','qc3','H1','H2','H3',
   'tempAll','tempGrad','tempT0',
-  'Hmode','settleDy','settleCol','braceMap','braceTensionMap','brushBrace','betaF','betaJ',
+  'Hmode','settleDy','settleCol','supportMap','movingLoad','braceMap','braceTensionMap','brushBrace','betaF','betaJ',
   'frameMat','braceMat','As','braceI','axialMode',
   'mScale','dScale','forceType','elFilter','displayMode',
   'showVals','showIds','showAntiPts','showPDelta'
@@ -343,6 +361,8 @@ function encodeState(){
     qc1: 0, qc2: 0, qc3: 0,
     H1: 0, H2: 0, H3: 0, Hmode: 'none', settleDy: 0, settleCol: 0,
     tempAll: 0, tempGrad: 0, tempT0: 20,
+    supportMap: {},
+    movingLoad: { enabled: false, lev: 1, bay: 1, P: 0, t: 0.5, speed: 1 },
     braceMap: {}, braceTensionMap: {}, brushBrace: 'none',
     betaF: 1, betaJ: 1,     frameMat: 'conc', braceMat: 'steel',
     As: 2000, braceI: 30, axialMode: 'real', mScale: 1, dScale: 30,
@@ -351,6 +371,19 @@ function encodeState(){
   };
 
   for(const k of SHARE_KEYS) {
+    if (k === 'movingLoad') {
+      if (S.movingLoad && (S.movingLoad.enabled || S.movingLoad.P > 0)) {
+        obj[k] = {
+          enabled: S.movingLoad.enabled,
+          lev: S.movingLoad.lev,
+          bay: S.movingLoad.bay,
+          P: S.movingLoad.P,
+          t: S.movingLoad.t,
+          speed: S.movingLoad.speed
+        };
+      }
+      continue;
+    }
     const def = defaults[k];
     const val = S[k];
 
@@ -359,8 +392,21 @@ function encodeState(){
         obj[k] = val;
       }
     } else {
-      if (val !== def) {
-        obj[k] = val;
+      /* 数值型 range 参数按滑块 step 对齐，避免扫掠到一半分享时
+         带出 321.5 这类非法值，对方打开后被 applyStateFromObj 取整，
+         出现“分享值 ≠ 打开值”。 */
+      let outVal = val;
+      if(typeof val === 'number' && typeof def === 'number'){
+        const el = document.getElementById(k);
+        if(el && el.type === 'range'){
+          const lo = parseFloat(el.min), step = parseFloat(el.step);
+          if(isFinite(lo) && isFinite(step) && step > 0){
+            outVal = parseFloat((lo + Math.round((val - lo) / step) * step).toFixed(4));
+          }
+        }
+      }
+      if (outVal !== def) {
+        obj[k] = outVal;
       }
     }
   }
@@ -434,6 +480,7 @@ function applyStateFromObj(obj){
     qc1: 0, qc2: 0, qc3: 0,
     H1: 0, H2: 0, H3: 0, Hmode: 'none', settleDy: 0, settleCol: 0,
     tempAll: 0, tempGrad: 0, tempT0: 20,
+    supportMap: {},
     braceMap: {}, braceTensionMap: {}, brushBrace: 'none',
     betaF: 1, betaJ: 1,     frameMat: 'conc', braceMat: 'steel',
     As: 2000, braceI: 30, axialMode: 'real', mScale: 1, dScale: 30,
@@ -448,6 +495,8 @@ function applyStateFromObj(obj){
         : def;
     }
   }
+  /* 强制重置 movingLoad，防止 DEFAULTS 遗漏导致状态残留 */
+  S.movingLoad = { enabled: false, lev: 1, bay: 1, P: 0, t: 0.5, playing: false, speed: 1, rafId: null, t0: 0 };
 
   const nb = parseInt(obj.nBay);
   const nl = parseInt(obj.nLev);
@@ -518,12 +567,48 @@ function applyStateFromObj(obj){
             const P = parseFloat(src.P);
             const a = parseFloat(src.a);
             const Lmax = S['L' + c] || 12;
+            /* 放宽到闭区间，与 solver 的 a ∈ (0.001, L-0.001) 钳制口径对齐；
+               边界值由 solver 内部钳制，避免白名单静默拒收造成“分享丢失集中力”。 */
             if(lv >= 1 && lv <= S.nLev && c >= 1 && c <= S.nBay &&
                isFinite(P) && P >= 0 && P <= 200 &&
-               isFinite(a) && a > 0 && a < Lmax){
+               isFinite(a) && a >= 0 && a <= Lmax){
               clean[kk] = { P, a };
             }
           }
+        }
+        S[k] = clean;
+      }
+    } else if(k === 'movingLoad'){
+      if (v && typeof v === 'object') {
+        S.movingLoad = {
+          enabled: !!v.enabled,
+          lev: Math.max(1, Math.min(S.nLev, parseInt(v.lev) || 1)),
+          bay: Math.max(1, Math.min(S.nBay, parseInt(v.bay) || 1)),
+          P: Math.max(0, Math.min(200, parseFloat(v.P) || 0)),
+          t: Math.max(0, Math.min(1, parseFloat(v.t) || 0.5)),
+          speed: Math.max(0.1, Math.min(10, parseFloat(v.speed) || 1)),
+          playing: false,
+          rafId: null,
+          t0: 0
+        };
+      }
+    } else if(k === 'supportMap'){
+      /* 每柱独立支座白名单：键为柱列号字符串，值为 { type, dy, rot } */
+      if(v && typeof v === 'object' && !Array.isArray(v)){
+        const clean = {};
+        for(const kk of Object.keys(v)){
+          if(!/^\d+$/.test(kk)) continue;
+          const col = parseInt(kk);
+          if(col < 0 || col > S.nBay) continue;
+          const e = v[kk];
+          if(!e || typeof e !== 'object') continue;
+          const entry = {};
+          if(e.type && ['fixed','pin','roller','spring'].includes(e.type)) entry.type = e.type;
+          const dy = parseFloat(e.dy);
+          if(isFinite(dy) && Math.abs(dy) <= 200) entry.dy = dy;
+          const rot = parseFloat(e.rot);
+          if(isFinite(rot) && Math.abs(rot) <= 0.1) entry.rot = rot;
+          if(Object.keys(entry).length > 0) clean[kk] = entry;
         }
         S[k] = clean;
       }
@@ -678,6 +763,7 @@ function applyStateFromObj(obj){
   // 清理可能残留的扫掠慢放倍率和高亮状态（防止分享链接或自检后污染普通扫掠）
   S.sweep.durMul = 1;
   S.highlight = null;
+  S.probe = { elIndex: null, xRatio: 0.5 }; // 强行重置探针
 
   run();
   return true;
@@ -979,6 +1065,20 @@ function shareURL(){
   window.addEventListener('mouseup', () => {
     isDragging = false;
   });
+
+  /* 窗口 resize 后把浮窗重新钳制回可视区，避免拖到边缘后缩小窗口时飞出屏幕。 */
+  window.addEventListener('resize', () => {
+    if(!wrap || wrap.hidden) return;
+    const rect = wrap.getBoundingClientRect();
+    let left = rect.left, top = rect.top;
+    const maxLeft = Math.max(0, window.innerWidth - wrap.offsetWidth);
+    const maxTop  = Math.max(0, window.innerHeight - wrap.offsetHeight);
+    left = Math.max(0, Math.min(left, maxLeft));
+    top  = Math.max(0, Math.min(top, maxTop));
+    wrap.style.left = left + 'px';
+    wrap.style.top  = top + 'px';
+    wrap.style.right = 'auto';
+  });
 })();
 
 /* =====================================================================
@@ -1046,6 +1146,10 @@ if(btnReset) btnReset.addEventListener('click', ()=>{
   S.braceMap = {};
   S.qSpanMap = {};
   S.pLoadMap = {};
+  S.supportMap = {};
+  S.movingLoad = { enabled: false, lev: 1, bay: 1, P: 50, t: 0.5, playing: false, speed: 1, rafId: null, t0: 0 };
+  if(typeof movingLoadStop === 'function') movingLoadStop();
+  if(typeof renderMovingLoadUI === 'function') renderMovingLoadUI();
   S.P1 = 0; S.P2 = 0; S.P3 = 0;
   S.tempAll = 0; S.tempGrad = 0; S.tempT0 = 20;
   S.brushBrace = 'none';
@@ -1064,6 +1168,7 @@ if(btnReset) btnReset.addEventListener('click', ()=>{
   if(typeof renderBraceGrid === 'function') renderBraceGrid();
   if(typeof renderSpanEditors === 'function') renderSpanEditors();
   if(typeof renderPSpanEditors === 'function') renderPSpanEditors();
+  if(typeof renderSupportMapPanel === 'function') renderSupportMapPanel();
   try{ window.dispatchEvent(new CustomEvent('structura-topo-change')); }catch(e){}
   
   // 重置所有新注入的滑块 UI

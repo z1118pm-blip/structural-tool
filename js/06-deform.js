@@ -137,5 +137,5 @@ function drawDeform(canvas, model, dprOverride){
   }
 
   if(model.p.showIds) drawIds(ctx, model, toS);
-  drawSupports(ctx, model, toS, model.p.betaF, true, F);
+  drawSupports(ctx, model, toS, model.p.betaF, true, F, W, H);
 }

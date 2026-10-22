@@ -239,8 +239,8 @@ var _hmt = _hmt || [];
             <span class="brandName">Structura<span class="brandTest">测试版</span></span>
           </div>
           <div class="brandActions">
+            <a href="estimate.html" id="btn-estimate" title="量级估算工具" style="text-decoration:none;">📐</a>
             <a id="gameSideBtn" href="game.html" title="打开应力释放 · Structura Breakout">🎮</a>
-            <button id="btn-tip" title="支持作者，请喝杯咖啡">☕</button>
             <span class="brandVer" id="ui-ver-brand"></span>
           </div>
         </div>
@@ -254,7 +254,8 @@ var _hmt = _hmt || [];
 
     <!-- 开发中警示横幅 -->
     <div class="devWarning">
-      ⚠ <b>测试版</b> · 严禁用于工程 · <a href="mailto:zhao_struct_e@163.com" style="color:inherit;text-decoration:underline;">Zhao_Struct_E@163.com</a>
+      <span>⚠ <b>测试版</b> · 严禁用于工程 · <a href="mailto:zhao_struct_e@163.com" style="color:inherit;text-decoration:underline;">Zhao_Struct_E@163.com</a></span>
+      <button id="btn-tip" title="支持作者，请喝杯咖啡">☕ 支持作者</button>
     </div>
 
     <!-- Tab 栏 -->
@@ -655,7 +656,37 @@ var _hmt = _hmt || [];
           </div>
         </details>
 
-        <!-- 面板 3：非荷载作用（沉降和动态注入的温度） -->
+        <!-- 面板 3：移动荷载 -->
+        <details class="tabDetails" id="details-load-moving">
+          <summary>移动荷载（单跨竖向集中力）</summary>
+          <div class="groupContent">
+            <div class="group">
+              <div class="ctrl" id="row-movingLev">
+                <div class="head"><span>作用层</span></div>
+                <select id="movingLoadLev" class="sweepSel"></select>
+              </div>
+              <div class="ctrl" id="row-movingBay">
+                <div class="head"><span>作用跨</span></div>
+                <select id="movingLoadBay" class="sweepSel"></select>
+              </div>
+              <div class="ctrl" id="row-movingP">
+                <div class="head"><span>集中力大小 P <small style="color:#64748b">(0=关闭)</small></span><b id="v-movingLoadP">0 kN</b></div>
+                <input type="range" id="movingLoadP" min="0" max="200" step="5" value="0">
+              </div>
+              <div class="ctrl" id="row-movingT">
+                <div class="head"><span>位置 t (0=左端, 1=右端)</span><b id="v-movingLoadT">50%</b></div>
+                <input type="range" id="movingLoadT" min="0" max="1" step="0.01" value="0.5">
+              </div>
+              <div class="ctrl" style="display:flex; gap:8px;">
+                <button type="button" id="btnMovingLoadPlay" class="btnSweep" style="flex:1;">▶ 播放</button>
+                <button type="button" id="btnMovingLoadStop" class="btnSweep" style="flex:1; display:none;">■ 停止</button>
+              </div>
+              <div class="hint">移动荷载启用时，会覆盖当前跨的「逐跨指定」集中力，并在荷载简图中动态显示。</div>
+            </div>
+          </div>
+        </details>
+
+        <!-- 面板 4：非荷载作用（沉降和动态注入的温度） -->
         <details class="tabDetails" id="details-load-other">
           <summary>非荷载作用（温度 / 沉降）</summary>
           <div class="groupContent">
@@ -671,10 +702,22 @@ var _hmt = _hmt || [];
                 </select>
               </div>
               <div class="ctrl" id="row-settleDy">
-                <div class="head"><span>柱脚竖向沉降 Δ↓</span><b id="v-settleDy">0 mm</b></div>
-                <input type="range" id="settleDy" min="0" max="100" step="1" value="0">
+                <div class="head"><span>柱脚竖向位移 Δ（正=沉降 / 负=上抬）</span><b id="v-settleDy">0 mm</b></div>
+                <input type="range" id="settleDy" min="-100" max="100" step="1" value="0">
               </div>
               <div class="hint">超静定结构在<strong>无外荷载</strong>时，支座沉降也会产生内力。内力与沉降量成正比、与刚度成正比。仅支持单柱竖向沉降；可与「冻结」对比，查看沉降前后的内力重分布。</div>
+            </div>
+            
+            <div class="group">
+              <div class="gtitle">支座类型与强迫位移（每柱独立）</div>
+              <div id="supportMapPanel"></div>
+              <div class="hint">
+                每根柱独立选择支座类型（固接 / 铰接 / 滚轴）。<br>
+                <b>滚轴</b>：仅约束竖向，水平可滑动、转动自由；至少一根柱需为固接或铰接，否则水平方向为机构。<br>
+                <b>竖向位移</b>：正=沉降向下，负=上抬向上（抗浮）。<br>
+                <b>强迫转角</b>：模拟基础转动造成的柱底强迫转角，正=逆时针。<br>
+                若上方「柱脚竖向沉降」已设置某柱，但下方该柱竖向位移也非 0，以下方为准。
+              </div>
             </div>
           </div>
         </details>
@@ -983,6 +1026,11 @@ var _hmt = _hmt || [];
               <strong>⚠ 关键声明：</strong>本工具目前处于<strong>持续更新与测试阶段</strong>，算法细节与交互可能随时调整。请将其作为“力学概念自检”的辅助参考，<strong>切勿盲目相信工具的绝对数值</strong>，绝对禁止将计算结果直接用于实际工程设计、施工图审查或工程鉴定。
             </div>
             <p>本工具是<strong>力学概念自检工具</strong>，用于帮助结构工程师快速验证对平面刚架受力性能的直觉判断。它<strong>不是工程设计或规范校核工具</strong>，计算结果的精度、荷载组合、稳定验算、抗震设计等内容均<strong>不适用于实际工程</strong>。默认的混凝土强度等级（C30）与截面尺寸仅用于提供量级参考，不作为设计依据。</p>
+            <div class="note" style="background:rgba(168,85,247,.10);border-left-color:#a855f7;color:#d8b4fe;margin-bottom:12px;margin-top:12px;">
+              <strong>✨ 隐藏彩蛋与附加功能：</strong>左侧顶部品牌 Logo 的右侧（📐 和 🎮），还内置了两个实用入口：<br>
+              1️⃣ <strong>📐 量级估算工具</strong>：用于概念阶段快速估算结构的重力荷载、风荷载与地震作用。<br>
+              2️⃣ <strong>🎮 应力释放小游戏</strong>：一个纯粹的解压打砖块游戏，建模范了可以点进去放松一下！
+            </div>
             <h3>二、关于作者</h3>
             <div style="background: rgba(244, 63, 94, 0.08); border-left: 3px solid #f43f5e; padding: 12px 16px; border-radius: 0 6px 6px 0; margin-bottom: 16px;">
               <p style="margin: 0; font-size: 13.5px; color: #fca5a5; font-weight: 600;">🚀 【震撼声明】</p>
@@ -1030,11 +1078,11 @@ var _hmt = _hmt || [];
             <ul>
               <li><strong>结构模型</strong>：平面刚架，参数化拓扑 —— 1~3 跨 × 1~3 层，可选右侧悬挑。柱列数 = 跨数 + 1；跨内梁数 = 跨数 × 层数；悬挑梁数 = 层数（开启悬挑时）。</li>
               <li><strong>材料</strong>：均质、各向同性、线弹性。混凝土弹性模量 E = 3.0×10⁷ kN/m²（C30 规范值）。</li>
-              <li><strong>变形</strong>：小变形、小应变。不做真正的几何非线性迭代（不迭代 K<sub>g</sub>）；P-Δ 放大系数 B 为基于等效单自由度的粗估（见第十三节）。</li>
+              <li><strong>变形</strong>：小变形、小应变。不做真正的几何非线性迭代（不迭代 K<sub>g</sub>）；P-Δ 放大系数 B 为基于等效单自由度的粗估（详见「求解与局限」Tab 第五节「P-Δ 放大系数与侧移刚度的说明」）。</li>
               <li><strong>轴向变形开关</strong>：默认「考虑（精确）」。切换为「忽略（刚性）」时，梁柱轴向刚度 EA 相对放大 1e6 倍，使轴向变形远小于弯曲变形，模拟传统手算"轴向不可伸长"假定。这是数值近似（相对放大），不是数学上的无限刚性；EI 不变，仅锁轴向；支撑 A<sub>s</sub> 的轴向刚度不受影响。</li>
               <li><strong>单元</strong>：平面梁单元，每节点 3 个自由度（水平、竖向、转角）。</li>
               <li><strong>支撑单元</strong>：二力杆，<code>kind:'brace'</code>，局部刚度仅保留轴向项 <code>EA/L</code>，所有弯曲刚度项（<code>12EI/L³</code> 等）置 0；两端强制铰接，不参与 β<sub>j</sub> 半刚接修正。按「层 × 跨」网格逐格布置（X / ╱ / ╲），每格可独立选择材质（钢 Q355 / 混凝土 C30）与截面积 A<sub>s</sub>，并可逐格开启「仅受拉」。</li>
-              <li><strong>忽略</strong>：剪切变形、扭转变形、材料非线性、节点域变形、施工阶段效应、收缩徐变、钢筋与混凝土滑移。温度作用采用简化模型（见第五节）。</li>
+              <li><strong>忽略</strong>：剪切变形、扭转变形、材料非线性、节点域变形、施工阶段效应、收缩徐变、钢筋与混凝土滑移。温度作用采用简化模型（见本节「四、荷载」中的温度条目）。</li>
             </ul>
             <h3>二、截面与刚度</h3>
             <ul>
@@ -1152,7 +1200,7 @@ var _hmt = _hmt || [];
                   <li><strong>刚性楼板（Hmode = 'rigid'）</strong>：采用自由度缩并技术，强制同层各节点水平位移相等。水平力同样作用于左柱顶，由刚性约束自动按各柱侧移刚度分配。适用于现浇混凝土楼盖。</li>
                 </ul>
               </li>
-              <li style="margin-bottom:5px"><strong>二阶效应为粗估</strong>：不做真正的 P-Δ 迭代（不组装几何刚度矩阵 K<sub>g</sub>），仅用等效单自由度反推 <code>B = 1/(1−ΣN/ΣN<sub>cr</sub>)</code>，见第十三节。</li>
+              <li style="margin-bottom:5px"><strong>二阶效应为粗估</strong>：不做真正的 P-Δ 迭代（不组装几何刚度矩阵 K<sub>g</sub>），仅用等效单自由度反推 <code>B = 1/(1−ΣN/ΣN<sub>cr</sub>)</code>，详见本节「五、P-Δ 放大系数与侧移刚度的说明」。</li>
               <li style="margin-bottom:5px"><strong>多跨对称结构的浮点虚假侧移</strong>：单跨无悬挑纯竖向荷载已在求解前用约束消除奇异；多跨对称结构（等跨、等层高、r=1、荷载对称）理论上水平位移为零，但代码未做此约束，浮点噪声可能产生极小侧移。对侧移刚度大的结构影响可忽略；对全铰接或半刚接的柔性框架，可能出现可见的虚假侧移。</li>
               <li style="margin-bottom:5px"><strong>无节点域</strong>：节点处按纯刚接或纯铰接处理，未考虑节点域剪切变形。</li>
               <li style="margin-bottom:5px"><strong>悬挑梁简化</strong>：悬挑梁按标准刚接单元处理，不参与 β<sub>j</sub> 半刚接修正；悬挑端为自由端，未建模实际边梁的弹性约束。</li>
@@ -1357,7 +1405,7 @@ var _hmt = _hmt || [];
   </div>
 </div>
 
-<script src="js/01-state.js?v=0.1.6.5"></script>
+<script src="js/01-state.js?v=0.1.7.1"></script>
 <script src="js/02-solver.js?v=0.1.6.5"></script>
 <script src="js/03-internal.js?v=0.1.6.5"></script>
 <script src="js/04-canvas.js?v=0.1.6.5"></script>

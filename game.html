@@ -449,7 +449,13 @@
   }
   function sfxWall(){ tone(180, 0.05, 'sine', 0.035); }
   function sfxPaddle(){ tone(320, 0.06, 'triangle', 0.05); }
+  let _lastBrickSfxAt = 0;
   function sfxBrick(row, combo){
+    /* 激光/多球可能同一帧击碎多块砖，高频音效叠加会破音。
+       30ms 内只触发一次砖块音效。 */
+    const now = performance.now();
+    if(now - _lastBrickSfxAt < 30) return;
+    _lastBrickSfxAt = now;
     /* rows 最多 14，row=13 时 380+(4-13)*65 为负；
        Web Audio 负频率会抛异常，被 tone() 的 try/catch 静默吞掉，表现为音效消失 */
     const baseFreq = Math.max(120, 380 + (4 - row) * 65);
@@ -765,6 +771,11 @@
       }
       G.particles = []; G.rings = []; G.floaters = []; G.trail = [];
       G.stuckSamples = [];
+      /* resize 重置了所有球/粒子，旧球对象已不可达；
+         清空砖块的穿透免疫集合，避免残留旧球引用（内存泄漏）。 */
+      for(const b of G.bricks){
+        if(b._piercedSet && b._piercedSet.size > 0) b._piercedSet.clear();
+      }
     }
     
     prerenderBackground();
@@ -1511,13 +1522,15 @@
          角度按主球飞行方向左右张开，每次拾取生成 2 个额外球，
          第 2 次拾取时张开幅度按 0.35/0.70 递增，避免完全重叠。 */
       if(G.pendingMultiball > 0){
-        const n = G.pendingMultiball;
+        /* 限制单次最多生成 6 个额外球，避免多次 ready 状态拾取后
+           额外球张开角度超过 1.0 rad 而朝下飞出。 */
+        const n = Math.min(6, G.pendingMultiball);
         G.pendingMultiball = 0;
         const baseSpeed = Math.hypot(G.ball.vx, G.ball.vy);
         const baseAng = Math.atan2(G.ball.vy, G.ball.vx);
         for(let i = 0; i < n; i++){
           const side = (i % 2 === 0) ? -1 : 1;
-          const mag = 0.35 * (Math.floor(i / 2) + 1);
+          const mag = Math.min(1.0, 0.35 * (Math.floor(i / 2) + 1));
           const ang = baseAng + side * mag;
           G.extraBalls.push({
             x: G.ball.x, y: G.ball.y,
@@ -1538,6 +1551,9 @@
   function releaseHeldBall(){
     const b = G.ball;
     if(!b.held) return;
+    /* 释放前先刷新挡板宽度：paddleWide / catch 同帧到期时，
+       若不先刷新，会按旧宽度计算释放角度，导致反弹方向偏移。 */
+    updatePaddleWidth();
     b.held = false;
     G.trail = []; // 新增：释放瞬间重置残影，避免从挡板位置拉出一条长线
     let speed = BASE_SPEED * Math.pow(1.10, G.level - 1) * G.speedMultiplier;
@@ -1799,9 +1815,11 @@
     if(b.x + BALL_R > W - WALL){ b.x = W - WALL - BALL_R; b.vx = -Math.abs(b.vx); sfxWall(); G.shake = Math.max(G.shake, 1.5); }
     if(b.y - BALL_R < WALL){ b.y = WALL + BALL_R; b.vy = Math.abs(b.vy); sfxWall(); G.shake = Math.max(G.shake, 1.5); }
 
+    const half = G.paddle.w / 2;
+    const px1 = G.paddle.x - half, px2 = G.paddle.x + half;
+    
+    // 1. 顶部碰撞（从上往下砸）
     if(b.vy > 0 && b.y + BALL_R >= PADDLE_Y && b.y - BALL_R <= PADDLE_Y + PADDLE_H){
-      const half = G.paddle.w / 2;
-      const px1 = G.paddle.x - half, px2 = G.paddle.x + half;
       if(b.x >= px1 - BALL_R * 0.5 && b.x <= px2 + BALL_R * 0.5){
         const speed = Math.hypot(b.vx, b.vy) || (BASE_SPEED * G.speedMultiplier);
         const t = Math.max(-1, Math.min(1, (b.x - G.paddle.x) / half));
@@ -1834,6 +1852,17 @@
           b.heldOffset = Math.max(-half, Math.min(half, b.x - G.paddle.x));
           G.trail = []; // 新增：接住瞬间清空飞行残影
         }
+      }
+    }
+    
+    // 2. 侧面碰撞（防止球贴边穿透）
+    if (b.y + BALL_R > PADDLE_Y && b.y - BALL_R < PADDLE_Y + PADDLE_H) {
+      if (b.x + BALL_R > px1 && b.x - BALL_R < px1 && b.vx > 0) {
+        b.x = px1 - BALL_R; // 从左侧撞
+        b.vx = -Math.abs(b.vx);
+      } else if (b.x - BALL_R < px2 && b.x + BALL_R > px2 && b.vx < 0) {
+        b.x = px2 + BALL_R; // 从右侧撞
+        b.vx = Math.abs(b.vx);
       }
     }
 
@@ -2774,7 +2803,15 @@
     }
   }, { passive: false });
 
-  window.addEventListener('keyup', e => { G.keys[e.key] = false; });
+  window.addEventListener('keyup', e => {
+    /* 同时清大小写：按住 Shift 时 keydown 记 'A'，松 Shift 后 keyup 记 'a'，
+       'A' 永不释放会导致挡板失控滑向一侧。 */
+    G.keys[e.key] = false;
+    const lower = e.key.toLowerCase();
+    const upper = e.key.toUpperCase();
+    if(lower !== e.key) G.keys[lower] = false;
+    if(upper !== e.key) G.keys[upper] = false;
+  });
 
   canvasWrap.addEventListener('pointermove', e => {
     if(G.state !== 'playing' && G.state !== 'ready') return;
@@ -2927,10 +2964,16 @@
     if(document.fullscreenElement) return;
     const el = document.getElementById('wrap');
     if(!el) return;
+    const onFail = () => { fullscreenKicked = false; };
     try {
-      if(el.requestFullscreen) el.requestFullscreen().catch(()=>{});
-      else if(el.webkitRequestFullscreen) el.webkitRequestFullscreen();
-    } catch(e){}
+      if(el.requestFullscreen){
+        el.requestFullscreen().catch(onFail);
+      } else if(el.webkitRequestFullscreen){
+        el.webkitRequestFullscreen();
+      } else {
+        onFail();
+      }
+    } catch(e){ onFail(); }
   }
 
   /* 移动端：点击图例浮层以外的任意位置，自动收起图例。
