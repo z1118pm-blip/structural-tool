@@ -5,11 +5,16 @@ function calcLoad() {
   const A_trib_raw = Math.max(0.1, EST.Lx * EST.Ly);
   let A_trib = A_trib_raw;
   let tribWarn = '';
-  // A_trib 仅用于梁/墙折算的分母，不得大于单层面积，否则梁墙折算会被稀释
-  // 配柱与 g_col 分母仍按 A_trib_raw 反算：当 A_trib_raw > A 时，
-  // N_col 偏大（W_beam 项被 A_trib_raw/A_trib 额外放大），柱截面偏保守；
-  // g_col 分摊到更大面积后偏小，与 N_col 偏大方向部分抵消，整体偏安全。
-  // 若需严格一致口径，可将下方 N_col 的乘数改为 A_trib。
+  // A_trib 仅用于梁/墙折算的分母，不得大于单层面积，否则梁墙折算会被稀释。
+  // 柱截面估算与 g_col 分母均按 A_trib_raw 反算。当 A_trib_raw > A 时：
+  //   N_col ∝ A_trib_raw 线性放大 → col_side² ∝ A_trib_raw；
+  //   g_col = col_side²·h·25 / A_trib_raw → 对 A_trib_raw 近似不变；
+  //   Gk 中的柱重 = g_col × A ∝ A，与 A_trib_raw 无关。
+  // 因此在 col_side 未被 300~1500mm 钳制时，Gk 中的柱重与“按 A_trib 反算”口径
+  // 精确相等，不会放大小震 FEk；柱截面因 N_col 中梁墙项被 A_trib_raw/A_trib 放大
+  // 而偏保守。切勿把 N_col 乘数改为 A_trib，那会破坏精确抵消并使 Gk 柱重偏大。
+  // 唯一例外：col_side 被 1500mm 上限钳制时抵消失效，Gk 柱重将偏小，UI 会通过
+  // colOverLimit 给出警告，此时应结合第一轮审查的“柱截面超限”问题一并复核。
   if (A_trib > A) {
     tribWarn = `⚠️ 柱网面积 ${A_trib_raw.toFixed(1)} m² > 单层面积 ${A.toFixed(1)} m²，梁墙折算已按单层面积封顶；请检查柱网 Lx/Ly 是否过大。`;
     A_trib = A;
@@ -89,25 +94,27 @@ function calcLoad() {
 
     let g_col = 0;
     let g_cw = 0;
+    let N_col_display = 0;
+    let A_col_req_display = 0;
 
     if (isFrameShear) {
       // 框剪：墙线载 = 墙厚 × 容重 × 层高；含墙率直接表达墙线长/面积
       const g_cw_line = (EST.cwThk / 1000) * rho_conc * EST.h;
       g_cw = g_cw_line * EST.cwRatio;
 
-      // 配柱反算：框剪结构竖向轴力由柱和墙按受荷面积分担。柱只承担本柱网的恒载与活载，不包含剪力墙自重（g_cw），也不因剪力墙存在而折减
+      // 柱截面估算（原“配柱”）：框剪结构竖向轴力由柱和墙按受荷面积分担。柱只承担本柱网的恒载与活载，不包含剪力墙自重（g_cw），也不因剪力墙存在而折减
       const fc = 14300;
-      const N_col = (1.3 * (g_slab + g_arch + g_beam + g_wall) * K_UNACCOUNTED + 1.5 * qk_area) * A_trib_raw * EST.nLev;
-      const A_col_req = N_col / (EST.muN * fc);
-      col_side_calc = Math.sqrt(A_col_req) * 1000;
+      N_col_display = (1.3 * (g_slab + g_arch + g_beam + g_wall) * K_UNACCOUNTED + 1.5 * qk_area) * A_trib_raw * EST.nLev;
+      A_col_req_display = N_col_display / (EST.muN * fc);
+      col_side_calc = Math.sqrt(A_col_req_display) * 1000;
       col_side = Math.max(300, Math.min(1500, Math.ceil(col_side_calc / 50) * 50));
       g_col = Math.pow(col_side / 1000, 2) * rho_conc * EST.h / A_trib_raw;
     } else {
-      // 纯框架配柱（fc 按 C30 取 14.3 MPa，见计算书说明）
+      // 纯框架柱截面估算（fc 按 C30 取 14.3 MPa，见计算书说明）
       const fc = 14300;
-      const N_col = (1.3 * (g_slab + g_arch + g_beam + g_wall) * K_UNACCOUNTED + 1.5 * qk_area) * A_trib_raw * EST.nLev;
-      const A_col_req = N_col / (EST.muN * fc);
-      col_side_calc = Math.sqrt(A_col_req) * 1000;
+      N_col_display = (1.3 * (g_slab + g_arch + g_beam + g_wall) * K_UNACCOUNTED + 1.5 * qk_area) * A_trib_raw * EST.nLev;
+      A_col_req_display = N_col_display / (EST.muN * fc);
+      col_side_calc = Math.sqrt(A_col_req_display) * 1000;
       col_side = Math.max(300, Math.min(1500, Math.ceil(col_side_calc / 50) * 50));
       g_col = Math.pow(col_side / 1000, 2) * rho_conc * EST.h / A_trib_raw;
     }
@@ -137,8 +144,8 @@ function calcLoad() {
       &nbsp;&nbsp;线荷载 = ${faceLoad.toFixed(2)} kN/m² × 净高${clearH.toFixed(2)}m × 满载率 ${EST.wallRatio}% = ${qWallLine.toFixed(2)} kN/m<br>
       &nbsp;&nbsp;墙总长（仅框架主梁）= ${wallLineLen.toFixed(1)} m（次梁上方默认不砌墙）<br>
       &nbsp;&nbsp;<b>折算：(${qWallLine.toFixed(2)} × ${wallLineLen.toFixed(1)}) / ${A_trib.toFixed(1)} = ${g_wall.toFixed(2)} kN/m²</b><br>
-      ${!isFrameShear ? `- 柱折算：<br>&nbsp;&nbsp;单柱自重 = ${col_side/1000}m × ${col_side/1000}m × ${EST.h}m × 25 = ${(Math.pow(col_side/1000, 2) * rho_conc * EST.h).toFixed(1)} kN<br>&nbsp;&nbsp;<b>折算 = ${(Math.pow(col_side/1000, 2) * rho_conc * EST.h).toFixed(1)} / ${A_trib_raw.toFixed(1)} = ${g_col.toFixed(2)} kN/m²（按 C30）</b><br>&nbsp;&nbsp;<span style="color:#64748b;font-size:11px;">注：配柱轴力未考虑 GB50009 5.1.2 活载折减，结果偏安全。</span><br>` : ''}
-      ${isFrameShear ? `- 墙柱混合折算：墙 ${g_cw.toFixed(2)} / 柱 ${g_col.toFixed(2)} kN/m²（按实际受荷面积折算，C30）<br>` : ''}
+      ${!isFrameShear ? `- 柱截面估算与柱折算：<br>&nbsp;&nbsp;单柱轴力 N = (1.3 × 恒载 + 1.5 × 活载) × 受荷面积 × 层数 = ${N_col_display.toFixed(1)} kN<br>&nbsp;&nbsp;按预估轴压比 μN = ${EST.muN.toFixed(2)}、C30 混凝土 fc = 14.3 MPa：<br>&nbsp;&nbsp;所需面积 Ac = N / (μN·fc) = ${N_col_display.toFixed(1)} / (${EST.muN.toFixed(2)} × 14.3) = ${(A_col_req_display * 1e6).toFixed(0)} mm²<br>&nbsp;&nbsp;估算边长 = √Ac = ${col_side_calc.toFixed(0)} mm，取整至 50mm 且限制在 300~1500mm，得 <b>${col_side}×${col_side} mm</b><br>&nbsp;&nbsp;单柱自重 = ${col_side/1000}m × ${col_side/1000}m × ${EST.h}m × 25 = ${(Math.pow(col_side/1000, 2) * rho_conc * EST.h).toFixed(1)} kN<br>&nbsp;&nbsp;<b>折算 = ${(Math.pow(col_side/1000, 2) * rho_conc * EST.h).toFixed(1)} / ${A_trib_raw.toFixed(1)} = ${g_col.toFixed(2)} kN/m²（按 C30）</b><br>&nbsp;&nbsp;<span style="color:#64748b;font-size:11px;">注：柱截面估算按 1.3恒+1.5活 组合，未考虑 GB50009 5.1.2 活载折减，结果偏安全；柱自重按 A_trib_raw 折算，不随梁墙分母封顶。</span><br>` : ''}
+      ${isFrameShear ? `- 墙柱混合折算：墙 ${g_cw.toFixed(2)} / 柱 ${g_col.toFixed(2)} kN/m²（按实际受荷面积折算，C30）<br>&nbsp;&nbsp;<span style="color:#64748b;font-size:11px;">柱截面估算：N = ${N_col_display.toFixed(1)} kN，Ac = N/(μN·fc) = ${(A_col_req_display * 1e6).toFixed(0)} mm²，边长 ${col_side_calc.toFixed(0)} mm → 取 ${col_side} mm；未计入活载折减，结果偏安全。</span><br>` : ''}
     `;
   } 
   else if (structType === 'wall') {
@@ -307,7 +314,7 @@ function calcLoad() {
     <b>1. 单层受荷面积与总层数</b><br>
     单层建筑面积 A = L × B = ${EST.L} × ${EST.B} = ${A} m²<br>
     柱网受荷面积 A_trib_raw = Lx × Ly = ${EST.Lx} × ${EST.Ly} = ${A_trib_raw.toFixed(1)} m²<br>
-    梁墙折算分母 A_trib = min(A_trib_raw, A) = ${A_trib.toFixed(1)} m²；配柱与柱自重仍按 A_trib_raw 反算<br>
+    梁墙折算分母 A_trib = min(A_trib_raw, A) = ${A_trib.toFixed(1)} m²；柱截面估算与柱自重仍按 A_trib_raw 反算<br>
     ${geoWarn ? `<span style="color:#facc15;">${geoWarn}</span><br>` : ''}<br>
     
     <b>2. 恒载面荷载标准值 gk 组成</b><br>

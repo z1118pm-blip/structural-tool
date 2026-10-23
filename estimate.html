@@ -268,7 +268,7 @@
       <!-- 轴压比配柱专属 -->
       <div id="group-col" class="slider-group" style="margin-top: 10px;">
         <div class="slider-head">
-          <span id="label-muN">预估轴压比 (配柱)</span>
+          <span id="label-muN">预估轴压比（柱截面估算）</span>
           <div style="display:flex; align-items:center; gap:6px;">
             <b id="r-colSize" style="font-family:'JetBrains Mono', monospace; color:#38bdf8; font-size:13px; min-width: 110px; text-align:right;">—</b>
             <span id="r-colCalc" style="font-size:10px; color:#64748b; white-space:nowrap;">(需 0)</span>
@@ -412,17 +412,15 @@
       <!-- Tab 1 -->
       <div id="usage-tab-position" class="usage-tab-content" style="display: block;">
         <div class="tip-box tip-blue" style="margin-bottom: 16px;">
-          <div style="color: #eab308; font-weight: 700; margin-bottom: 6px; font-size: 14px;">【致读者：结构工程师的最后主战场】</div>
-          <p style="margin-bottom: 8px;">随着 AI 技术的狂飙突进，AI 快速完成建模、出图已是可望且可即的现实。在这个时代，结构工程师的核心价值究竟何在？</p>
-          <p style="margin-bottom: 8px;">答案在于：<b>精准判断 AI 生成的结构方案，引导 AI 进行迭代优化，并为最终的结构安全兜底负责。</b>这将成为结构工程师不可替代的最后主战场。</p>
-          <p>本工具的初衷，并非替代任何计算软件，而是为了帮你磨砺力学直觉、完善概念设计能力。因为<b>软件可以算得很快，但判断对错与承担责任，永远属于人。</b></p>
+          <div style="color: #eab308; font-weight: 700; margin-bottom: 6px; font-size: 14px;">【工具定位】</div>
+          <p style="margin-bottom: 8px;">本工具用于建筑结构概念设计阶段的<b>竖向与水平荷载量级估算</b>。旨在辅助工程师快速建立力学直觉，校验软件、AI 生成结果或手算数据的合理性。<b>严禁用于施工图设计。</b></p>
+          <p>软件可以算得很快，但判断对错与承担责任，永远属于人。磨砺力学直觉与完善概念设计能力，是结构工程师不可替代的核心价值。</p>
         </div>
         
-        <h4 style="color:#38bdf8; margin: 16px 0 8px;">📌 双轨制荷载估算（V2 核心逻辑）</h4>
+        <h4 style="color:#38bdf8; margin: 16px 0 8px;">📌 双轨制估算模式</h4>
         <ul class="usage-list">
-          <li><b>宏观打底（开箱即用）</b>：内置了《高规》5.1.8 条文说明及行业经验的不同结构体系综合恒载基准值。不填细部参数也能立刻得出合理的量级结果。</li>
-          <li><b>细部拆解（精准修正）</b>：展开细部参数后，系统会根据所选结构类型（框架、框剪、剪力墙、砌体、钢结构）自动切换计算模型。比如砌体会自动剔除梁柱，改用“墙厚×含墙率×容重+抹灰”的真实逻辑重算。</li>
-          <li><b>物理校验尺</b>：若 AI 给出的柱截面、用钢量与你在此工具中调出的合理区间严重背离，即说明需要人工复核。</li>
+          <li><b>宏观打底（开箱即用）</b>：内置不同结构体系（框架、剪力墙、砌体、钢构等）的综合恒载与重力基准值，不填细部参数也能立刻得出合理的量级结果。</li>
+          <li><b>细部修正（精准拆解）</b>：展开参数后，系统将根据所选结构类型自动切换计算模型，按“板厚+做法+梁墙构件+柱截面反算”进行精细累加重算。</li>
         </ul>
       </div>
 
@@ -433,41 +431,30 @@
           <b>💡 核心理念：</b>软件算得快，但判断对错属于人。本工具所有公式均为显式表达，旨在帮您快速建立量级直觉。
         </div>
 
-        <h4 style="color:#38bdf8; margin: 0 0 8px;">⚖️ 1. 重力荷载估算逻辑</h4>
+        <h4 style="color:#38bdf8; margin: 16px 0 8px;">⚖️ 1. 竖向荷载与构件估算</h4>
         <ul class="usage-list" style="margin-bottom: 16px;">
-          <li><b>宏观基准 vs 细部累加</b>：宏观基准（g<sub>k</sub>）提供纯恒载量级（不含活载）。一旦拖动细部参数，系统自动切换为“细部累加”。</li>
-          <li><b>总重力校验</b>：结果区展示 g<sub>std</sub> = g<sub>k</sub> + q<sub>k</sub>。根据《高规》5.1.8 条文说明，框架总重力约 12~14 kN/m²，剪力墙约 13~16 kN/m²，在此区间内校验尺亮绿灯。</li>
-          <li><b>框架结构</b>：全部竖向轴力由框架柱承担。填充墙重量仅沿<strong>框架主梁</strong>摊派，默认次梁上方不砌墙，避免因梁系布置改变导致墙重突变。</li>
-          <li><b>框剪结构</b>：除填充墙外，额外按“墙厚 × 25 × 层高 × 含墙率”计入剪力墙自重。配柱时，框架柱仅承担本柱网内的竖向重力荷载（不含剪力墙自重），剪力墙仅起到分担水平荷载的作用。</li>
-          <li><b>剪力墙结构</b>：全剪力墙承重。无梁柱折算，恒载由楼板自重、建筑做法及剪力墙自重组成（墙厚 × 25 × 层高 × 含墙率）。</li>
-          <li><b>砌体结构</b>：由砌体墙承重。恒载由楼板、建筑做法、砌体墙自重（墙厚 × 18 × 层高 × 含墙率）及双面抹灰组成。因刚度极大，地震作用按底部剪力法直接取 α<sub>1</sub> = α<sub>max</sub>，不计算周期。</li>
-          <li><b>钢结构</b>：采用“构件级算量”。<b>主次梁</b>选择常用 HN 型钢型号（查表得线重度），按周边均摊及排布规则求总长算重。<b>钢柱</b>采用“轴压比（强度）+长细比（稳定）双控”反算箱形截面（Q355，f=305 MPa）：先由轴压比求所需面积，再按容许长细比 [λ]=120 校验最小边长，取大值后校验宽厚比 a/t ≤ 45。加上组合楼板、做法及轻质围护墙，摊入面积。</li>
-          <li><b>轴力折减</b>：配柱轴力按 1.3恒 + 1.5活 组合，<strong>未考虑活载折减</strong>（GB50009 5.1.2），算出的柱截面偏安全。</li>
+          <li><b>总重力指标校验</b>：系统自动计算 g<sub>std</sub> = g<sub>k</sub> + q<sub>k</sub>。如框架结构常规区间为 12~14 kN/m²，若偏离，指标条将变黄警告。</li>
+          <li><b>填充墙折算</b>：仅沿框架主梁布置（默认次梁上方无墙），重量自动计入双面抹灰，并乘以设定的满布率。</li>
+          <li><b>结构类型特异规则</b>：剪力墙/框剪额外计入墙自重；砌体剔除梁柱折算；钢结构主次梁查表算重，钢柱按“强度+长细比”双控反算。</li>
+          <li><b>柱截面估算</b>：按 N = (1.3 × 恒载 + 1.5 × 活载) × 柱网受荷面积 × 层数 估算轴力。依据预估轴压比与 C30 混凝土（f<sub>c</sub>=14.3 MPa）反算边长，取整至 50mm（范围 300~1500mm）。</li>
+          <li><b>面积封顶</b>：若柱网面积大于单层总面积，梁墙折算分母按单层面积封顶，但<b>柱截面估算与柱自重仍按原始柱网面积 A_trib_raw 反算</b>。</li>
+          <li><b>保守设定</b>：计算中未计入 GB50009 的活载按层数折减，结果偏安全。</li>
         </ul>
 
-        <h4 style="color:#38bdf8; margin: 16px 0 8px;">📐 2. 构件自重与配柱反算</h4>
+        <h4 style="color:#38bdf8; margin: 16px 0 8px;">🌀 2. 周期与地震作用</h4>
         <ul class="usage-list" style="margin-bottom: 16px;">
-          <li><b>梁自重摊派</b>：扣除板厚后的净高 × 梁宽 × 25 kN/m³。<br>
-          &nbsp;&nbsp;👉 <b>框架主梁</b>：位于柱网边界，由相邻柱网共同分担。本柱网只计取“一个长边 + 一个短边”的重量（即分摊长度 = Lx + Ly）。<br>
-          &nbsp;&nbsp;👉 <b>楼盖次梁</b>：位于柱网内部，完全属于本柱网。按您选择的布置模型（十字、单向、井字），排了几根就累加几根的长度。</li>
-          <li><b>墙体与抹灰</b>：墙体线荷载 = 墙厚 × 容重 × 净高。<b>所有墙体（含框架填充墙、砌体墙）均已计入双面抹灰</b>（按 0.8 kN/m² 考虑）。抹灰重量与墙体自重一样，都会随着设定的“满布率/含墙率”同步折减，确保与实际砌筑量匹配。</li>
-          <li><b>配柱反算原理</b>：依据预估轴压比 μ<sub>N</sub>，采用 C30 混凝土（f<sub>c</sub>=14.3 MPa）。轴力 N = (1.3 × 单层恒载 + 1.5 × 活载) × 受荷面积 × 层数。反算面积 A<sub>c</sub> = N / (μ<sub>N</sub> · f<sub>c</sub>)，开方得边长并向上取整至 50mm，且不小于 300mm 构造要求。</li>
-          <li><b>受荷面积封顶</b>：若柱网 Lx×Ly 大于单层建筑面积，梁墙分母按单层面积封顶；但配柱与柱自重仍按原始柱网面积反算，防止截面偏小。</li>
+          <li><b>周期估算</b>：按 T<sub>1</sub> = C·H<sup>p</sup> 经验公式计算，并乘以周期折减系数 ψ<sub>T</sub>（考虑填充墙刚度效应）得到 T<sub>calc</sub>。</li>
+          <li><b>地震影响系数</b>：根据场地类别与地震分组确定特征周期 T<sub>g</sub>，按 GB50011 反应谱公式求得 α<sub>1</sub>。</li>
+          <li><b>底部总剪力</b>：F<sub>Ek</sub> = α<sub>1</sub> · G<sub>eq</sub>。</li>
+          <li><b>顶部附加力</b>：当 T<sub>calc</sub> > 1.4T<sub>g</sub> 时，顶层附加地震力 ΔF<sub>n</sub> = δ<sub>n</sub> · F<sub>Ek</sub>。</li>
+          <li><b>逐层分配</b>：按倒三角 F<sub>i</sub> = (F<sub>Ek</sub> - ΔF<sub>n</sub>) · (G<sub>i</sub>H<sub>i</sub> / ΣG<sub>j</sub>H<sub>j</sub>) 计算。计算书内会提供逐层分配表格及 ΣF<sub>i</sub> = F<sub>Ek</sub> 校验。</li>
         </ul>
 
-        <h4 style="color:#38bdf8; margin: 16px 0 8px;">🌀 3. 周期与地震作用推导</h4>
-        <ul class="usage-list" style="margin-bottom: 16px;">
-          <li><b>周期估算经验系数 C</b>：依据《高规》附录 C，框架取 0.02，框剪取 0.018，剪力墙取 0.015；钢结构取 0.085 且指数 p 取 0.75（T₁ = C·H<sup>p</sup>）。</li>
-          <li><b>周期折减系数 ψ<sub>T</sub></b>：考虑填充墙刚度对计算周期的缩短效应。框架默认 0.65，框剪 0.75，剪力墙 0.95。</li>
-          <li><b>反应谱计算</b>：依据 GB50011，特征周期 T<sub>g</sub> 由场地类别和分组查表。地震影响系数 α₁ 由 T<sub>calc</sub>（折减后周期）代入反应谱公式求出（下降段指数 γ=0.9）。</li>
-          <li><b>顶部附加力 ΔF<sub>n</sub></b>：当 T<sub>calc</sub> > 1.4 T<sub>g</sub> 时，按 GB50011 5.2.1 在顶层附加地震力，附加系数 δ<sub>n</sub> = 0.08 T<sub>calc</sub> + 0.07（不超过 0.15）。</li>
-        </ul>
-
-        <h4 style="color:#38bdf8; margin: 16px 0 8px;">🌬️ 4. 风荷载参数取值</h4>
+        <h4 style="color:#38bdf8; margin: 16px 0 8px;">🌬️ 3. 风荷载计算</h4>
         <ul class="usage-list">
-          <li><b>体型与高度系数</b>：依据 GB50009-2012 表 8.3.1，矩形平面建筑总高 ≤24m 时体型系数 μ<sub>s</sub> 取 1.3，>24m 时取 1.4。风压高度变化系数 μ<sub>z</sub> 按 GB50009 表 8.2.1 线性插值。</li>
-          <li><b>风振系数 β<sub>z</sub></b>：高度 ≤30m 时取 1.0；超过 30m 后按高度线性放大，最大封顶 1.8（估算值）。</li>
-          <li><b>风压计算</b>：w<sub>k</sub> = β<sub>z</sub> · μ<sub>s</sub> · μ<sub>z</sub> · w<sub>0</sub>。计算书中的 10m 参考风压，严格按 10m 高度处的 μ<sub>z</sub> 且 β<sub>z</sub>=1.0 计算。</li>
+          <li><b>参数选取</b>：体型系数 μ<sub>s</sub> 按总高取 1.3 或 1.4；风压高度变化系数 μ<sub>z</sub> 按 GB50009 表 8.2.1 线性插值；风振系数 β<sub>z</sub> ≤30m 取 1.0，否则线性放大。</li>
+          <li><b>迎风面</b>：X 向取总宽 B，Y 向取总长 L。</li>
+          <li><b>逐层风荷载</b>：计算每层受风面积，得出 F<sub>i</sub> = β<sub>z</sub> μ<sub>s</sub> μ<sub>z</sub> w<sub>0</sub> A<sub>i</sub>。计算书内会提供逐层风荷载表格。</li>
         </ul>
 
       </div>
@@ -475,15 +462,15 @@
       <!-- Tab 3 -->
       <div id="usage-tab-limit" class="usage-tab-content" style="display: none;">
         <div class="tip-box tip-red" style="margin-bottom: 16px;">
-          <b>⚠️ 关键声明：</b> 本工具目前处于持续更新阶段，计算结果仅作为概念阶段的量级参考，<b>严禁用于施工图设计。</b>
+          <b>⚠️ 关键声明：</b> 结果仅作概念阶段参考，<b>严禁用于施工图设计。</b>
         </div>
         
-        <h4 style="color:#38bdf8; margin: 16px 0 8px;">🚫 无法替代的复杂因素</h4>
+        <h4 style="color:#38bdf8; margin: 16px 0 8px;">🚫 本工具未考虑的复杂因素：</h4>
         <ul class="usage-list">
-          <li>不能替代 SATWE / YJK / ETABS 等整体有限元分析；</li>
-          <li>未考虑结构平面不规则、竖向不规则引起的扭转效应；</li>
-          <li>未考虑楼板面内变形、地基基础沉降、温度收缩应力；</li>
-          <li>砌体结构仅做重力与底部总剪力估算，未进行墙段抗震验算。</li>
+          <li>结构平面/竖向不规则引起的扭转效应。</li>
+          <li>楼板面内变形、地基基础沉降及温度收缩应力。</li>
+          <li>砌体结构的墙段抗震承载力验算。</li>
+          <li>整体有限元分析（如需精细设计，请使用 SATWE / YJK / ETABS 等软件）。</li>
         </ul>
       </div>
     </div>

@@ -3,7 +3,9 @@
 const IDS = ['terrain', 'intensity', 'siteClass', 'seismicGroup'];
 
 // 细部参数白名单：只有这些 ID 的变更才切换到细部模式
-// 注意：muN（轴压比）只影响配柱截面，不改变荷载口径，因此不列入 DETAIL_IDS
+// 注意：muN（轴压比）不列入 DETAIL_IDS，因此调整 muN 不会主动把宏观模式切到细部模式；
+// 但在细部模式已启用时，muN 会经 col_side → g_col → g_detail 改变 gk_area，
+// 这属于柱自重的合理联动，并非“不改变荷载口径”。
 const DETAIL_IDS = ['tSlab','qArch','Lx','Ly','bBeam','hBeam','tWall','qWallDensity','wallRatio',
   'cwThk','cwRatio','masThk','masRatio','qWallSteel',
   'bSecBeam','hSecBeam','secBeamSpacing','beamModel',
@@ -12,7 +14,8 @@ const DETAIL_IDS = ['tSlab','qArch','Lx','Ly','bBeam','hBeam','tWall','qWallDens
 // 统一的 useDetail 状态机：基本参数（nLev/h/L/B/qk/w0/C_period/psiT）永不改变 useDetail
 function updateUseDetailFlag(id) {
   const tag = document.getElementById('gk-tag');
-  const gkGroup = document.getElementById('in-gkBase').closest('.slider-group');
+  const gkBaseEl = document.getElementById('in-gkBase');
+  const gkGroup = gkBaseEl ? gkBaseEl.closest('.slider-group') : null;
   
   const btnReset = document.getElementById('btn-gk-reset');
   
@@ -124,21 +127,19 @@ function renderPlan() {
   // 风向指示箭头（约定：箭头指向 = 风压作用方向 = 坐标系正向）
   let windArrow = '';
   if (currentWindDirView === 'X') {
-    // X 向风：风从 -X 吹向 +X，箭头沿 +X 正向
+    // X 向风：尖端抵住左边框 (x)
     windArrow = `
-      <path d="M${x-60} ${y+rh/2} L${x-20} ${y+rh/2}" stroke="#38bdf8" stroke-width="3"/>
-      <polygon points="${x-20},${y+rh/2-6} ${x-20},${y+rh/2+6} ${x-5},${y+rh/2}" fill="#38bdf8"/>
-      <text x="${x-40}" y="${y+rh/2-15}" fill="#38bdf8" font-size="13" font-weight="bold" text-anchor="middle">X向风</text>
+      <path d="M${x-50} ${y+rh/2} L${x-15} ${y+rh/2}" stroke="#38bdf8" stroke-width="3"/>
+      <polygon points="${x-15},${y+rh/2-6} ${x-15},${y+rh/2+6} ${x},${y+rh/2}" fill="#38bdf8"/>
+      <text x="${x-30}" y="${y+rh/2-12}" fill="#38bdf8" font-size="13" font-weight="bold" text-anchor="middle">X向风</text>
     `;
   } else {
-    // Y 向风：风从 -Y 吹向 +Y，箭头沿 +Y 正向（与左下坐标系 Y 一致）
-    // 箭头穿过矩形下边进入内部，避免与下方 L 标注重叠
-    const yTail = Math.min(y + rh + 50, H - 15);
-    const yLabel = Math.min(y + rh + 30, H - 20);
+    // Y 向风：尖端抵住下边框 (y+rh)
+    const yTail = y + rh + 45;
     windArrow = `
-      <path d="M${x+rw/2} ${yTail} L${x+rw/2} ${y+rh-30}" stroke="#38bdf8" stroke-width="3"/>
-      <polygon points="${x+rw/2-6},${y+rh-30} ${x+rw/2+6},${y+rh-30} ${x+rw/2},${y+rh-45}" fill="#38bdf8"/>
-      <text x="${x+rw/2+40}" y="${yLabel}" fill="#38bdf8" font-size="13" font-weight="bold" text-anchor="middle">Y向风</text>
+      <path d="M${x+rw/2} ${yTail} L${x+rw/2} ${y+rh+15}" stroke="#38bdf8" stroke-width="3"/>
+      <polygon points="${x+rw/2-6},${y+rh+15} ${x+rw/2+6},${y+rh+15} ${x+rw/2},${y+rh}" fill="#38bdf8"/>
+      <text x="${x+rw/2-15}" y="${yTail-5}" fill="#38bdf8" font-size="13" font-weight="bold" text-anchor="end">Y向风</text>
     `;
   }
 
@@ -153,8 +154,8 @@ function renderPlan() {
     
     ${windArrow}
 
-    <!-- 标注受风面宽度：L在下，B在右侧 -->
-    <text x="${x+rw/2}" y="${y+rh+25}" fill="#7dd3fc" font-size="14" font-family="'JetBrains Mono', monospace" text-anchor="middle">L = ${w} m</text>
+    <!-- 标注受风面宽度：L在上，B在右侧 -->
+    <text x="${x+rw/2}" y="${y-20}" fill="#7dd3fc" font-size="14" font-family="'JetBrains Mono', monospace" text-anchor="middle">L = ${w} m</text>
     <text x="${x+rw+20}" y="${y+rh/2}" fill="#7dd3fc" font-size="14" font-family="'JetBrains Mono', monospace" text-anchor="middle" transform="rotate(-90 ${x+rw+20} ${y+rh/2})">B = ${bPlan} m</text>
 
     <!-- 左下角 XY 坐标系指示器 -->
@@ -499,24 +500,8 @@ function updateEst() {
     }
   }
 
-  // 计算地震每层力：T1 > 1.4Tg 时按 GB50011 5.2.1 加顶部附加 ΔFn
-  // 注意：δn 公式中的 T1 应与 calcAlpha 一致使用折减后的 T_calc
-  forcesSeis = [];
-  const T1v = lastSeisData.T_calc || lastSeisData.T1 || 0;
-  const Tgv = lastSeisData.Tg || 0;
-  let deltaFn = 0;
-  if (T1v > 1.4 * Tgv && Tgv > 0) {
-    const deltaN = Math.min(0.15, 0.08 * T1v + 0.07);
-    deltaFn = deltaN * lastSeisData.FEk;
-  }
-  const baseFi = Math.max(0, lastSeisData.FEk - deltaFn);
-  let sumH = 0;
-  for (let i = 1; i <= EST.nLev; i++) sumH += i;
-  for (let i = 1; i <= EST.nLev; i++) {
-    let fi = baseFi * (i / sumH);
-    if (i === EST.nLev) fi += deltaFn;
-    forcesSeis.push(fi);
-  }
+  // 逐层地震力由 calcSeismic 统一计算并返回，UI 直接复用，避免图表与计算书口径漂移
+  forcesSeis = Array.isArray(lastSeisData.forces) ? lastSeisData.forces.slice() : [];
 
   // 绘图
   renderPlan();
@@ -798,9 +783,9 @@ const btnGkReset = document.getElementById('btn-gk-reset');
 if (btnGkReset) {
   btnGkReset.addEventListener('click', () => {
     const type = document.getElementById('in-structType').value;
-    const steelRateV = parseFloat((document.getElementById('in-steelRate') || {}).value);
+    // 预留 steelRate 入口，当前 HTML 无该输入，显式传 NaN 让 calcDefaultGkBase 回退到经验值
     const tSlabV = parseFloat((document.getElementById('in-tSlab') || {}).value);
-    const baseVal = calcDefaultGkBase(type, EST.nLev, steelRateV, tSlabV);
+    const baseVal = calcDefaultGkBase(type, EST.nLev, NaN, tSlabV);
     
     const gkNum = document.getElementById('in-gkBase');
     const gkRange = document.getElementById('range-gkBase');
@@ -843,9 +828,11 @@ function calcDefaultGkBase(type, nLev, steelRate, tSlab) {
   else if (type === 'wall') baseVal = 12.0; // 剪力墙默认 12，配合活载 2.0 -> 总重力 14.0
   else if (type === 'masonry') baseVal = 12.0;
   else if (type === 'steel') {
-    // 注意：当前 HTML 未提供 in-steelRate 输入，steelRate 恒为 NaN；
-    // 钢结构综合用钢量经验值约 40~100 kg/m²，取 65 作缺省
-    const steelRateSafe = Number.isFinite(steelRate) ? steelRate : 65;
+    // steelRate 为预留参数入口；当前 HTML 未提供该输入，调用方显式传 NaN，回退到经验值。
+    // 65 kg/m² 为“含梁柱的综合用钢量”经验值（范围 40~100），与细部模式
+    // g_beam+g_col 折算的用钢量量级一致，切换宏观/细部模式时 gk 不应出现量级跳变。
+    const DEFAULT_STEEL_RATE = 65;
+    const steelRateSafe = Number.isFinite(steelRate) ? steelRate : DEFAULT_STEEL_RATE;
     const tSlabSafe = Number.isFinite(tSlab) ? tSlab : 100;
     // 钢结构：用钢量 + 板 + 做法 + 墙，纯恒载通常在 8 左右
     baseVal = steelRateSafe * 9.8 / 1000 + (tSlabSafe / 1000) * 25 + 1.5 + 1.5 + 1.0;
@@ -874,6 +861,19 @@ function applyStructTypeDefaults() {
   if (cGroup) cGroup.style.display = isMasonry ? 'none' : '';
   if (pGroup) pGroup.style.display = isMasonry ? 'none' : '';
 
+  // 砌体不使用周期估算，但需把滑块 min/max/value 复位到框架默认区间，
+  // 避免从钢结构（0.075~0.100）切到砌体后残留脏区间被 readRange 读取，
+  // 把 EST.C_period 钳制到错误范围。程序设 value 不触发 input 事件，不会引发重算。
+  if (isMasonry) {
+    const cRangeReset = document.getElementById('range-C_period');
+    const cNumReset = document.getElementById('in-C_period');
+    if (cRangeReset && cNumReset) {
+      cRangeReset.min = 0.008; cRangeReset.max = 0.025; cRangeReset.step = 0.001;
+      cNumReset.min = 0.008; cNumReset.max = 0.025; cNumReset.step = 0.001;
+      cRangeReset.value = 0.020; cNumReset.value = '0.020';
+    }
+  }
+
   // 控制细部参数面板显隐
   const show = (id, cond) => { const el = document.getElementById(id); if(el) el.style.display = cond ? '' : 'none'; };
   const showEl = (id, cond) => { const el = document.getElementById(id); if(el) el.style.display = cond ? '' : 'none'; };
@@ -882,7 +882,7 @@ function applyStructTypeDefaults() {
   show('group-frame', isFrame || isSteel); // 梁/墙都在里面，共用容器
   show('group-col', isFrame || isSteel);   // 轴压比共用
   const muNLabel = document.getElementById('label-muN');
-  if (muNLabel) muNLabel.textContent = isSteel ? '强度利用率 μ (钢结构)' : '预估轴压比 (配柱)';
+  if (muNLabel) muNLabel.textContent = isSteel ? '强度利用率 μ (钢结构)' : '预估轴压比（柱截面估算）';
   show('group-secBeam', isFrame || isSteel);
   show('group-cw', type === 'frameShear' || isWall);
   show('group-masonry', isMasonry);
@@ -907,9 +907,8 @@ function applyStructTypeDefaults() {
   // 切换结构类型时退出细部模式
   EST.useDetail = false;
   // 框架 / 框剪：高规 5.1.8 综合值 12~14；剪力墙 13~16；砌体 12~15；钢结构 7~12（含组合楼板）
-  const steelRateV = parseFloat((document.getElementById('in-steelRate') || {}).value);
   const tSlabV = parseFloat((document.getElementById('in-tSlab') || {}).value);
-  const baseVal = calcDefaultGkBase(type, EST.nLev, steelRateV, tSlabV);
+  const baseVal = calcDefaultGkBase(type, EST.nLev, NaN, tSlabV);
   
   let hintText = '纯恒载：9~12（高规 5.1.8 总重力 12~14 扣除活载）';
   if (type === 'frameShear') { hintText = '纯恒载：9~12（高规 5.1.8 总重力 12~14 扣除活载）'; }

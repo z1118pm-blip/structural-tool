@@ -79,6 +79,13 @@ function calcSeismic(Geq) {
     const alpha_1 = alpha_max;
     const FEk = alpha_1 * Geq;
     let warning = '';
+    // 砌体：刚度大、周期短，不判定 ΔFn，按倒三角直接分配
+    let sumH = 0;
+    for (let i = 1; i <= EST.nLev; i++) sumH += i;
+    const forces = [];
+    for (let i = 1; i <= EST.nLev; i++) forces.push(FEk * i / sumH);
+    let sumFi = 0;
+    for (let i = 0; i < forces.length; i++) sumFi += forces[i];
     const limit = MASONRY_LIMIT[EST.intensity];
     if (isMid) {
       warning = '⚠️ 砌体结构通常不采用中震性能化设计，结果仅供概念参考。';
@@ -93,9 +100,38 @@ function calcSeismic(Geq) {
       ${warning ? `<br><span style="color:#facc15;">${warning}</span><br>` : ''}
       <br><b>2. 底部总剪力 FEk</b><br>
       等效总重力荷载 Geq = ${Geq.toFixed(1)} kN<br>
-      FEk = α₁ × Geq = ${alpha_1.toFixed(3)} × ${Geq.toFixed(1)} = <b>${FEk.toFixed(1)} kN</b>
+      FEk = α₁ × Geq = ${alpha_1.toFixed(3)} × ${Geq.toFixed(1)} = <b>${FEk.toFixed(1)} kN</b><br><br>
+
+      <b>3. 逐层地震作用分配（倒三角）</b><br>
+      砌体结构刚度大、基本周期短，不判定顶部附加力 ΔFn（取 0）；<br>
+      假定各层重力相同，Fi = FEk × i / Σj，Σj = ${sumH}<br>
+      <table style="border-collapse:collapse; width:100%; font-size:12px; margin:6px 0;">
+        <thead>
+          <tr style="background:rgba(248,113,113,0.08);">
+            <th style="border:1px solid #334155; padding:4px 6px; text-align:center;">层</th>
+            <th style="border:1px solid #334155; padding:4px 6px; text-align:center;">Hi (m)</th>
+            <th style="border:1px solid #334155; padding:4px 6px; text-align:center;">i / Σj</th>
+            <th style="border:1px solid #334155; padding:4px 6px; text-align:center;">Fi (kN)</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${forces.map((fi, idx) => {
+            const i = idx + 1;
+            return `<tr>
+              <td style="border:1px solid #334155; padding:4px 6px; text-align:center;">${i}F</td>
+              <td style="border:1px solid #334155; padding:4px 6px; text-align:center;">${(i * EST.h).toFixed(1)}</td>
+              <td style="border:1px solid #334155; padding:4px 6px; text-align:center;">${(i / sumH).toFixed(4)}</td>
+              <td style="border:1px solid #334155; padding:4px 6px; text-align:center;">${fi.toFixed(1)}</td>
+            </tr>`;
+          }).join('')}
+          <tr style="background:rgba(248,113,113,0.05); font-weight:700;">
+            <td colspan="3" style="border:1px solid #334155; padding:4px 6px; text-align:right;">ΣFi</td>
+            <td style="border:1px solid #334155; padding:4px 6px; text-align:center;">${sumFi.toFixed(1)}</td>
+          </tr>
+        </tbody>
+      </table>
     `;
-    return { FEk, alpha_1, alpha_max, T1: 0, T_calc: 0, Tg: 0, H, structType, warning, html };
+    return { FEk, alpha_1, alpha_max, T1: 0, T_calc: 0, Tg: 0, H, structType, warning, html, forces, deltaFn: 0, deltaN: 0, baseFi: FEk, sumH };
   }
 
   /* ---------- 框架/框剪/剪力墙/钢结构：周期 → 折减 → 反应谱 ---------- */
@@ -121,6 +157,26 @@ function calcSeismic(Geq) {
 
   const alpha_1 = calcAlpha(T_calc, Tg, alpha_max);
   const FEk = alpha_1 * Geq;
+
+  // 逐层地震力分配（GB50011 5.2.1），与计算书、图表同源
+  let deltaFn = 0;
+  let deltaN = 0;
+  const T1v = T_calc || T1 || 0;
+  if (T1v > 1.4 * Tg && Tg > 0) {
+    deltaN = Math.min(0.15, 0.08 * T1v + 0.07);
+    deltaFn = deltaN * FEk;
+  }
+  const baseFi = Math.max(0, FEk - deltaFn);
+  let sumH = 0;
+  for (let i = 1; i <= EST.nLev; i++) sumH += i;
+  const forces = [];
+  for (let i = 1; i <= EST.nLev; i++) {
+    let fi = baseFi * (i / sumH);
+    if (i === EST.nLev) fi += deltaFn;
+    forces.push(fi);
+  }
+  let sumFi = 0;
+  for (let i = 0; i < forces.length; i++) sumFi += forces[i];
 
   const periodFormula = cfg.p === 1
     ? `T₁ = C × H = ${C.toFixed(3)} × ${H.toFixed(1)} = ${T1.toFixed(3)} s`
@@ -151,8 +207,48 @@ function calcSeismic(Geq) {
 
     <b>4. 底部总剪力 FEk</b><br>
     等效总重力荷载 Geq = ${Geq.toFixed(1)} kN<br>
-    FEk = α₁ × Geq = ${alpha_1.toFixed(3)} × ${Geq.toFixed(1)} = <b>${FEk.toFixed(1)} kN</b>
+    FEk = α₁ × Geq = ${alpha_1.toFixed(3)} × ${Geq.toFixed(1)} = <b>${FEk.toFixed(1)} kN</b><br><br>
+
+    <b>5. 顶部附加地震作用 ΔFn 判定</b><br>
+    T_calc = ${T_calc.toFixed(3)} s，Tg = ${Tg.toFixed(2)} s，1.4Tg = ${(1.4 * Tg).toFixed(2)} s<br>
+    ${T1v > 1.4 * Tg && Tg > 0
+      ? `T_calc > 1.4Tg，需计入顶部附加力：δn = min(0.15, 0.08T_calc + 0.07) = min(0.15, ${(0.08 * T1v + 0.07).toFixed(3)}) = <b>${deltaN.toFixed(3)}</b><br>ΔFn = δn × FEk = ${deltaN.toFixed(3)} × ${FEk.toFixed(1)} = <b>${deltaFn.toFixed(1)} kN</b>`
+      : `T_calc ≤ 1.4Tg（或 Tg 无效），不计顶部附加力，ΔFn = 0`}<br><br>
+
+    <b>6. 逐层地震作用分配（倒三角，GB50011 5.2.1）</b><br>
+    假定各层重力荷载代表值相同，则 GiHi / ΣGjHj = i / Σj，其中 Σj = 1+2+…+${EST.nLev} = ${sumH}<br>
+    Fi = (FEk − ΔFn) × i / Σj，顶层再叠加 ΔFn<br>
+    <table style="border-collapse:collapse; width:100%; font-size:12px; margin:6px 0;">
+      <thead>
+        <tr style="background:rgba(248,113,113,0.08);">
+          <th style="border:1px solid #334155; padding:4px 6px; text-align:center;">层</th>
+          <th style="border:1px solid #334155; padding:4px 6px; text-align:center;">Hi (m)</th>
+          <th style="border:1px solid #334155; padding:4px 6px; text-align:center;">i / Σj</th>
+          <th style="border:1px solid #334155; padding:4px 6px; text-align:center;">Fi (kN)</th>
+          <th style="border:1px solid #334155; padding:4px 6px; text-align:center;">备注</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${forces.map((fi, idx) => {
+          const i = idx + 1;
+          const note = (i === EST.nLev && deltaFn > 0) ? '含 ΔFn' : '';
+          return `<tr>
+            <td style="border:1px solid #334155; padding:4px 6px; text-align:center;">${i}F</td>
+            <td style="border:1px solid #334155; padding:4px 6px; text-align:center;">${(i * EST.h).toFixed(1)}</td>
+            <td style="border:1px solid #334155; padding:4px 6px; text-align:center;">${(i / sumH).toFixed(4)}</td>
+            <td style="border:1px solid #334155; padding:4px 6px; text-align:center;">${fi.toFixed(1)}</td>
+            <td style="border:1px solid #334155; padding:4px 6px; text-align:center;">${note}</td>
+          </tr>`;
+        }).join('')}
+        <tr style="background:rgba(248,113,113,0.05); font-weight:700;">
+          <td colspan="3" style="border:1px solid #334155; padding:4px 6px; text-align:right;">ΣFi</td>
+          <td style="border:1px solid #334155; padding:4px 6px; text-align:center;">${sumFi.toFixed(1)}</td>
+          <td style="border:1px solid #334155; padding:4px 6px; text-align:center;">校验 ≈ FEk</td>
+        </tr>
+      </tbody>
+    </table>
+    <span style="color:#64748b; font-size:11px;">注：ΣFi 与 FEk 的微小差异来自逐层四舍五入；图表使用的逐层力与本表同源。</span>
   `;
 
-  return { FEk, alpha_1, alpha_max, T1, T_calc, Tg, H, structType, warning: '', html };
+  return { FEk, alpha_1, alpha_max, T1, T_calc, Tg, H, structType, warning: '', html, forces, deltaFn, deltaN, baseFi, sumH };
 }

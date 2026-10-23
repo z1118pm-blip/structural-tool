@@ -32,6 +32,7 @@ function calcWind() {
   const calcDir = (B_width, dirName) => {
     let forces = [];
     let Vw = 0;
+    const rows = [];
     for (let i = 1; i <= EST.nLev; i++) {
       const z = i * EST.h;
       const muz = getMuz(EST.terrain, z);
@@ -39,6 +40,7 @@ function calcWind() {
       const Fi = wk_i * B_width * EST.h;
       forces.push(Fi);
       Vw += Fi;
+      rows.push({ i, z, muz, wk_i, Fi });
     }
     // 10 m 高度参考风压（含体型系数 μs；βz 按 30m 以下取 1.0）
     const wk_ref = mus * getMuz(EST.terrain, 10) * EST.w0;
@@ -51,11 +53,40 @@ function calcWind() {
       根据 ${EST.terrain} 类地面粗糙度，按 GB50009-2012 表 8.2.1 线性插值；<br>
       顶层(z=${H.toFixed(1)}m) μz = ${getMuz(EST.terrain, H).toFixed(2)}<br><br>
       <b>3. 风压标准值与总剪力</b><br>
-      体型系数 μs：总高 ${H.toFixed(1)}m ${H <= 24 ? '≤' : '>'} 24m，取 ${mus}<br>
+      体型系数 μs：总高 ${H.toFixed(1)}m ${H <= 24 ? '≤' : '>'} 24m，取 ${mus}（矩形平面，GB50009 表 8.3.1）<br>
+      风振系数 βz：按总高 ${H.toFixed(1)}m 取 ${bz.toFixed(2)}（≤30m 取 1.0，否则线性放大至 1.8 封顶）<br>
       wk(z) = βz × μs × μz × w0 = ${bz.toFixed(2)} × ${mus} × μz × ${EST.w0}<br>
-      10 m 高度参考风压 wk(10m) = <b>${wk_ref.toFixed(3)} kN/m²</b><br>
-      Vw = Σ(Fi) = <b>${Vw.toFixed(1)} kN</b>
-      ${muzOverflow ? `<br><span style="color:#facc15;">${muzOverflow}</span>` : ''}
+      迎风面宽度：${dirName}向取 ${B_width.toFixed(1)} m，每层受风面积 = ${B_width.toFixed(1)} × ${EST.h.toFixed(1)} = ${(B_width * EST.h).toFixed(1)} m²<br>
+      10 m 高度参考风压 wk(10m) = <b>${wk_ref.toFixed(3)} kN/m²</b>（βz 按 10m 处取 1.0）<br><br>
+
+      <b>4. 逐层风荷载计算表</b><br>
+      <table style="border-collapse:collapse; width:100%; font-size:12px; margin:6px 0;">
+        <thead>
+          <tr style="background:rgba(56,189,248,0.08);">
+            <th style="border:1px solid #334155; padding:4px 6px; text-align:center;">层</th>
+            <th style="border:1px solid #334155; padding:4px 6px; text-align:center;">z (m)</th>
+            <th style="border:1px solid #334155; padding:4px 6px; text-align:center;">μz</th>
+            <th style="border:1px solid #334155; padding:4px 6px; text-align:center;">wk (kN/m²)</th>
+            <th style="border:1px solid #334155; padding:4px 6px; text-align:center;">受风面积 (m²)</th>
+            <th style="border:1px solid #334155; padding:4px 6px; text-align:center;">Fi (kN)</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(r => `<tr>
+            <td style="border:1px solid #334155; padding:4px 6px; text-align:center;">${r.i}F</td>
+            <td style="border:1px solid #334155; padding:4px 6px; text-align:center;">${r.z.toFixed(1)}</td>
+            <td style="border:1px solid #334155; padding:4px 6px; text-align:center;">${r.muz.toFixed(3)}</td>
+            <td style="border:1px solid #334155; padding:4px 6px; text-align:center;">${r.wk_i.toFixed(3)}</td>
+            <td style="border:1px solid #334155; padding:4px 6px; text-align:center;">${(B_width * EST.h).toFixed(1)}</td>
+            <td style="border:1px solid #334155; padding:4px 6px; text-align:center;">${r.Fi.toFixed(1)}</td>
+          </tr>`).join('')}
+          <tr style="background:rgba(56,189,248,0.05); font-weight:700;">
+            <td colspan="5" style="border:1px solid #334155; padding:4px 6px; text-align:right;">Vw = ΣFi</td>
+            <td style="border:1px solid #334155; padding:4px 6px; text-align:center;">${Vw.toFixed(1)}</td>
+          </tr>
+        </tbody>
+      </table>
+      ${muzOverflow ? `<span style="color:#facc15;">${muzOverflow}</span>` : ''}
     `;
     return { Vw, forces, html };
   };

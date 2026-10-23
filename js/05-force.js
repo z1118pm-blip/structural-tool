@@ -70,6 +70,18 @@ function drawInternal(canvas, model, dprOverride){
   const NP = 61;
   const targetPx = Math.min(W,H)*0.055;
 
+  /* ======== 拦截死胡同组合 ======== */
+  if(filter === 'brace' && type !== 'N') {
+    ctx.save();
+    ctx.fillStyle = T.frame;
+    ctx.font = 'bold 14px "JetBrains Mono", monospace';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('支撑为二力杆，仅提供轴力图 (N) 计算', W/2, H/2);
+    ctx.restore();
+    drawFrameLines(ctx, model, toS, T.frameThin, 1.5, false, false);
+    return; 
+  }
+
   /* ======== 反力图专属渲染 ======== */
   if(type === 'R'){
     /* R 图不支持冻结对比：支座反力是标量，画成虚线叠加在弯矩图上会与当前值混在一起，
