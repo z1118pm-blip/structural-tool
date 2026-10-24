@@ -197,23 +197,22 @@ function localEqLoad(el, p){
         if (el.hinge) {
           pFeTI = 0; pFeTJ = 0;
         } else {
-          /* 梁端热梯度产生向下凹的固端弯矩，以匹配柱顶转角。
-             温度梯度是均匀曲率（对称荷载），其固端弯矩释放系数为 (1+4α)/Δ，
-             而非均布荷载（反对称）的 (1+6α)/Δ。 */
+          /* 【修复 A1 & A4】梁端热梯度产生同号的固端弯矩（产生均匀曲率）。
+             均匀曲率的半刚接固端弯矩释放系数为 (1+2α)/Δ，而非均布荷载的 (1+6α)/Δ。 */
           const baseT = (el.EI * alpha * tempGrad * gradFactor / h);
           const alI = (el.alphaI != null) ? el.alphaI : (el.alpha || 0);
           const alJ = (el.alphaJ != null) ? el.alphaJ : (el.alpha || 0);
           if(alI === 0 && alJ === 0){
-            pFeTI = baseT; pFeTJ = baseT;
+            pFeTI = baseT; pFeTJ = -baseT; 
           } else {
             const D = (1 + 4*alI)*(1 + 4*alJ) - 4*alI*alJ;
-            pFeTI = baseT * (1 + 4*alJ) / D;
-            pFeTJ = baseT * (1 + 4*alI) / D;
+            pFeTI = baseT * (1 + 2*alJ) / D;
+            pFeTJ = -baseT * (1 + 2*alI) / D;
           }
         }
       } else {
-        pFeTI = -(el.EI * alpha * tempGrad * gradFactor / h);
-        pFeTJ = pFeTI;
+        pFeTI = (el.EI * alpha * tempGrad * gradFactor / h); // 【修复 A1】去掉负号，产生正确的向内弯曲
+        pFeTJ = -pFeTI;
       }
     } else {
       pFeTI = 0; pFeTJ = 0;
@@ -253,7 +252,7 @@ function analyze(p, opts = {}){
         const key = lv + '-' + c;
         let P = p['P'+lv] || 0;
         if (pLoadMapTmp[key] && pLoadMapTmp[key].P != null) P = pLoadMapTmp[key].P;
-        if (P > 0) {
+        if (Math.abs(P) > 1e-12) { // 【修复 A6】允许负向集中力触发检查
           throw new Error(`第 ${lv} 层第 ${c} 跨存在集中力，但梁端完全铰接 (βj=0)，跨内节点失去竖向约束（几何可变），无法计算。请提高 βj 或取消集中力。`);
         }
       }
@@ -368,7 +367,7 @@ function analyze(p, opts = {}){
         if (pLoadMap[spanKey].a != null) a = pLoadMap[spanKey].a;
       }
 
-      if (P > 0) {
+      if (Math.abs(P) > 1e-12) { // 【修复 A6】允许负向集中力打断梁并施加荷载
         /* a 越界（分享链接或异常输入）时钳制到跨内，避免集中力丢失，
            同时保证结构施加与 appliedFy / ΣV 残差口径一致。
            NaN 防御：非法 a 回退到跨中，避免污染节点坐标。 */
@@ -494,7 +493,7 @@ function analyze(p, opts = {}){
   /* rigidDiaphragm=false：按 D 值法分配（原逻辑，保留）；
      rigidDiaphragm=true ：力加左柱顶，由刚性楼板约束自动分配到各柱。 */
   function applyFloorH(level, H){
-    if(H <= 0) return;
+    if(Math.abs(H) <= 1e-12) return; // 【修复 A2】允许施加负向（向右/反向）水平力
     /* 无论有无楼板，力都加在左柱顶。刚性楼板会通过约束自动分配。 */
     F[nid(0, level)*3] += H;
   }
@@ -608,13 +607,14 @@ const hasSettlement = fixedDisp.size > 0;
    避免全铰接时侧向刚度阵为0导致的矩阵奇异崩溃。
    注意：有沉降时必须跳过，否则会吃掉沉降引起的不对称侧移。
    ===================================================================== */
-let sumH = 0;
-for(let lv=1; lv<=nLev; lv++) sumH += p['H'+lv];
+let hasAnyH = false;
+for(let lv=1; lv<=nLev; lv++) {
+  if(Math.abs(p['H'+lv]) > 1e-12) { hasAnyH = true; break; }
+}
 
-/* 扩展对称约束：适用于多跨等跨、等刚度、无悬挑、无水平力、无沉降的纯竖向工况。
-   彻底消除由浮点误差引起的多跨对称结构虚假侧移。 */
+/* 【修复 A3】只要有任何一层存在水平力（无论正负），都不算对称，严禁强制水平位移为 0 */
 let isSymmetric = (
-  Math.abs(sumH) < 1e-12 &&
+  !hasAnyH &&
   !p.hasCant &&
   Math.abs((p.r || 1) - 1) < 1e-6
 );
@@ -785,7 +785,7 @@ for(let i=0;i<ndof;i++) if(!fixedR.has(i) && reduce[i] === i) free.push(i);
   // 先清理，再同步从属 DOF，保证刚性楼板约束一致性
   // 有沉降时不清理，避免抹掉沉降引起的结构倾斜
   let hasLateralForce = false;
-  for(let lv=1; lv<=nLev; lv++) { if(p['H'+lv] > 0) hasLateralForce = true; }
+  for(let lv=1; lv<=nLev; lv++) { if(Math.abs(p['H'+lv]) > 1e-12) hasLateralForce = true; } // 【修复 A2】识别负向水平力
   if (!hasLateralForce && !hasSettlement) {
     for(let i=0; i<ndof; i+=3) {
       if (Math.abs(U[i]) < 1e-7) U[i] = 0;
@@ -915,17 +915,22 @@ function analyzeTensionOnly(p) {
       }
     }
     
-    // 振荡检测：若新失效集与历史某次完全相同，说明在两点间反复横跳。
+    // 【修复 A5】优先判断收敛：若前后两次迭代的失效集合完全相同，说明已达平衡，直接收敛。
+    if(!changed){ 
+      converged = true; 
+      break; 
+    }
+    
+    // 振荡检测：若状态发生了改变（changed为true），且与历史某次完全相同，说明在两点间反复横跳。
     const fp = [...nextInactiveBraces].sort().join('|');
     if(seenFingerprints.has(fp)){
       console.warn(hasTemp ? '温度工况下仅受拉支撑振荡' : '仅受拉支撑迭代出现振荡，输出最后一轮近似解。');
       converged = false; // 标记为未收敛
-      break;             // 跳出循环，不再抛错导致整个界面崩溃
+      break;             // 跳出循环
     }
     seenFingerprints.add(fp);
     
     inactiveBraces = nextInactiveBraces;
-    if(!changed){ converged = true; break; }
   }
   if(m) m.tensionConverged = converged;
   return m;
