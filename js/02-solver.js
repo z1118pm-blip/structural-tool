@@ -169,7 +169,7 @@ function localEqLoad(el, p){
       const Ac = bcM*hcM, Ab = bbM*hbM;
       let realEA;
       if(el.kind === 'col'){
-        const kc = (el.col > 0 && el.col < p.nBay) ? p.r : 1.0;
+        const kc = (el.col > 0 && el.col < p.nBay) ? (p.r || 1.0) : 1.0;
         realEA = E_frame_real * Ac * kc;
       } else {
         realEA = E_frame_real * Ab;
@@ -203,16 +203,16 @@ function localEqLoad(el, p){
           const alI = (el.alphaI != null) ? el.alphaI : (el.alpha || 0);
           const alJ = (el.alphaJ != null) ? el.alphaJ : (el.alpha || 0);
           if(alI === 0 && alJ === 0){
-            pFeTI = baseT; pFeTJ = -baseT; 
+            pFeTI = baseT; pFeTJ = baseT;
           } else {
             const D = (1 + 4*alI)*(1 + 4*alJ) - 4*alI*alJ;
-            pFeTI = baseT * (1 + 2*alJ) / D;
-            pFeTJ = -baseT * (1 + 2*alI) / D;
+            pFeTI = baseT * (1 + 6*alJ) / D;
+            pFeTJ = baseT * (1 + 6*alI) / D;
           }
         }
       } else {
-        pFeTI = (el.EI * alpha * tempGrad * gradFactor / h); // 【修复 A1】去掉负号，产生正确的向内弯曲
-        pFeTJ = -pFeTI;
+        pFeTI = (el.EI * alpha * tempGrad * gradFactor / h);
+        pFeTJ = pFeTI;
       }
     } else {
       pFeTI = 0; pFeTJ = 0;
@@ -222,7 +222,17 @@ function localEqLoad(el, p){
   /* 局部等效节点力 [Fx_i, Fy_i, M_i, Fx_j, Fy_j, M_j]
      i 端弯矩 = pFeI − pFeTI，j 端弯矩 = pFeJ + pFeTJ。
      对称情况（αI=αJ）退化为原 [pFeN, wL/2, pFe−pFeT, −pFeN, wL/2, −pFe+pFeT]。 */
-  return [pFeN, w*L/2, pFeI - pFeTI, -pFeN, w*L/2, pFeJ + pFeTJ];
+  let Vi = w*L/2, Vj = w*L/2;
+  if(el.kind === 'beam' && !el.hinge && w !== 0){
+    const alIq = (el.alphaI != null) ? el.alphaI : (el.alpha || 0);
+    const alJq = (el.alphaJ != null) ? el.alphaJ : (el.alpha || 0);
+    if(alIq > 0 || alJq > 0){
+      const Dq = (1 + 4*alIq)*(1 + 4*alJq) - 4*alIq*alJq;
+      Vi = w*L/2 * (1 + 3*alIq + 5*alJq + 12*alIq*alJq) / Dq;
+      Vj = w*L/2 * (1 + 5*alIq + 3*alJq + 12*alIq*alJq) / Dq;
+    }
+  }
+  return [pFeN, Vi, pFeI - pFeTI, -pFeN, Vj, pFeJ + pFeTJ];
 }
 function globalEqLoad(el, p){
   return matVec(transpose(Tmat(el)), localEqLoad(el, p));
@@ -251,8 +261,12 @@ function analyze(p, opts = {}){
       for(let c=1; c<=nBay; c++){
         const key = lv + '-' + c;
         let P = p['P'+lv] || 0;
-        if (pLoadMapTmp[key] && pLoadMapTmp[key].P != null) P = pLoadMapTmp[key].P;
-        if (Math.abs(P) > 1e-12) { // 【修复 A6】允许负向集中力触发检查
+        if (pLoadMapTmp[key] && pLoadMapTmp[key].P != null) P = parseFloat(pLoadMapTmp[key].P) || 0;
+        const mlTmp = p.movingLoad || {};
+        if (mlTmp.enabled && Number(mlTmp.lev) === lv && Number(mlTmp.bay) === c) {
+          P = parseFloat(mlTmp.P) || 0;
+        }
+        if (Math.abs(P) > 1e-12) {
           throw new Error(`第 ${lv} 层第 ${c} 跨存在集中力，但梁端完全铰接 (βj=0)，跨内节点失去竖向约束（几何可变），无法计算。请提高 βj 或取消集中力。`);
         }
       }
@@ -299,14 +313,16 @@ function analyze(p, opts = {}){
   const EAc = E_frame*Ac*axialBoost;
   const EAb = E_frame*Ab*axialBoost;
   
-  const EAs = E_brace * ((p.As || 2000) / 1000000); // mm² 转 m²
+  const AsParsed = parseFloat(p.As);
+  const AsVal = (isFinite(AsParsed) && AsParsed > 0) ? AsParsed : 2000;
+  const EAs = E_brace * (AsVal / 1000000); // mm² 转 m²
 
   let els=[];
   const isMidCol = (c) => (c>0 && c<nBay);   // 内柱判定：0 < c < nBay
 
   /* ---- 柱：nCol 列 × nLev 根 ---- */
   for(let c=0;c<nCol;c++){
-    const kc = isMidCol(c) ? p.r : 1.0;
+    const kc = isMidCol(c) ? (p.r || 1.0) : 1.0;
     const EAcc = EAc * kc;
     const EIcc = EIc * kc;
     for(let lv=0;lv<nLev;lv++){
@@ -340,7 +356,7 @@ function analyze(p, opts = {}){
   const qSpanMap = (p.qSpanMap && typeof p.qSpanMap === 'object') ? p.qSpanMap : {};
   const pLoadMap = (p.pLoadMap && typeof p.pLoadMap === 'object') ? p.pLoadMap : {};
   for(let lv=1;lv<=nLev;lv++){
-    const qDefault = p['q'+lv];
+    const qDefault = p['q'+lv] || 0;
     const pDefault = p['P'+lv] || 0;
     for(let c=0;c<nBay;c++){
       const spanKey = lv + '-' + (c+1);
@@ -356,15 +372,15 @@ function analyze(p, opts = {}){
       let P = pDefault;
       let a = L / 2;
       const movingLoad = p.movingLoad || {};
-      const isMovingTarget = movingLoad.enabled && movingLoad.lev === lv && movingLoad.bay === c + 1;
+      const isMovingTarget = movingLoad.enabled && Number(movingLoad.lev) === lv && Number(movingLoad.bay) === c + 1;
       if (isMovingTarget) {
         /* 移动荷载优先级高于 pLoadMap */
-        P = movingLoad.P || 0;
+        P = parseFloat(movingLoad.P) || 0;
         const t = (movingLoad.t != null) ? movingLoad.t : 0.5;
         a = Math.max(0.001, Math.min(L - 0.001, t * L));
       } else if (pLoadMap[spanKey]) {
-        if (pLoadMap[spanKey].P != null) P = pLoadMap[spanKey].P;
-        if (pLoadMap[spanKey].a != null) a = pLoadMap[spanKey].a;
+        if (pLoadMap[spanKey].P != null) P = parseFloat(pLoadMap[spanKey].P) || 0;
+        if (pLoadMap[spanKey].a != null) a = parseFloat(pLoadMap[spanKey].a);
       }
 
       if (Math.abs(P) > 1e-12) { // 【修复 A6】允许负向集中力打断梁并施加荷载
@@ -372,7 +388,8 @@ function analyze(p, opts = {}){
            同时保证结构施加与 appliedFy / ΣV 残差口径一致。
            NaN 防御：非法 a 回退到跨中，避免污染节点坐标。 */
         if (!isFinite(a)) a = L / 2;
-        a = Math.max(0.001, Math.min(L - 0.001, a));
+        const aEps = Math.min(0.001, L * 0.001);
+        a = Math.max(aEps, Math.min(L - aEps, a));
         /* 有集中力：在 a 处生成子节点，拆分为两个单元 */
         const midIndex = nodes.length;
         nodes.push({
@@ -385,13 +402,13 @@ function analyze(p, opts = {}){
         /* 左子单元：i 端接柱（保留半刚接 alphaJ 作为 alphaI），
            j 端是集中力打断点（内部节点，强制刚接 alphaJ=0）。
            集中力打断点不是梁端，不应有半刚接弹簧。 */
+        const alphaLeft  = Number.isFinite(alphaJ) ? alphaJ * L / a       : alphaJ;
+        const alphaRight = Number.isFinite(alphaJ) ? alphaJ * L / (L - a) : alphaJ;
         els.push({i, j: midIndex, L: a, cs:dx/L, sn:dy/L, EA:EAb, EI:EIb, w:-q, q,
-                  kind:'beam', alphaI:alphaJ, alphaJ:0, hinge:beamHinge, lev:lv, bay:c+1, qSpan:q,
+                  kind:'beam', alphaI:alphaLeft, alphaJ:0, hinge:beamHinge, lev:lv, bay:c+1, qSpan:q,
                   startOffset: 0, spanL: L});
-        /* 右子单元：i 端是集中力打断点（强制刚接 alphaI=0），
-           j 端接柱（保留半刚接 alphaJ 作为 alphaJ）。 */
         els.push({i: midIndex, j, L: L - a, cs:dx/L, sn:dy/L, EA:EAb, EI:EIb, w:-q, q,
-                  kind:'beam', alphaI:0, alphaJ:alphaJ, hinge:beamHinge, lev:lv, bay:c+1, qSpan:q,
+                  kind:'beam', alphaI:0, alphaJ:alphaRight, hinge:beamHinge, lev:lv, bay:c+1, qSpan:q,
                   startOffset: a, spanL: L});
       } else {
         /* 无集中力：标准单单元 */
@@ -437,7 +454,7 @@ function analyze(p, opts = {}){
   /* ---- 悬挑梁：仅右侧，nLev 根 ---- */
   if(p.hasCant){
     for(let lv=1;lv<=nLev;lv++){
-      const q = p['qc'+lv];
+      const q = p['qc'+lv] || 0;
       const i = nid(nBay,lv);
       const j = cantNid(lv);
       const dx=nodes[j].x-nodes[i].x, dy=nodes[j].y-nodes[i].y;
@@ -451,7 +468,7 @@ function analyze(p, opts = {}){
   if (Math.abs(p.tempGrad || 0) > 1e-9) {
     const alphaT = 1.0e-5;
     for (const el of els) {
-      if (el.kind === 'brace' || el.isCant) continue;
+      if (el.kind === 'brace' || el.isCant || el.hinge) continue;
       let gf = 0;
       if (el.kind === 'col') {
         if (el.col === 0) gf = 1.0;
@@ -497,7 +514,7 @@ function analyze(p, opts = {}){
     /* 无论有无楼板，力都加在左柱顶。刚性楼板会通过约束自动分配。 */
     F[nid(0, level)*3] += H;
   }
-  for(let lv=1;lv<=nLev;lv++) applyFloorH(lv, p['H'+lv]);
+  for(let lv=1;lv<=nLev;lv++) applyFloorH(lv, Number(p['H'+lv]) || 0);
 
   /* ---- 柱脚：nCol 个，按 supportMap 每柱独立类型 ---- */
   const fixed=new Set();
@@ -538,12 +555,16 @@ function analyze(p, opts = {}){
       if(supType === 'fixed'){
         fixed.add(thz);
       } else if(supType === 'spring'){
-        if(p.betaF > BETA_HINGE){
-          const kc = isMidCol(c) ? p.r : 1.0;
-          const EIcol = EIc * kc;
-          const Rf = (4*EIcol/hFloor1) * p.betaF / (1 - p.betaF);
-          rotSpring[thz] = Rf;
+        const entryBeta = (entry.betaF != null) ? Number(entry.betaF) : p.betaF;
+        if(!(entryBeta > BETA_HINGE && entryBeta < BETA_FIXED)){
+          throw new Error('柱 ' + c + ' 设为弹簧支座，但 betaF=' + entryBeta
+            + ' 不在开区间 (' + BETA_HINGE + ', ' + BETA_FIXED + ') 内，无法确定弹簧刚度。'
+            + '请设置 0<betaF<1 或改用 fixed/pin。');
         }
+        const kc = isMidCol(c) ? (p.r || 1.0) : 1.0;
+        const EIcol = EIc * kc;
+        const Rf = (4*EIcol/hFloor1) * entryBeta / (1 - entryBeta);
+        rotSpring[thz] = Rf;
       }
       /* supType === 'pin'：rz 自由 */
     }
@@ -592,7 +613,7 @@ const settleDyVal = parseFloat(p.settleDy) || 0;
 if(Math.abs(settleDyVal) > 1e-6){
   const sc = Math.max(0, Math.min(nCol - 1, p.settleCol | 0));
   const entry = supportMapSolver[String(sc)];
-  const alreadyHasDy = entry && entry.dy != null && Math.abs(entry.dy) > 1e-6;
+  const alreadyHasDy = entry && entry.dy != null;
   if(!alreadyHasDy){
     const nSettle = nid(sc, 0);
     fixedDisp.set(nSettle*3 + 1, -settleDyVal * 1e-3);
@@ -662,13 +683,10 @@ if(isSymmetric){
   }
 }
 
-if (isSymmetric && !hasSettlement) {
-  for(let lv=1; lv<=nLev; lv++){
-    for(let c=0; c<=nBay; c++){
-      fixed.add(nid(c, lv)*3);
-    }
-  }
-}
+/* 已删除：不再强制对称框架柱顶 ux=0。
+   有限轴向刚度下，对称框架在竖向荷载下柱顶可产生等值反向的真实水平位移；
+   强制 ux=0 是增加物理约束，会删除真实位移并改变内力。
+   若结构确实为机构（无侧向刚度），应让求解器报奇异，而非用额外约束掩盖。 */
 
 /* =====================================================================
    刚性楼板自由度缩并：同层各节点 ux 绑定到主节点（col=0 的 ux）
@@ -856,7 +874,7 @@ for(let i=0;i<ndof;i++) if(!fixedR.has(i) && reduce[i] === i) free.push(i);
     if(nodes[idx].pLoad) appliedFy -= nodes[idx].pLoad;
   }
   /* 水平力直接施加在左柱顶节点 */
-  for(let lv=1; lv<=nLev; lv++) appliedFx += p['H'+lv];
+  for(let lv=1; lv<=nLev; lv++) appliedFx += Number(p['H'+lv]) || 0;
   const residX = appliedFx + Rx;
   const residY = appliedFy + Ry;
 
@@ -868,8 +886,8 @@ for(let i=0;i<ndof;i++) if(!fixedR.has(i) && reduce[i] === i) free.push(i);
     for(let c=0;c<nBay;c++){
       const Lc = X[c+1] - X[c];
       /* 内柱 EI 为边柱的 r 倍：按跨内两端柱平均线刚度计算 rho。 */
-      const kcL = isMidCol(c) ? p.r : 1.0;
-      const kcR = isMidCol(c+1) ? p.r : 1.0;
+      const kcL = isMidCol(c) ? (p.r || 1.0) : 1.0;
+      const kcR = isMidCol(c+1) ? (p.r || 1.0) : 1.0;
       const EIcAvg = EIc * (kcL + kcR) / 2;
       row.push((EIb / Lc) / (EIcAvg / hlv));
     }
