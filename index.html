@@ -1021,11 +1021,18 @@ var _hmt = _hmt || [];
             <div class="note" style="background:rgba(56,189,248,.10);border-left-color:#38bdf8;color:#7dd3fc;margin-bottom:12px">
               📬 <strong>反馈与建议：</strong>欢迎将盲测中遇到的 Bug 或力学概念改进建议发送至作者邮箱 <a href="mailto:zhao_struct_e@163.com" style="color:#38bdf8;text-decoration:underline;font-weight:600;">Zhao_Struct_E@163.com</a>。
             </div>
-            <h3>一、工具定位</h3>
+            <h3>一、工具定位与学习路径</h3>
+            <p>本工具是一个纯粹的<strong>力学概念自检工具</strong>。它不是用来替代 YJK / SAP2000 进行出图设计的。本工具跳过了繁琐的规范组合（如 1.2恒+1.4活），去掉了复杂的配筋计算，旨在用最纯粹的线弹性理论，帮你快速验证对平面刚架受力性能的直觉判断。</p>
+            <p><strong>推荐的学习路径：</strong></p>
+            <ul>
+              <li><strong>第一步：先做实验。</strong>点击「自检」中的卡片（如“⑦ 层刚度变化与变形集中”），观察右侧扫掠动画。</li>
+              <li><strong>第二步：看现象。</strong>注意右侧变形图的层间位移角，看看变形是不是确实集中在软弱层。</li>
+              <li><strong>第三步：看理论。</strong>打开本说明书的「建模与假设」Tab，阅读背后的力学逻辑。</li>
+              <li><strong>第四步：自己动手。</strong>去「模型」和「荷载」Tab 随意修改参数，看看你的修改是否引发了符合你预期的力学变化。</li>
+            </ul>
             <div class="note" style="background:rgba(244,63,94,.10);border-left-color:#f43f5e;color:#fca5a5;margin-bottom:12px">
               <strong>⚠ 关键声明：</strong>本工具目前处于<strong>持续更新与测试阶段</strong>，算法细节与交互可能随时调整。请将其作为“力学概念自检”的辅助参考，<strong>切勿盲目相信工具的绝对数值</strong>，绝对禁止将计算结果直接用于实际工程设计、施工图审查或工程鉴定。
             </div>
-            <p>本工具是<strong>力学概念自检工具</strong>，用于帮助结构工程师快速验证对平面刚架受力性能的直觉判断。它<strong>不是工程设计或规范校核工具</strong>，计算结果的精度、荷载组合、稳定验算、抗震设计等内容均<strong>不适用于实际工程</strong>。默认的混凝土强度等级（C30）与截面尺寸仅用于提供量级参考，不作为设计依据。</p>
             <div class="note" style="background:rgba(168,85,247,.10);border-left-color:#a855f7;color:#d8b4fe;margin-bottom:12px;margin-top:12px;">
               <strong>✨ 隐藏彩蛋与附加功能：</strong>左侧顶部品牌 Logo 的右侧（📐 和 🎮），还内置了两个实用入口：<br>
               1️⃣ <strong>📐 量级估算工具</strong>：用于概念阶段快速估算结构的重力荷载、风荷载与地震作用。<br>
@@ -1074,16 +1081,30 @@ var _hmt = _hmt || [];
 
           <!-- ====== Tab 2 ====== -->
           <div class="modalTabPane" id="mh-tab2">
-            <h3>一、计算模型与基本假设</h3>
+            <h3>一、基本假定与单元模型</h3>
             <ul>
-              <li><strong>结构模型</strong>：平面刚架，参数化拓扑 —— 1~3 跨 × 1~3 层，可选右侧悬挑。柱列数 = 跨数 + 1；跨内梁数 = 跨数 × 层数；悬挑梁数 = 层数（开启悬挑时）。</li>
-              <li><strong>材料</strong>：均质、各向同性、线弹性。混凝土弹性模量 E = 3.0×10⁷ kN/m²（C30 规范值）。</li>
-              <li><strong>变形</strong>：小变形、小应变。不做真正的几何非线性迭代（不迭代 K<sub>g</sub>）；P-Δ 放大系数 B 为基于等效单自由度的粗估（详见「求解与局限」Tab 第五节「P-Δ 放大系数与侧移刚度的说明」）。</li>
-              <li><strong>轴向变形开关</strong>：默认「考虑（精确）」。切换为「忽略（刚性）」时，梁柱轴向刚度 EA 相对放大 1e6 倍，使轴向变形远小于弯曲变形，模拟传统手算"轴向不可伸长"假定。这是数值近似（相对放大），不是数学上的无限刚性；EI 不变，仅锁轴向；支撑 A<sub>s</sub> 的轴向刚度不受影响。</li>
-              <li><strong>单元</strong>：平面梁单元，每节点 3 个自由度（水平、竖向、转角）。</li>
-              <li><strong>支撑单元</strong>：二力杆，<code>kind:'brace'</code>，局部刚度仅保留轴向项 <code>EA/L</code>，所有弯曲刚度项（<code>12EI/L³</code> 等）置 0；两端强制铰接，不参与 β<sub>j</sub> 半刚接修正。按「层 × 跨」网格逐格布置（X / ╱ / ╲），每格可独立选择材质（钢 Q355 / 混凝土 C30）与截面积 A<sub>s</sub>，并可逐格开启「仅受拉」。</li>
-              <li><strong>忽略</strong>：剪切变形、扭转变形、材料非线性、节点域变形、施工阶段效应、收缩徐变、钢筋与混凝土滑移。温度作用采用简化模型（见本节「四、荷载」中的温度条目）。</li>
+              <li><strong>线弹性与小变形假定</strong>：本工具严格遵循线弹性理论。这意味着无论你施加多大的荷载，材料都不会屈服，杆件也不会发生大变形。工具中没有“极限承载力”的概念，所有结果都可以直接线性叠加。但这不代表可以无限制地输入大荷载，一旦超过现实中的比例极限，算出的内力就失去了工程意义。</li>
+              <li><strong>平面梁单元</strong>：每根杆件被离散为一个标准的 Euler-Bernoulli 梁单元，每个节点具有 3 个自由度（水平位移 u、竖向位移 v、转角 θ）。工具忽略剪切变形（即 Timoshenko 梁效应），因此对于跨高比极小的“深梁”，计算结果会存在一定误差。</li>
             </ul>
+
+            <h3>二、半刚接节点的力学本质（核心）</h3>
+            <p>在传统的结构力学中，节点要么是刚接（β=1），要么是铰接（β=0）。但在真实的钢框架或装配式混凝土结构中，节点往往处于半刚接状态。本工具通过引入端部柔度参数 <b>α = (1-β) / (4β)</b> 来修正梁单元的刚度矩阵。它的物理意义非常直观：</p>
+            <ul>
+              <li>当 <b>β<sub>j</sub> = 1</b> 时，<b>α = 0</b>，转动弹簧完全刚性，梁端弯矩可以完全传递给柱，这是标准的刚接框架；</li>
+              <li>当 <b>β<sub>j</sub> &rarr; 0</b> 时，<b>α &rarr; &infin;</b>，梁端的抗弯刚度被完全释放，退化为两端铰接。</li>
+              <li><strong>教材级理解</strong>：你可以把 β_j 想象成一个调节旋钮。从 1 调到 0 的过程，就是梁端从“死死焊住”逐渐变成“用一根有弹性的弹簧拉住”的过程。你会发现，随着 β_j 减小，梁端负弯矩急剧下降，而跨中正弯矩剧烈上升。</li>
+            </ul>
+
+            <h3>三、支撑（二力杆）的特殊处理</h3>
+            <p>支撑是框架抵抗水平力的第二道防线。在模型底层，支撑单元被赋予了特殊的标记 kind:'brace'：</p>
+            <ul>
+              <li><strong>纯轴力</strong>：局部刚度矩阵中，所有弯曲刚度项（如 12EI/L³）被强制清零，只保留轴向刚度 EA/L。</li>
+              <li><strong>两端铰接</strong>：支撑不参与 β_j 的修正，不论你把梁端刚度调到多少，支撑两端永远是理想铰接。</li>
+              <li><strong>仅受拉非线性</strong>：当开启“仅受拉”时，求解器会进入迭代。只要检测到支撑轴力出现压力（哪怕是极小的 10⁻⁴ kN），这根杆就会被直接“踢出”刚度矩阵，重新求解。这就模拟了真实工程中，长细比很大的柔性拉杆一旦受压就会屈曲失效退出工作的物理现象。</li>
+            </ul>
+            
+            <h3>四、刚性楼板与自由度缩并</h3>
+            <p>在现浇混凝土楼盖中，楼板的面内刚度极大。如果在水平力下，同一层的柱顶水平位移不一致，楼板会被撕裂。因此，本工具提供「刚性楼板」选项。在求解底层，程序采用了矩阵自由度缩并技术，强制让同层所有柱顶的水平位移相等。这就模拟了真实的刚性隔板效应，此时水平力会自动根据各柱的线刚度进行分配。</p>
             <h3>二、截面与刚度</h3>
             <ul>
               <li>柱截面：b<sub>c</sub> × h<sub>c</sub>（出平面 × 平面内），I<sub>c</sub> = b<sub>c</sub>·h<sub>c</sub>³/12，A<sub>c</sub> = b<sub>c</sub>·h<sub>c</sub>。</li>
@@ -1105,11 +1126,11 @@ var _hmt = _hmt || [];
               <li>采用标准半刚接梁单元模型，引入端部柔度参数 <code>α = (1−β_j)/(4β_j)</code>，对以下四项进行修正：
                 <table>
                   <tr><th>项</th><th>修正后</th></tr>
-                  <tr><td>横向刚度 k<sub>vv</sub></td><td>12EI/L³ · 1/(1+6α)</td></tr>
-                  <tr><td>耦合项 k<sub>vθ</sub></td><td>6EI/L² · (1+2α)/(1+8α+12α²)</td></tr>
-                  <tr><td>转动自项 k<sub>θθ</sub></td><td>4EI/L · (1+3α)/(1+8α+12α²)</td></tr>
-                  <tr><td>转动互项 k<sub>θθ'</sub></td><td>2EI/L · 1/(1+8α+12α²)</td></tr>
-                  <tr><td>固端弯矩</td><td>wL²/12 · (1+6α)/(1+8α+12α²)</td></tr>
+                                    <tr><td>横向刚度 k<sub>vv</sub></td><td>12EI/L<sup>3</sup> &middot; 1/(1+6α)</td></tr>
+                  <tr><td>耦合项 k<sub>vθ</sub></td><td>6EI/L<sup>2</sup> &middot; (1+2α)/(1+8α+12α<sup>2</sup>)</td></tr>
+                  <tr><td>转动自项 k<sub>θθ</sub></td><td>4EI/L &middot; (1+3α)/(1+8α+12α<sup>2</sup>)</td></tr>
+                  <tr><td>转动互项 k<sub>θθ'</sub></td><td>2EI/L &middot; 1/(1+8α+12α<sup>2</sup>)</td></tr>
+                  <tr><td>固端弯矩</td><td>wL<sup>2</sup>/12 &middot; (1+6α)/(1+8α+12α<sup>2</sup>)</td></tr>
                 </table>
               </li>
               <li>β<sub>j</sub> = 1（α = 0）退化为标准刚接梁单元；β<sub>j</sub> = 0（α → ∞）退化为两端铰接。</li>
@@ -1174,7 +1195,30 @@ var _hmt = _hmt || [];
 
           <!-- ====== Tab 3 ====== -->
           <div class="modalTabPane" id="mh-tab3">
-            <h3>一、求解方法</h3>
+            <h3>一、林同炎的线刚度比 ρ</h3>
+            <p>在右侧实时读数面板中，我们提供了 <b>ρ = (EI<sub>b</sub> / L) / (EI<sub>c</sub> / h)</b>，即梁线刚度与柱线刚度的比值。这是判断框架受力特性的核心指标：</p>
+            <ul>
+              <li><strong>强柱弱梁（ρ &lt; 0.5）</strong>：柱的刚度远大于梁。此时框架的侧移主要是由柱的弯曲变形主导的，称为“弯曲型”。在地震下，塑性铰会优先生于梁端形成，形成良好的耗能机制。</li>
+              <li><strong>强梁弱柱（ρ &gt; 2.0）</strong>：梁的刚度远大于柱。框架侧移呈现明显的“剪切型”（越往下层间位移越大）。这种体系非常危险，地震时柱端会先出现塑性铰，容易导致整体楼层垮塌。</li>
+              <li><strong>反弯点联动</strong>：打开反弯点小图，你会看到一个极其规整的力学现象：随着 ρ 的增大（梁越来越刚），柱子的反弯点会越来越接近跨中（即 x/h 趋向于 0.5）。因为超强的梁死死限制了柱子的转动，柱子的变形模式越来越接近“两端固接”的杆件。</li>
+            </ul>
+
+            <h3>二、P-Δ 二阶效应与失稳</h3>
+            <p>传统一阶分析不考虑变形对内力产生的附加影响。但在高层或柔性框架中，竖向荷载 N 在发生侧移 Δ 后，会产生附加倾覆力矩 N·Δ。</p>
+            <ul>
+              <li>本工具没有采用复杂的几何非线性矩阵迭代，而是采用了一种工程上更直观的<strong>放大系数法</strong>：<b>B = 1 / (1 - ΣN / ΣN<sub>cr</sub>)</b>。</li>
+              <li><b>ΣN</b> 是当前总竖向力，<b>ΣN<sub>cr</sub></b> 是结构的弹性临界屈曲荷载。系统会自动剥离所有竖向荷载，单独施加一个纯水平力，反推出结构的真实侧向刚度，从而精准计算出 <b>N<sub>cr</sub></b>。</li>
+              <li><strong>教材级预警</strong>：当 <b>ΣN / ΣN<sub>cr</sub></b> 接近 1 时（即 B 值急剧放大甚至变负数），意味着你的结构已经无限接近失稳（侧移突变）。此时现实中的结构早已发生大变形破坏，线弹性假定彻底失效。</li>
+            </ul>
+
+            <h3>三、为什么支座沉降会产生内力？</h3>
+            <p>静定结构（如简支梁）的支座沉降不会产生任何内力，因为结构能自由变形。但本工具分析的是超静定刚架。当你拖动某根柱发生沉降时，由于多余的约束限制，结构无法自由变形，从而产生极大的附加内力。</p>
+            <ul>
+              <li><strong>公式本质</strong>：K·ΔU = F_等效。沉降相当于在支座处强行塞入了一个强迫位移，这个位移通过刚度矩阵 K 耦合到了其他自由节点上，相当于施加了巨大的等效外力。</li>
+              <li><strong>经验法则</strong>：沉降产生的次内力大小，与支座的转动刚度（固接 vs 铰接）强相关。如果你把沉降柱脚设为“铰接”（β_f=0），你会发现沉降产生次内力会大幅减少。</li>
+            </ul>
+            
+            <h3>四、求解方法（矩阵位移法）</h3>
             <ul>
               <li>采用矩阵位移法（直接刚度法）：组装整体刚度矩阵 K，组装等效节点荷载向量 F，施加边界条件后高斯消元求解 K·U = F。</li>
               <li>高斯消元使用部分主元法；对角元 &lt; 1e-14 时判定为奇异并提示。</li>
@@ -1241,30 +1285,27 @@ var _hmt = _hmt || [];
 
           <!-- ====== Tab 4 ====== -->
           <div class="modalTabPane" id="mh-tab4">
-            <h3>一、界面速览</h3>
+
+            <h3>一、后处理面板的高阶解读</h3>
+            
+            <p><strong>1. 截面探针（应力分析）</strong><br>
+            在内力图上点击任意杆件，右侧会弹出截面应力图。这是基于经典的<strong>平截面假定</strong>，利用轴力 N 和弯矩 M 计算得出的：σ = N/A ± M/W。<br>
+            当你看到红色的部分（受压）和蓝色的部分（受拉）是不对称的，说明该截面处于<strong>大偏心受力</strong>状态（弯矩主导）；如果两边颜色对称但只有一种颜色（全红或全蓝），说明处于<strong>小偏心受力</strong>状态（轴力主导）。利用这个探针，你可以直观地看到“框架作用”是如何在中柱中产生巨大轴力的。</p>
+
+            <p><strong>2. 刚度贡献分解（K值对比）</strong><br>
+            这个面板用于回答“到底是什么在抵抗水平力？”。程序会在后台进行一次“剥离计算”：比如求 `去支撑后 K` 时，程序会在内存中暂时删掉所有支撑，重新计算一次顶层位移，从而得到去支撑后的刚度。<br>
+            <strong>易错点：</strong>下降百分比并不能线性相加。比如去掉支撑刚度下降 50%，去掉梁约束刚度下降 40%，你绝对不能得出结论“支撑占 50%，梁占 40%”。它们互相之间是高度耦合的。你需要关注的是哪一项剥离后，结构的侧移发生了<strong>急剧的失稳性增加</strong>。</p>
+
+            <p><strong>3. 受压支撑校核</strong><br>
+            欧拉临界力 <b>N<sub>cr</sub> = π<sup>2</sup>EA / λ<sup>2</sup></b>（其中 <b>λ = μL / i</b>）。在真实的工程中，如果一根支撑的长细比 λ 过大，它在远没达到屈服强度前，就会发生横向屈曲（受压失稳）。当你在扫掠工况中使得某根支撑内力超过 <b>N<sub>cr</sub></b> 时，面板会亮起红灯并报警。虽然工具为了保持线弹性假定不会让这根杆直接断裂，但这提示你：<strong>如果你真的开启“仅受拉”开关，这根杆早就退出了。</strong></p>
+
+            <h3>二、关于界面与操作的说明</h3>
             <ul>
-              <li><strong>左栏 Tab 与读数面板</strong>：「自检」放 30+ 个预设工况，「模型」放拓扑 / 几何 / 截面 / 支撑，「荷载」放均布 / 悬挑 / 水平力 / 二阶效应；右侧读数面板显示截面尺寸、内柱刚度比 r、逐层逐跨 ρ、水平力分配、刚度贡献分解。原「左栏摘要卡」已合并进读数面板（避免与左栏重复）。</li>
-              <li><strong>体系判定（林同炎概念）</strong>：读数面板的「模型」组中，工具会根据当前的梁柱线刚度比 ρ 与梁端刚度 β<sub>j</sub>，自动判定当前的结构体系（如：强柱弱梁、典型刚接框架、铰接排架等）。帮助工程师在建模阶段快速识别变形主导模式（弯曲型 vs 剪切型）及抗震隐患（如强梁弱柱）。</li>
-              <li><strong>左栏 Tab</strong>：「自检」内置 30+ 个预设工况（A 弯矩与刚度 / B 轴力与框架 / C 变形与侧移 / D 水平力与二阶 / E 支撑系统 / F 非荷载作用），「模型」放拓扑 / 几何 / 截面 / 支撑，「荷载」放均布 / 悬挑 / 水平力 / 二阶效应。快捷键 <code>1</code> / <code>2</code> / <code>3</code> 切换。</li>
-              <li><strong>内力图卡（右上角工具条）</strong>：
-                <ul style="margin-top:3px">
-                  <li><code>M</code> / <code>N</code> / <code>V</code> / <code>R</code>：切换内力类型或支座反力图；</li>
-                  <li><code>全部</code> / <code>柱</code> / <code>梁</code> / <code>撑</code>：筛选单元；</li>
-                  <li><code>数值</code>：标注杆端内力；</li>
-                  <li><code>冻结</code>：把当前结果存为浅灰虚线基准，后续改动与它对比；</li>
-                  <li><code>N#</code>：显示节点 / 单元编号；</li>
-                  <li><code>📷</code>：导出当前内力图为 PNG（2x 分辨率）。</li>
-                </ul>
-                弯矩图会自动标出<strong>反弯点</strong>（空心圆圈，仅标构件内部 M 严格变号处）。底栏「缩放」滑块只影响显示比例，不改变计算结果。
-              </li>
-              <li><strong>荷载简图卡</strong>：均布荷载箭头按屏幕像素自适应，两端封口；标签纯数字（位置已说明含义）；<strong>顶层标签贴箭头上方，中间层标签落在本层梁与上层梁之间的空格</strong>；柱脚符号随 β<sub>f</sub> 切换（固定 / 铰接 / 弹簧）；右上角标注柱梁截面尺寸。</li>
-              <li><strong>变形图卡</strong>：挠度曲线由 <code>EI·v'' = M(x)</code> 双重积分得到（对半刚接与悬挑同样成立）。叠加层显示最大位移、最大层间位移角、侧移刚度 K、P-Δ 放大系数 B。底栏「缩放」滑块控制变形放大倍数（10~300）。</li>
-              <li><strong>显示模式</strong>（右上角浮层）：<code>全部</code> / <code>仅受力图</code> / <code>仅变形图</code>。</li>
-              <li><strong>参数扫掠</strong>（底栏「▶ 扫掠」）：单参数默认 3s 循环播放（自检卡片为 12s 慢速播放），可暂停 / 重置 / 录制；参数按当前拓扑自动过滤（如无悬挑则不显示 q<sub>c</sub> 系列）。</li>
-              <li><strong>录制</strong>：录制范围为内力图或变形图单张 canvas。录制期间自动切白底、关扫描线、限制分辨率 ≤ 1920×1080，优先 mp4，回退 webm。</li>
-              <li><strong>URL 分享</strong>（底栏 🔗）：把当前工况编码进 <code>#st=...</code> 一键复制。支持 <code>file://</code> / <code>https://</code> / <code>localhost</code>。重置全部时自动清除 hash。</li>
-              <li><strong>底部状态栏</strong>：<code>NODES</code> 节点数 · <code>ELEMENTS</code> 单元数 · <code>DOF</code> 自由度数 · <code>SOLVE</code> 本次求解耗时（ms）· <code>RESIDUAL</code> <strong>相对</strong>平衡残差（柱脚反力之和与外部荷载之和的差值，除以柱脚反力量级，越小越准）· <code>STATUS</code> 状态（<strong>相对残差</strong> &lt; 1e-8 显示绿色 OK，否则 CHECK；仅受拉迭代 15 次未收敛时显示 NC·未收敛）。</li>
-              <li><strong>刚度贡献分解</strong>（读数面板中）：显示当前工况下基准 K、去支撑后 K、去梁约束后 K（去梁 = 梁端铰接 β<sub>j</sub>=0）。三者基于同一 u_top 口径，可直接对比。⚠ 各分项不是线性叠加（刚度非线性耦合），只能看「去掉某项后下降多少」，不能反过来相加。扫掠播放中暂不更新。</li>
+              <li><strong>左侧控制栏</strong>：包含「自检」/「模型」/「荷载」三个 Tab。其中「自检」内置了 30+ 个预设工况（分 A~G 七个大类）。「模型」用于配置几何与截面，「荷载」用于配置受力条件。支持快捷键 <code>1</code> / <code>2</code> / <code>3</code> 快速切换。</li>
+              <li><strong>右侧读数面板</strong>：实时显示截面参数、刚度比、逐层逐跨 ρ 等。其中「体系判定」模块会根据当前的梁柱线刚度比 ρ 与梁端刚度 β_j，自动判定当前的结构体系（如：强柱弱梁、典型刚接框架、铰接排架等）。</li>
+              <li><strong>内力图工具条</strong>：<code>M</code> / <code>N</code> / <code>V</code> / <code>R</code> 切换内力类型；<code>冻结</code> 把当前结果存为浅灰虚线基准；<code>📷</code> 导出当前内力图为 PNG。底栏「缩放」滑块只影响显示比例，不改变计算结果。</li>
+              <li><strong>参数扫掠</strong>（底栏「▶ 扫掠」）：单参数默认 3s 循环播放（自检卡片为 12s 慢速播放）。录制功能可录制为视频（自动选 mp4 / webm）。</li>
+              <li><strong>底部状态栏</strong>：<code>RESIDUAL</code> 显示<strong>相对</strong>平衡残差（越小越准）。<code>STATUS</code> 相对残差 &lt; 1e-8 显示绿色 OK；仅受拉迭代 15 次未收敛时显示 NC·未收敛。</li>
             </ul>
 
             <h3>二、力学概念自检建议</h3>
@@ -1405,18 +1446,18 @@ var _hmt = _hmt || [];
   </div>
 </div>
 
-<script src="js/01-state.js?v=0.1.7.1"></script>
-<script src="js/02-model.js?v=0.1.7.1"></script>
-<script src="js/02-generator.js?v=0.1.7.1"></script>
-<script src="js/02-solver.js?v=0.1.6.5"></script>
-<script src="js/03-internal.js?v=0.1.6.5"></script>
-<script src="js/04-canvas.js?v=0.1.6.5"></script>
-<script src="js/05-force.js?v=0.1.6.5"></script>
-<script src="js/06-deform.js?v=0.1.6.5"></script>
+<script src="js/01-state.js?v=0.1.8"></script>
+<script src="js/02-model.js?v=0.1.8"></script>
+<script src="js/02-generator.js?v=0.1.8"></script>
+<script src="js/02-solver.js?v=0.1.8"></script>
+<script src="js/03-internal.js?v=0.1.8"></script>
+<script src="js/04-canvas.js?v=0.1.8"></script>
+<script src="js/05-force.js?v=0.1.8"></script>
+<script src="js/06-deform.js?v=0.1.8"></script>
 
-<script src="js/07-run.js?v=0.1.6.5"></script>
-<script src="js/08-sweep-record.js?v=0.1.6.5"></script>
-<script src="js/09-ui-share.js?v=0.1.6.5"></script>
+<script src="js/07-run.js?v=0.1.8"></script>
+<script src="js/08-sweep-record.js?v=0.1.8"></script>
+<script src="js/09-ui-share.js?v=0.1.8"></script>
 <!-- 注意加载顺序：11-construct.js 必须在 10-boot.js 之前，
      因为 10-boot.js 顶层的 applyTopoState() 会 dispatch 'structura-topo-change'，
      而该事件的监听器在 11-construct.js 的 bindBraceTopo 里注册。 -->

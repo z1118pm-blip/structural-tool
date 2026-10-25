@@ -180,7 +180,8 @@
       </div>
       <button class="hudBtn on" id="btnMusic" type="button">🎵 音乐</button>
       <button class="hudBtn on" id="btnSound" type="button">🔊 音效</button>
-      <button class="hudBtn" id="btnLegend" type="button" title="道具图例">📖</button>
+      <button class="hudBtn" id="btnLegend" type="button" title="道具图例">🎒</button>
+      <button class="hudBtn" id="btnGameHelp" type="button" title="玩法说明">❓</button>
       <button class="hudBtn" id="btnFull" type="button" title="全屏">⛶</button>
     </div>
   </div>
@@ -204,6 +205,84 @@
 <!-- 背景音乐（同目录下的两个 mp3，每局随机切一首） -->
 <audio id="bgmA" src="bgm1.mp3" loop preload="auto"></audio>
 <audio id="bgmB" src="bgm.mp3" loop preload="auto"></audio>
+
+<!-- ==================== 游戏说明模态框 ==================== -->
+<style>
+  .game-modal {
+    position: fixed; inset: 0; z-index: 999;
+    background: rgba(2,6,23,0.85); backdrop-filter: blur(8px);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; visibility: hidden; pointer-events: none;
+    transition: opacity 0.2s, visibility 0.2s;
+  }
+  .game-modal.open { opacity: 1; visibility: visible; pointer-events: auto; }
+  .game-modal-content {
+    background: #0f172a; border: 1px solid #334155; border-radius: 12px;
+    width: min(650px, 90vw); max-height: 85vh; display: flex; flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+  }
+  .game-modal-head {
+    padding: 16px 24px; border-bottom: 1px solid #1e293b;
+    display: flex; justify-content: space-between; align-items: center;
+    background: rgba(56,189,248,0.05); border-radius: 12px 12px 0 0;
+  }
+  .game-modal-head h3 { font-family: "JetBrains Mono", monospace; font-size: 16px; color: #38bdf8; margin: 0; letter-spacing: 1px; }
+  .game-modal-close { background: none; border: none; color: #94a3b8; font-size: 24px; cursor: pointer; transition: color 0.2s; }
+  .game-modal-close:hover { color: #fff; }
+  .game-modal-body { padding: 24px; overflow-y: auto; font-size: 13.5px; line-height: 1.7; color: #cbd5e1; }
+  .game-modal-body h4 { color: #a78bfa; margin: 16px 0 8px; font-size: 14.5px; border-bottom: 1px dashed #334155; padding-bottom: 4px; }
+  .game-modal-body h4:first-child { margin-top: 0; }
+  .game-modal-body ul { padding-left: 20px; margin: 0; }
+  .game-modal-body li { margin-bottom: 6px; }
+  .game-modal-body b { color: #f8fafc; }
+  .game-modal-body .highlight { color: #38bdf8; font-weight: 600; }
+  .game-modal-body .danger { color: #f87171; font-weight: 600; }
+</style>
+
+<div class="game-modal" id="modalGameHelp">
+  <div class="game-modal-content">
+    <div class="game-modal-head">
+      <h3><span style="color:#a78bfa">◆</span> 应力释放 · 玩法与机制</h3>
+      <button class="game-modal-close" id="btnGameHelpClose">×</button>
+    </div>
+    <div class="game-modal-body">
+      
+      <h4>🎮 基础操作</h4>
+      <ul>
+        <li><b>移动挡板：</b> <span class="highlight">← → 或 A D</span> 键，或者直接用鼠标/手指在画面中拖动。</li>
+        <li><b>发射小球：</b> 按 <span class="highlight">空格</span> 或点击画面任意位置。每关开局小球会吸附在挡板上。</li>
+        <li><b>系统控制：</b> <span class="highlight">ESC / P</span> 暂停游戏，<span class="highlight">R</span> 重新开始。右上角可开关音乐/音效、全屏。</li>
+      </ul>
+
+      <h4>🧱 砖块与得分</h4>
+      <ul>
+        <li>击碎砖块得基础分。越靠上的砖块分值越高。</li>
+        <li><b>装甲砖：</b> 表面带有数字（2 或 3），需要连续击打多次才能摧毁，破坏时分数不变。</li>
+        <li><b>连击（Combo）：</b> 球在击碎砖块后，如果没碰到挡板再次击中其他砖块，会触发连击。连击数越高，得分倍率越高（屏幕中央会有特效提示）。</li>
+        <li><b>掉球惩罚：</b> 球落到挡板下方会扣除一条命，并重置当前连击。</li>
+      </ul>
+
+      <h4>🎁 道具掉落（增益与惩罚）</h4>
+      <ul>
+        <li>击碎砖块时有概率掉落道具（方块图标）。<b>只有被挡板接住才会生效。</b></li>
+        <li>前 3 关只会掉落<b>增益道具</b>（如：变宽、慢速、多球、加命、粘球）。</li>
+        <li>从第 3 关开始，解锁高级增益（<span style="color:#ef4444">激光</span>、<span style="color:#eab308">穿透</span>）。</li>
+        <li>从第 5 关开始，会掉落<b>惩罚道具</b>（红色图标，如：变窄、加速、视野干扰），接住后会带来负面效果。</li>
+        <li>点击右上角的 <b>🎒 图例</b> 按钮，可随时查看当前关卡已解锁的道具列表。</li>
+      </ul>
+
+      <h4>⚡ 隐藏机制与护肝设定</h4>
+      <ul>
+        <li><b>球速递增：</b> 每摧毁一块砖，球速都会产生极其微弱的提升，直至达到上限。不要指望能一直用慢速磨。</li>
+        <li><b>防卡死角：</b> 如果球在 1.5 秒内一直在极小范围内来回弹跳（容易死循环），系统会自动改变球的角度，帮你解围。</li>
+        <li><b>赛博旁白：</b> 当连击达到一定次数、生命见底，或者你“摸鱼”太久时，屏幕下方会随机弹出四川话的赛博旁白。别在意，那是系统在嘲笑你。</li>
+        <li><b>连续失焦保护：</b> 切出页面时游戏会自动暂停，不会再因为切 QQ/微信回来发现球已经掉光了（前提是你开着声音）。</li>
+      </ul>
+
+    </div>
+  </div>
+</div>
+<!-- ==================== 模态框结束 ==================== -->
 
 <script>
 (function(){
@@ -2870,6 +2949,23 @@
   };
   bindHoldKey(btnLeftEl,  'ArrowLeft');
   bindHoldKey(btnRightEl, 'ArrowRight');
+
+  /* 玩法说明弹窗 */
+  const btnHelp = document.getElementById('btnGameHelp');
+  const modalHelp = document.getElementById('modalGameHelp');
+  const btnHelpClose = document.getElementById('btnGameHelpClose');
+  if (btnHelp && modalHelp) {
+    btnHelp.addEventListener('click', () => modalHelp.classList.add('open'));
+    btnHelpClose.addEventListener('click', () => modalHelp.classList.remove('open'));
+    modalHelp.addEventListener('click', (e) => {
+      if (e.target === modalHelp) modalHelp.classList.remove('open');
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && modalHelp.classList.contains('open')) {
+        modalHelp.classList.remove('open');
+      }
+    });
+  }
 
   /* 道具图例切换 */
   const btnLegendEl = document.getElementById('btnLegend');
