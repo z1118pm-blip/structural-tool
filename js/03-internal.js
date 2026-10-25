@@ -47,6 +47,17 @@ function elemDisp(res, x){
     return [cs*ulx - sn*vly, sn*ulx + cs*vly];
   }
 
+  /* 完全铰接梁：弯曲刚度已被移除，节点转角不再代表该梁真实端转角。
+     改用「端点弦线 + 简支梁均布特解 + 温度自由曲率」。 */
+  if(el.kind === 'beam' && el.hinge){
+    const vUDL = (w !== 0)
+      ? w * x * (L*L*L - 2*L*x*x + x*x*x) / (24 * EI)
+      : 0;
+    const vTempH = 0.5 * (el.tempGradEff || 0) * x * (x - L);
+    const vly = (1-xi)*vi + xi*vj + vUDL + vTempH;
+    return [cs*ulx - sn*vly, sn*ulx + cs*vly];
+  }
+
   /* 使用标准的 Hermite 形函数插值，确保节点处的转角严格等于求解出的节点转角。
      对于半刚接、悬挑、温度等工况，节点转角已由整体求解器精确算出，
      直接通过形函数插值即可保证变形曲线在节点处切向连续（满足刚接夹角不变）。 */

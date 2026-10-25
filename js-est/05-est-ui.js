@@ -745,18 +745,6 @@ function initSliders() {
     numEl.addEventListener('blur', (e) => {
       const grp = numEl.closest('.slider-group');
       const isGkBase = (p.id === 'gkBase');
-      // 细部模式下 gkBase 数字框仅为镜像，失焦时还原显示，不切模式
-      if (isGkBase && EST.useDetail) {
-        if (lastLoadData) {
-          e.target.value = lastLoadData.g_detail.toFixed(1);
-          const mn = parseFloat(rangeEl.min);
-          const mx = parseFloat(rangeEl.max);
-          const v = Math.max(mn, Math.min(mx, parseFloat(e.target.value)));
-          rangeEl.value = v;
-          updateBg(v);
-        }
-        return;
-      }
       if (grp && grp.classList.contains('disabled') && !isGkBase) {
         e.target.value = rangeEl.value;
         return;

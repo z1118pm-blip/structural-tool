@@ -206,8 +206,8 @@ function localEqLoad(el, p){
             pFeTI = baseT; pFeTJ = baseT;
           } else {
             const D = (1 + 4*alI)*(1 + 4*alJ) - 4*alI*alJ;
-            pFeTI = baseT * (1 + 6*alJ) / D;
-            pFeTJ = baseT * (1 + 6*alI) / D;
+            pFeTI = baseT * (1 + 2*alJ) / D;
+            pFeTJ = baseT * (1 + 2*alI) / D;
           }
         }
       } else {
@@ -232,6 +232,11 @@ function localEqLoad(el, p){
       Vj = w*L/2 * (1 + 5*alIq + 3*alJq + 12*alIq*alJq) / Dq;
     }
   }
+  /* 温度梯度：当两端柔度不等时 pFeTI ≠ pFeTJ，固端弯矩自身不满足力矩平衡，
+     必须配套端剪力使力系自平衡。固接/铰接/对称柔度时增量为零，无副作用。 */
+  const vTempJ = (pFeTI - pFeTJ) / L;
+  Vi -= vTempJ;
+  Vj += vTempJ;
   return [pFeN, Vi, pFeI - pFeTI, -pFeN, Vj, pFeJ + pFeTJ];
 }
 function globalEqLoad(el, p){
@@ -468,7 +473,7 @@ function analyze(p, opts = {}){
   if (Math.abs(p.tempGrad || 0) > 1e-9) {
     const alphaT = 1.0e-5;
     for (const el of els) {
-      if (el.kind === 'brace' || el.isCant || el.hinge) continue;
+      if (el.kind === 'brace' || el.isCant) continue;
       let gf = 0;
       if (el.kind === 'col') {
         if (el.col === 0) gf = 1.0;

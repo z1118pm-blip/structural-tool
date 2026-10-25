@@ -168,9 +168,9 @@ function sweepPlay(loop, forcedRange){
     if(S.sweep.loop || t < 1){
       S.sweep.rafId = requestAnimationFrame(tick);
     } else {
-      S.sweep.playing = false;
-      S.sweep.rafId   = null;
-      sweepUpdatePlayBtn();
+      /* 自然结束走统一收尾，确保最后一次 run() 之后补算刚度分解/P-Δ，
+         避免读数永久停在"扫掠中"。 */
+      sweepStop();
     }
   };
   S.sweep.rafId = requestAnimationFrame(tick);
@@ -318,6 +318,61 @@ function setSweepLocked(locked){
   });
 }
 
+/* 统一收尾：正常停止、取消、构造失败、启动失败、运行错误、stop() 异常，
+   全部经过此函数，幂等。 */
+function _finalizeRecording(exportData){
+  const R = S.rec;
+  if(R.finalized) return;
+  R.finalized = true;
+
+  /* 显式停止捕获轨道，防止流泄漏 */
+  if(R.stream){
+    try{ R.stream.getTracks().forEach(t => t.stop()); }catch(e){}
+    R.stream = null;
+  }
+
+  const shouldSave = !!exportData && !R.cancel && R.chunks && R.chunks.length > 0;
+  const chunks = R.chunks || [];
+  const finalMime = R.mime || '';
+  const scope = R.scope;
+
+  R.active   = false;
+  R.recorder = null;
+  R.chunks   = [];
+  R.cancel   = false;
+
+  S.lightBg = false;
+  document.body.classList.remove('recording');
+  sweepStop();
+  try{ run(); }catch(e){ console.error('[rec] finalize run 失败:', e); }
+
+  updateRecBtn();
+  setSweepLocked(false);
+
+  if(shouldSave){
+    try{
+      const blob = new Blob(chunks, { type: finalMime });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      const ts   = new Date().toISOString()
+                       .replace(/[:T]/g,'-').replace(/\..+$/,'');
+      const ext  = finalMime.indexOf('mp4') >= 0 ? 'mp4' : 'webm';
+      a.href = url;
+      a.download = `sweep_${S.sweep.param}_${scope}_${ts}.${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(()=>URL.revokeObjectURL(url), 2000);
+      console.log(`[rec] 已保存 ${a.download}  (${(blob.size/1024).toFixed(0)} KB)`);
+    }catch(e){
+      console.error('[rec] 保存失败:', e);
+      alert('录制保存失败：' + e.message);
+    }
+  } else if(!exportData){
+    console.log('[rec] 已取消或异常中止，未保存');
+  }
+}
+
 function startRecording(){
   const R = S.rec;
   if(R.active){
@@ -369,62 +424,36 @@ function startRecording(){
   sweepReset();
 
   let recorder;
+  let stream = null;
   try{
-    const stream = src.captureStream(30);
+    stream = src.captureStream(30);
     recorder = new MediaRecorder(stream, {
       mimeType: mime,
       videoBitsPerSecond: 6_000_000
     });
   }catch(e){
+    if(stream){ try{ stream.getTracks().forEach(t => t.stop()); }catch(_){} }
+    R.finalized = true; // 尚未真正开始，标记已终结以避免二次收尾
     R.active  = false;
     S.lightBg = false;
-    run();
+    document.body.classList.remove('recording');
+    try{ run(); }catch(_){}
+    updateRecBtn();
+    setSweepLocked(false);
     alert('录制初始化失败：' + e.message);
     return;
   }
 
+  R.stream    = stream;
+  R.finalized = false;
+
   recorder.ondataavailable = e => {
     if(e.data && e.data.size > 0) R.chunks.push(e.data);
   };
-  recorder.onstop = () => {
-    const wasCancelled = R.cancel;
-    const chunks      = R.chunks;
-    const finalMime   = R.mime;
-    const scope       = R.scope;
-
-    R.active   = false;
-    R.cancel   = false;
-    R.chunks   = [];
-    R.recorder = null;
-
-    S.lightBg = false;
-    document.body.classList.remove('recording');
-    run();
-
-    updateRecBtn();
-    setSweepLocked(false);
-
-    if(wasCancelled){
-      console.log('[rec] 已取消，未保存');
-      return;
-    }
-    if(!chunks.length){
-      alert('录制未产生数据（可能时长过短）。');
-      return;
-    }
-    const blob = new Blob(chunks, { type: finalMime });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    const ts   = new Date().toISOString()
-                    .replace(/[:T]/g,'-').replace(/\..+$/,'');
-    const ext  = finalMime.indexOf('mp4') >= 0 ? 'mp4' : 'webm';
-    a.href = url;
-    a.download = `sweep_${S.sweep.param}_${scope}_${ts}.${ext}`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(()=>URL.revokeObjectURL(url), 2000);
-    console.log(`[rec] 已保存 ${a.download}  (${(blob.size/1024).toFixed(0)} KB)`);
+  recorder.onstop  = () => _finalizeRecording(true);
+  recorder.onerror = (e) => {
+    console.error('[rec] MediaRecorder error:', e);
+    _finalizeRecording(false);
   };
 
   R.recorder = recorder;
@@ -432,7 +461,14 @@ function startRecording(){
   updateRecBtn();
   setSweepLocked(true);
 
-  recorder.start(100);
+  try{
+    recorder.start(100);
+  }catch(e){
+    console.error('[rec] start 失败:', e);
+    alert('录制启动失败：' + e.message);
+    _finalizeRecording(false);
+    return;
+  }
 
   setTimeout(()=>{
     if(!R.active) return;
@@ -455,12 +491,19 @@ function startRecording(){
 function stopRecording(){
   const R = S.rec;
   if(!R.active) return;
-  R.active = false;
 
   sweepStop();
 
   if(R.recorder && R.recorder.state !== 'inactive'){
-    try{ R.recorder.stop(); }catch(e){ /* 忽略 */ }
+    try{
+      R.recorder.stop(); // 正常触发 onstop → _finalizeRecording(true)
+    }catch(e){
+      /* stop() 抛异常时 onstop 不会触发，必须兜底收尾 */
+      _finalizeRecording(false);
+    }
+  } else {
+    /* recorder 已失效或未创建 */
+    _finalizeRecording(false);
   }
 }
 

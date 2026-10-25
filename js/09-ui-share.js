@@ -443,7 +443,7 @@ function encodeState(){
     else delete obj.qSpanMap;
   }
   if(!S.hasCant){ obj.Lc = 1.5; obj.qc1 = 0; obj.qc2 = 0; obj.qc3 = 0; }
-  if(!(obj.settleDy > 0)){ obj.settleDy = 0; obj.settleCol = 0; }
+  if(!Number.isFinite(obj.settleDy)){ obj.settleDy = 0; obj.settleCol = 0; }
   try{
     return btoa(JSON.stringify(obj))
       .replace(/\+/g, '-')
@@ -580,12 +580,14 @@ function applyStateFromObj(obj){
       }
     } else if(k === 'movingLoad'){
       if (v && typeof v === 'object') {
+        const rawT = parseFloat(v.t);
+        const restoredT = Number.isFinite(rawT) ? Math.max(0, Math.min(1, rawT)) : 0.5;
         S.movingLoad = {
           enabled: !!v.enabled,
           lev: Math.max(1, Math.min(S.nLev, parseInt(v.lev) || 1)),
           bay: Math.max(1, Math.min(S.nBay, parseInt(v.bay) || 1)),
           P: Math.max(0, Math.min(200, parseFloat(v.P) || 0)),
-          t: Math.max(0, Math.min(1, parseFloat(v.t) || 0.5)),
+          t: restoredT,
           speed: Math.max(0.1, Math.min(10, parseFloat(v.speed) || 1)),
           playing: false,
           rafId: null,
@@ -751,7 +753,7 @@ function applyStateFromObj(obj){
   if(typeof S.settleDy !== 'number' || isNaN(S.settleDy)){
     S.settleDy = 0;
   } else {
-    S.settleDy = Math.max(0, Math.min(100, S.settleDy));
+    S.settleDy = Math.max(-100, Math.min(100, S.settleDy));
   }
 
   applyTopoState();

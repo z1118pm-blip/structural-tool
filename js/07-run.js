@@ -30,7 +30,7 @@ function getMaxInternal(model, type, filter){
   return maxF;
 }
 
-function updateReadout(model){
+function updateReadout(model, skipAux){
   const p = model.p;
   
   // 增加辅助函数，仅在文本内容发生变化时才更新 DOM，防止高频扫掠时重排闪烁
@@ -206,6 +206,10 @@ function updateReadout(model){
         setTxt('r-Kall', '—（无水平力）');
         setTxt('r-Knobrace', '—');
         setTxt('r-Knobeam', '—');
+      } else if(skipAux){
+        setTxt('r-Kall', '—（播放中）');
+        setTxt('r-Knobrace', '—');
+        setTxt('r-Knobeam', '—');
       } else if(S.sweep && S.sweep.playing){
         setTxt('r-Kall', '—（扫掠中）');
         setTxt('r-Knobrace', '—');
@@ -234,7 +238,9 @@ function updateReadout(model){
           p.settleDy, p.settleCol,
           p.frameMat, p.braceMat, p.As, p.braceI, p.axialMode,
           JSON.stringify(p.braceMap || {}),
-          JSON.stringify(p.braceTensionMap || {})
+          JSON.stringify(p.braceTensionMap || {}),
+          JSON.stringify(p.supportMap || {}),
+          JSON.stringify(p.movingLoad || {})
         ].join('|');
 
         let K_nobrace, K_nobeam, errNB = null, errNM = null;
@@ -248,7 +254,16 @@ function updateReadout(model){
           if(hasBrace){
             try{
               /* 求“去支撑刚度”时，需清除非荷载作用产生的初始侧移，否则刚度会被严重污染 */
-              const pPureNB = { ...p, braceMap: {}, braceTensionMap: {}, settleDy: 0, settleCol: 0, tempAll: 0, tempGrad: 0, supportMap: {} };
+              /* 去支撑求解：保留支座类型（含弹簧 betaF），只清强迫位移；
+                 禁用移动荷载以免混入跨内集中力。 */
+              const _nbSM = {};
+              for(const kk of Object.keys(p.supportMap || {})){
+                const ee = p.supportMap[kk] || {};
+                _nbSM[kk] = {};
+                if(ee.type && ee.type !== 'auto') _nbSM[kk].type = ee.type;
+                if(ee.betaF != null) _nbSM[kk].betaF = ee.betaF;
+              }
+              const pPureNB = { ...p, braceMap: {}, braceTensionMap: {}, settleDy: 0, settleCol: 0, tempAll: 0, tempGrad: 0, supportMap: _nbSM, movingLoad: { ...(p.movingLoad || {}), enabled:false, playing:false, P:0 } };
               const mNB = analyze(pPureNB);
               let uAvg = 0;
               for(let c=0;c<mNB.nCol;c++) uAvg += mNB.U[mNB.nid(c, mNB.nLev)*3];
@@ -266,7 +281,14 @@ function updateReadout(model){
               }
             }
             /* 求“去梁刚度”时，必须临时清空集中力，否则会触发 solver 的“全铰接+集中力=机构”的安全拦截 */
-            const pPureStiff = { ...p, betaJ: 0, settleDy: 0, settleCol: 0, P1: 0, P2: 0, P3: 0, pLoadMap: {} };
+            const _nbSM2 = {};
+            for(const kk of Object.keys(p.supportMap || {})){
+              const ee = p.supportMap[kk] || {};
+              _nbSM2[kk] = {};
+              if(ee.type && ee.type !== 'auto') _nbSM2[kk].type = ee.type;
+              if(ee.betaF != null) _nbSM2[kk].betaF = ee.betaF;
+            }
+            const pPureStiff = { ...p, betaJ: 0, settleDy: 0, settleCol: 0, P1: 0, P2: 0, P3: 0, pLoadMap: {}, supportMap: _nbSM2, movingLoad: { ...(p.movingLoad || {}), enabled:false, playing:false, P:0 } };
             const mNM = anyTension ? analyzeTensionOnly(pPureStiff) : analyze(pPureStiff);
             let uAvg = 0;
             for(let c=0;c<mNM.nCol;c++) uAvg += mNM.U[mNM.nid(c, mNM.nLev)*3];
@@ -314,6 +336,16 @@ function updateReadout(model){
   /* (注：Hmode 现已统一为 none/rigid，不再受 D 值法影响) */
       // 性能优化：纯水平力工况的 uPure 仅与几何/刚度有关，与竖向荷载无关。
       // 缓存于 MODEL 上，避免扫掠或录制时每帧重复求解。
+      /* P-Δ 纯水平工况：保留支座类型（含弹簧 betaF），剥离所有强迫位移，
+         并显式禁用移动荷载——否则 movingLoad 会覆盖 P1/P2/P3 混入跨内集中力，
+         使 uPure 被污染、Ncr 偏小、B 值虚高。 */
+      const _pureSM = {};
+      for(const kk of Object.keys(p.supportMap || {})){
+        const ee = p.supportMap[kk] || {};
+        _pureSM[kk] = {};
+        if(ee.type && ee.type !== 'auto') _pureSM[kk].type = ee.type;
+        if(ee.betaF != null) _pureSM[kk].betaF = ee.betaF;
+      }
       const pPureKey = [
         p.nBay, p.nLev, p.hasCant,
         p.L1, p.L2, p.L3, p.h1, p.h2, p.h3, p.Lc,
@@ -321,12 +353,13 @@ function updateReadout(model){
         p.H1, p.H2, p.H3, p.Hmode,
         p.frameMat, p.braceMat, p.As, p.axialMode,
         JSON.stringify(p.braceMap || {}),
-        JSON.stringify(p.braceTensionMap || {})
+        JSON.stringify(p.braceTensionMap || {}),
+        JSON.stringify(_pureSM)
       ].join('|');
       let uPure;
       if (S._uPureCache && S._uPureCache.key === pPureKey) {
         uPure = S._uPureCache.value;
-      } else if((S.sweep && S.sweep.playing) || (S._lastSliderInput && performance.now() - S._lastSliderInput < 200)){
+      } else if(skipAux || (S.sweep && S.sweep.playing) || (S._lastSliderInput && performance.now() - S._lastSliderInput < 200)){
         /* 扫掠/拖动中跳过纯侧向刚度反算，避免逐帧额外 analyze 拖慢帧率；
            扫掠结束后 sweepStop 会触发 scheduleRender() 补算到准确值 */
         uPure = Math.abs(uTopAvg) || 1e-9;
@@ -334,7 +367,9 @@ function updateReadout(model){
         const pPure = { ...p, q1:0, q2:0, q3:0, qc1:0, qc2:0, qc3:0,
                         qSpanMap:{}, P1:0, P2:0, P3:0, pLoadMap:{},
                         tempAll:0, tempGrad:0,
-                        settleDy:0, settleCol:0 };
+                        settleDy:0, settleCol:0,
+                        supportMap: _pureSM,
+                        movingLoad: { ...(p.movingLoad || {}), enabled:false, playing:false, P:0 } };
         try {
           let anyTension = false;
           for(const k of Object.keys(pPure.braceMap)){
@@ -828,7 +863,8 @@ function drawAntiRhoCanvas(model){
   renderTo('cvAntiRhoFloat');
 }
 
-function run(){
+function run(opts){
+  const skipAux = !!(opts && opts.skipAux);
   if(BASE){
     const p0 = BASE.p;
     const geoChanged = (
@@ -928,7 +964,7 @@ function run(){
   drawLoadDiagram(document.getElementById('cvLoad'), MODEL);
   if (document.getElementById('cvForce').offsetParent !== null) drawInternal(document.getElementById('cvForce'), MODEL);
   if (document.getElementById('cvD').offsetParent !== null) drawDeform(document.getElementById('cvD'), MODEL);
-  updateReadout(MODEL);
+  updateReadout(MODEL, skipAux);
   updateStatusBar(MODEL);
   drawAntiRhoCanvas(MODEL);
   drawProbeCanvas(MODEL);
@@ -1035,6 +1071,13 @@ function applyTopoState(){
     for(const k in S.braceTensionMap) {
       const parts = k.split('-');
       if (parseInt(parts[0]) > S.nLev || parseInt(parts[1]) > S.nBay) delete S.braceTensionMap[k];
+    }
+  }
+
+  if (S.supportMap) {
+    for(const k in S.supportMap) {
+      const c = Number(k);
+      if(!Number.isInteger(c) || c < 0 || c > S.nBay) delete S.supportMap[k];
     }
   }
 
@@ -1685,7 +1728,7 @@ function renderSupportMapPanel(){
   for(let c = 0; c < nCol; c++){
     const key = String(c);
     const entry = (S.supportMap && S.supportMap[key]) || {};
-    const type = entry.type || 'spring';
+    const type = entry.type || 'auto';
     const dy = entry.dy || 0;
     const rot = entry.rot || 0;
     let label;
@@ -1698,10 +1741,11 @@ function renderSupportMapPanel(){
       <div class="ctrl">
         <div class="head"><span>${label} · 支座类型</span></div>
         <select class="sweepSel supportTypeSel" data-col="${c}">
-          <option value="spring"${type === 'spring' ? ' selected' : ''}>跟随 βf（默认）</option>
+          <option value="auto"${type === 'auto' ? ' selected' : ''}>跟随 βf（默认）</option>
           <option value="fixed"${type === 'fixed' ? ' selected' : ''}>固接</option>
           <option value="pin"${type === 'pin' ? ' selected' : ''}>铰接</option>
           <option value="roller"${type === 'roller' ? ' selected' : ''}>滚轴（仅竖向约束）</option>
+          <option value="spring"${type === 'spring' ? ' selected' : ''}>弹簧（需 0&lt;βf&lt;1）</option>
         </select>
       </div>
       <div class="ctrl">
@@ -1724,7 +1768,12 @@ function renderSupportMapPanel(){
       const v = sel.value;
       if(!S.supportMap) S.supportMap = {};
       if(!S.supportMap[c]) S.supportMap[c] = {};
-      S.supportMap[c].type = v;
+      if(v === 'auto'){
+        /* 跟随 βf：不写 type，由求解器按 betaF 自动判定 */
+        delete S.supportMap[c].type;
+      } else {
+        S.supportMap[c].type = v;
+      }
       run();
     });
   });
@@ -1802,6 +1851,8 @@ function movingLoadStop() {
     movingLoadRaf = null;
   }
   updateMovingLoadBtn();
+  /* 播放结束后补一次完整计算，恢复刚度分解/P-Δ 等辅助读数 */
+  if(typeof scheduleRender === 'function') scheduleRender(); else run();
 }
 
 function movingLoadPlay() {
@@ -1823,7 +1874,7 @@ function movingLoadPlay() {
     const out = document.getElementById('v-movingLoadT');
     if (input) { input.value = t; updateRangeProgress(input); }
     if (out) out.textContent = (t * 100).toFixed(0) + '%';
-    run();
+    run({ skipAux: true });
     movingLoadRaf = requestAnimationFrame(tick);
   };
   movingLoadRaf = requestAnimationFrame(tick);
