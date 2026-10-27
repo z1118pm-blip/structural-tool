@@ -59,7 +59,7 @@ const SELF_TEST_CASES = [
   {
     id: 'anti-rho',
     sweep: 'hb',
-    state: { nBay: 2, nLev: 2, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 400, hc: 400, bb: 250, hb: 150, r: 1, q1: 0, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 30, H2: 30, H3: 0, Hmode: 'none', betaF: 1, betaJ: 1, forceType: 'M', elFilter: 'all', showVals: false, showIds: false, showPDelta: false, displayMode: 'all', mScale: 1, dScale: 30 },
+    state: { nBay: 2, nLev: 2, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 400, hc: 400, bb: 250, hb: 400, r: 1, q1: 0, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 30, H2: 30, H3: 0, Hmode: 'none', betaF: 1, betaJ: 1, forceType: 'M', elFilter: 'all', showVals: false, showIds: false, showPDelta: false, displayMode: 'all', mScale: 1, dScale: 30 },
     toast: '纯水平力工况下，扫掠梁高 hb 时，请留意「反弯点 x/h vs ρ」小图。随着梁高增加（ρ 变大），梁对柱的转动约束增强，各柱反弯点会非常规整地向虚线 x/h=0.5 靠拢。'
   },
   {
@@ -68,9 +68,15 @@ const SELF_TEST_CASES = [
     state: { nBay: 2, nLev: 2, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 400, hc: 400, bb: 250, hb: 500, r: 1, q1: 0, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 30, H2: 0, H3: 0, Hmode: 'none', betaF: 1, betaJ: 1, forceType: 'M', elFilter: 'all', showVals: true, showIds: false, showPDelta: false, displayMode: 'all', mScale: 10, dScale: 300 }
   },
   {
+    id: 'axial-hinge',
+    sweep: null,
+    state: { nBay: 1, nLev: 1, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 800, hc: 800, bb: 200, hb: 400, r: 1, q1: 100, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 0, H2: 0, H3: 0, Hmode: 'none', axialMode: 'real', betaF: 1, betaJ: 1, forceType: 'M', elFilter: 'all', showVals: true, showIds: false, showPDelta: false, displayMode: 'force', mScale: 1, dScale: 30 },
+    toast: '很多工程师认为竖向荷载下反弯点必然是 0.33h。但在本工况中，由于强柱弱梁（柱 800×800，梁 200×400），且考虑梁的轴向变形，竖向荷载引起了极微小的侧移，反弯点偏移到了约 0.30h。请点击左侧【模型】Tab，切换至【忽略（刚性）】轴向变形，看看反弯点是不是瞬间跳回了 0.33h？'
+  },
+  {
     id: 'strong-beam',
     sweep: 'hb',
-        state: { nBay: 1, nLev: 1, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 400, hc: 400, bb: 250, hb: 50, r: 1, q1: 0, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 40, H2: 0, H3: 0, Hmode: 'none', betaF: 1, betaJ: 1, forceType: 'M', elFilter: 'all', showVals: true, showIds: false, showPDelta: false, displayMode: 'force', mScale: 7, dScale: 30 }
+        state: { nBay: 1, nLev: 1, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 400, hc: 400, bb: 250, hb: 400, r: 1, q1: 0, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 40, H2: 0, H3: 0, Hmode: 'none', betaF: 1, betaJ: 1, forceType: 'M', elFilter: 'all', showVals: true, showIds: false, showPDelta: false, displayMode: 'force', mScale: 7, dScale: 30 }
   },
   {
     id: 'load-moment',
@@ -86,6 +92,13 @@ const SELF_TEST_CASES = [
     id: 'cant-tension',
     sweep: 'qc1',
     state: { nBay: 1, nLev: 1, hasCant: true, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 2.0, bc: 400, hc: 400, bb: 250, hb: 500, r: 1, q1: 0, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 0, H2: 0, H3: 0, Hmode: 'none', betaF: 1, betaJ: 1, forceType: 'N', elFilter: 'all', showVals: true, showIds: false, showPDelta: false, displayMode: 'all', mScale: 10, dScale: 300 }
+  },
+  {
+    id: 'overturning-pier',
+    sweep: 'betaF',
+    sweepRange: [0, 1],
+    state: { nBay: 1, nLev: 1, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 400, hc: 400, bb: 250, hb: 500, r: 1, q1: 0, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 100, H2: 0, H3: 0, Hmode: 'none', betaF: 0, betaJ: 1, forceType: 'N', elFilter: 'all', showVals: true, showIds: false, showPDelta: false, displayMode: 'force', mScale: 8, dScale: 100 },
+    toast: '💡 力学秘籍：水平力 H×h 会产生倾覆力矩。整体平衡公式：M_倾覆 = M_柱脚 + N×L。\n当 βf=1.0（刚接）时，柱脚弯矩吃掉大部分弯矩，轴力仅为 27.6 kN；\n当 βf=0.0（铰接）时，柱脚弯矩为 0，倾覆力矩只能靠两侧柱子的拉压来抵抗，轴力瞬间飙升至 66.7 kN！'
   },
   {
     id: 'weak-story',
@@ -115,7 +128,7 @@ const SELF_TEST_CASES = [
   {
     id: 'pdelta',
     sweep: 'q1',
-    state: { nBay: 1, nLev: 2, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 6, h2: 6, h3: 4, Lc: 1.5, bc: 250, hc: 250, bb: 250, hb: 500, r: 1, q1: 0, q2: 20, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 3, H2: 3, H3: 0, Hmode: 'none', betaF: 1, betaJ: 0, forceType: 'M', elFilter: 'all', showVals: false, showIds: false, showPDelta: true, displayMode: 'deform', mScale: 1, dScale: 5 }
+    state: { nBay: 1, nLev: 2, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 6, h2: 6, h3: 4, Lc: 1.5, bc: 300, hc: 300, bb: 250, hb: 500, r: 1, q1: 0, q2: 20, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 3, H2: 3, H3: 0, Hmode: 'none', betaF: 1, betaJ: 0, forceType: 'M', elFilter: 'all', showVals: false, showIds: false, showPDelta: true, displayMode: 'deform', mScale: 1, dScale: 5 }
   },
   {
     id: 'brace-stiffness',
@@ -135,7 +148,23 @@ const SELF_TEST_CASES = [
   {
     id: 'settlement',
     sweep: 'settleDy',
-    state: { nBay: 2, nLev: 2, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 400, hc: 400, bb: 250, hb: 500, r: 1, q1: 0, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 0, H2: 0, H3: 0, Hmode: 'none', settleDy: 0, settleCol: 0, frameMat: 'conc', braceMat: 'steel', As: 2000, braceOnlyTension: false, braceMap: {}, braceTensionMap: {}, brushBrace: 'none', betaF: 1, betaJ: 1, forceType: 'M', elFilter: 'all', showVals: true, showIds: false, showPDelta: false, displayMode: 'all', mScale: 0.6, dScale: 10 }
+    sweepRange: [0, 100],
+    state: { nBay: 2, nLev: 2, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 400, hc: 400, bb: 250, hb: 500, r: 1, q1: 0, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 0, H2: 0, H3: 0, Hmode: 'none', supportMap: {'0': {dy: 0}}, frameMat: 'conc', braceMat: 'steel', As: 2000, braceOnlyTension: false, braceMap: {}, braceTensionMap: {}, brushBrace: 'none', betaF: 1, betaJ: 1, forceType: 'M', elFilter: 'all', showVals: true, showIds: false, showPDelta: false, displayMode: 'all', mScale: 0.6, dScale: 10 },
+    toast: '两层两跨 · 无外荷载。扫掠左柱沉降 (0→100mm)，看超静定结构在"什么都没加"的情况下，M 图从零逐渐出现、反力重新分配、结构整体倾斜。'
+  },
+  {
+    id: 'support-uplift',
+    sweep: 'settleDy',
+    sweepRange: [0, -100],
+    state: { nBay: 2, nLev: 2, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 400, hc: 400, bb: 250, hb: 500, r: 1, q1: 0, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 0, H2: 0, H3: 0, Hmode: 'none', supportMap: {'0': {dy: 0}}, frameMat: 'conc', braceMat: 'steel', As: 2000, braceOnlyTension: false, braceMap: {}, braceTensionMap: {}, brushBrace: 'none', betaF: 1, betaJ: 1, forceType: 'M', elFilter: 'all', showVals: true, showIds: false, showPDelta: false, displayMode: 'all', mScale: 0.6, dScale: 10 },
+    toast: '地下水位上升导致基础上浮。扫掠左柱竖向位移 (0→-100mm)，看框架被整体"顶"起后的上拱变形，以及梁柱内力从零出现的反向弯矩（模拟抗浮锚杆受力）。'
+  },
+  {
+    id: 'support-rotation',
+    sweep: 'supportRot0',
+    sweepRange: [0, 30],
+    state: { nBay: 2, nLev: 2, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 400, hc: 400, bb: 250, hb: 500, r: 1, q1: 0, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 0, H2: 0, H3: 0, Hmode: 'none', supportMap: {'0': {rot: 0}}, frameMat: 'conc', braceMat: 'steel', As: 2000, braceOnlyTension: false, braceMap: {}, braceTensionMap: {}, brushBrace: 'none', betaF: 1, betaJ: 1, forceType: 'M', elFilter: 'all', showVals: true, showIds: false, showPDelta: false, displayMode: 'all', mScale: 0.6, dScale: 10 },
+    toast: '强迫左柱底发生旋转，模拟基础局部不均匀沉降或地基倾斜引起的强迫转角。扫掠角度 (0°→30°)，看柱子被迫扭曲时产生的巨大附加弯矩和框架侧移。'
   },
 
   {
@@ -157,7 +186,7 @@ const SELF_TEST_CASES = [
   {
     id: 'col-h3',
     sweep: 'hc',
-    state: { nBay: 1, nLev: 1, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 400, hc: 200, bb: 250, hb: 500, r: 1, q1: 0, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 50, H2: 0, H3: 0, Hmode: 'none', betaF: 1, betaJ: 1, forceType: 'M', elFilter: 'all', showVals: true, showIds: false, showPDelta: false, displayMode: 'all', mScale: 10, dScale: 300 }
+    state: { nBay: 1, nLev: 1, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 400, hc: 300, bb: 250, hb: 500, r: 1, q1: 0, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 50, H2: 0, H3: 0, Hmode: 'none', betaF: 1, betaJ: 1, forceType: 'M', elFilter: 'all', showVals: true, showIds: false, showPDelta: false, displayMode: 'all', mScale: 10, dScale: 300 }
   },
 
   /* ⑳ 三层薄弱层转移：⑦ 的纵向延伸，填补三层拓扑零覆盖 */
@@ -246,13 +275,13 @@ const SELF_TEST_CASES = [
   {
     id: 'pdelta-h1',
     sweep: 'h1',
-    state: { nBay: 1, nLev: 2, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 2.5, h2: 6, h3: 4, Lc: 1.5, bc: 250, hc: 250, bb: 250, hb: 500, r: 1, q1: 0, q2: 20, q3: 0, qc1: 0, qc2: 0, qc3: 0, P1:0, P2:0, P3:0, pLoadMap:{}, H1: 3, H2: 3, H3: 0, Hmode: 'none', betaF: 1, betaJ: 0, forceType: 'M', elFilter: 'all', showVals: false, showIds: false, showPDelta: true, displayMode: 'deform', mScale: 1, dScale: 5 }
+    state: { nBay: 1, nLev: 2, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 2.5, h2: 6, h3: 4, Lc: 1.5, bc: 300, hc: 300, bb: 250, hb: 500, r: 1, q1: 0, q2: 20, q3: 0, qc1: 0, qc2: 0, qc3: 0, P1:0, P2:0, P3:0, pLoadMap:{}, H1: 3, H2: 3, H3: 0, Hmode: 'none', betaF: 1, betaJ: 0, forceType: 'M', elFilter: 'all', showVals: false, showIds: false, showPDelta: true, displayMode: 'deform', mScale: 1, dScale: 5 }
   },
   /* ㉕ P-δ vs P-Δ 概念卡（静态，无数值） */
   {
     id: 'pdelta-vs-pdelta',
     sweep: null,
-    state: { nBay: 1, nLev: 2, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 6, h2: 6, h3: 4, Lc: 1.5, bc: 250, hc: 250, bb: 250, hb: 500, r: 1, q1: 0, q2: 50, q3: 0, qc1: 0, qc2: 0, qc3: 0, P1:0, P2:0, P3:0, pLoadMap:{}, H1: 3, H2: 3, H3: 0, Hmode: 'none', betaF: 1, betaJ: 0, forceType: 'M', elFilter: 'all', showVals: false, showIds: false, showPDelta: true, displayMode: 'deform', mScale: 1, dScale: 5 },
+    state: { nBay: 1, nLev: 2, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 6, h2: 6, h3: 4, Lc: 1.5, bc: 300, hc: 300, bb: 250, hb: 500, r: 1, q1: 0, q2: 50, q3: 0, qc1: 0, qc2: 0, qc3: 0, P1:0, P2:0, P3:0, pLoadMap:{}, H1: 3, H2: 3, H3: 0, Hmode: 'none', betaF: 1, betaJ: 0, forceType: 'M', elFilter: 'all', showVals: false, showIds: false, showPDelta: true, displayMode: 'deform', mScale: 1, dScale: 5 },
     toast: '本工具只计算 P-Δ（结构侧移引起），不计算 P-δ（构件自身挠曲）。P-δ 在高轴压比细长柱中才显著；若需精确二阶分析，应使用带几何刚度的专用软件。'
   },
   {
@@ -267,10 +296,41 @@ const SELF_TEST_CASES = [
     state: { nBay: 2, nLev: 1, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 400, hc: 400, bb: 250, hb: 500, r: 1, q1: 0, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, P1:0, P2:0, P3:0, pLoadMap:{}, H1: 0, H2: 0, H3: 0, Hmode: 'none', tempAll: 0, tempGrad: 0, betaF: 1, betaJ: 1, forceType: 'N', elFilter: 'all', showVals: true, showIds: false, showPDelta: false, displayMode: 'force', mScale: 5, dScale: 100 }
   },
   {
+    id: 'remove-beam-pierce',
+    sweep: 'H2',
+    state: { 
+      nBay: 2, nLev: 2, hasCant: false, 
+      L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, 
+      bc: 400, hc: 400, bb: 250, hb: 500, r: 1, 
+      q1: 0, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, 
+      P1:0, P2:0, P3:0, pLoadMap:{}, 
+      H1: 0, H2: 100, H3: 0, 
+      Hmode: 'none', tempAll: 0, tempGrad: 0, 
+      betaF: 1, betaJ: 1, 
+      forceType: 'M', elFilter: 'all', showVals: false, showIds: false, showPDelta: true, 
+      displayMode: 'deform', mScale: 1, dScale: 100, 
+      removeBeamMap: {'1-1': true, '2-1': true} 
+    },
+    toast: '注意看：左跨1、2层的梁被抽空，左侧边柱变成了无侧向约束的穿层柱。在无楼板假设下，顶部水平力完全由这根柔弱的单柱承担，产生了极大的侧向变形。'
+  },
+  {
     id: 'temp-grad',
     sweep: 'tempGrad',
     sweepRange: [0, 30], // 指定扫掠区间
-    state: { nBay: 2, nLev: 1, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 400, hc: 400, bb: 250, hb: 500, r: 1, q1: 0, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, P1:0, P2:0, P3:0, pLoadMap:{}, H1: 0, H2: 0, H3: 0, Hmode: 'none', tempAll: 0, tempGrad: 0, betaF: 1, betaJ: 1, forceType: 'M', elFilter: 'all', showVals: true, showIds: false, showPDelta: false, displayMode: 'all', mScale: 5, dScale: 100 }
+    state: { nBay: 2, nLev: 1, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 400, hc: 400, bb: 250, hb: 500, r: 1, q1: 0, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, P1:0, P2:0, P3:0, pLoadMap:{}, H1: 0, H2: 0, H3: 0, Hmode: 'none', tempAll: 0, tempGrad: 0, betaF: 1, betaJ: 1, forceType: 'M', elFilter: 'all', showVals: true, showIds: false, showPDelta: false,     displayMode: 'all', mScale: 5, dScale: 100 }
+  },
+  {
+    id: 'beam-inflection-vs-col',
+    sweep: 'hc',
+    state: { nBay: 1, nLev: 1, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 300, hc: 300, bb: 250, hb: 600, r: 1, q1: 30, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 0, H2: 0, H3: 0, Hmode: 'none', betaF: 1, betaJ: 1, forceType: 'M', elFilter: 'all', showVals: true, showIds: false, showPDelta: false, showAntiPts: true, displayMode: 'force', mScale: 2, dScale: 30 },
+    toast: '注意看梁上的反弯点位置（带 x/L 标注）。随着柱高 hc 激增，柱的抗弯刚度呈三次方放大，对梁端的转动约束从弱变强。梁反弯点会从靠近支座处（约 0.13L）明显向跨中极限位置（0.21L）移动！'
+  },
+  {
+    id: 'inflection-point-theory',
+    sweep: 'hb',
+    sweepRange: [400, 1000],
+    state: { nBay: 1, nLev: 1, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 400, hc: 400, bb: 250, hb: 400, r: 1, q1: 0, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 50, H2: 0, H3: 0, Hmode: 'none', betaF: 1, betaJ: 1, forceType: 'M', elFilter: 'all', showVals: true, showIds: false, showPDelta: false, showAntiPts: true, displayMode: 'force', mScale: 8, dScale: 300 },
+    toast: '💡 理论秘籍：很多手算教材认为水平力下柱反弯点在 0.5h，但这建立在“梁刚度无限大（无转角）”的假定上。精确公式：y/h = (1+3k)/(1+6k)（k为梁柱线刚度比ρ）。请盯住柱上的 x/h 标注：随着梁高 hb 扫掠至 1000，k 激增，反弯点会肉眼可见地从 0.6h 以上回落到 0.51h 左右，逐渐逼近理论假定！'
   }
 ];
 
@@ -301,7 +361,9 @@ function _freezeCurrentModel(){
          braceMap: { ...MODEL.p.braceMap },
          braceTensionMap: { ...MODEL.p.braceTensionMap },
          qSpanMap: JSON.parse(JSON.stringify(MODEL.p.qSpanMap || {})),
-         pLoadMap: JSON.parse(JSON.stringify(MODEL.p.pLoadMap || {})) }
+         pLoadMap: JSON.parse(JSON.stringify(MODEL.p.pLoadMap || {})),
+         supportMap: JSON.parse(JSON.stringify(MODEL.p.supportMap || {})),
+         removeBeamMap: JSON.parse(JSON.stringify(MODEL.p.removeBeamMap || {})) }
   };
   const btnFz  = document.getElementById('btnFreeze');
   if(btnFz)  btnFz.classList.add('on');
@@ -335,16 +397,16 @@ function runSelfTest(caseId){
 
   /* 2.5 清空可能残留的状态：支撑、逐跨荷载、沉降、材质、刚度。
      不重置的话，用户此前布置的支撑 / 逐跨覆盖会被带入自检场景，导致与卡片描述不符。 */
+  if (typeof movingLoadStop === 'function') movingLoadStop();
   S.braceMap = {};
   S.braceTensionMap = {};
+  S.removeBeamMap = {};
   S.qSpanMap = {};
   S.pLoadMap = {};
   S.supportMap = {};
   S.P1 = 0; S.P2 = 0; S.P3 = 0;
   S.tempAll = 0; S.tempGrad = 0; S.tempT0 = 20;
   S.brushBrace = 'none';
-  S.settleDy = 0;
-  S.settleCol = 0;
   S.frameMat = 'conc';
   S.braceMat = 'steel';
   S.axialMode = 'real';
@@ -397,7 +459,7 @@ function runSelfTest(caseId){
     else if (tc.sweep === 'bc' || tc.sweep === 'hc' || tc.sweep === 'bb' || tc.sweep === 'hb' || tc.sweep === 'r') openDetails('details-model-mat');
     else openDetails('details-model-topo');
   } else if (isLoadParam) {
-    if (['tempAll','tempGrad','settleDy'].includes(tc.sweep)) openDetails('details-load-other');
+    if (['tempAll','tempGrad','settleDy','supportRot0'].includes(tc.sweep)) openDetails('details-load-other');
     else if (['H1','H2','H3'].includes(tc.sweep)) openDetails('details-load-horz');
     else openDetails('details-load-vert');
   }
@@ -409,7 +471,7 @@ function runSelfTest(caseId){
   }
 
   /* 3.55 针对反弯点自检卡，自动弹出悬浮窗并放置在弯矩图左侧 */
-  if(tc.id === 'anti-rho'){
+  if(tc.id === 'anti-rho' || tc.id === 'inflection-point-theory'){
     requestAnimationFrame(() => {
       const chartForce = document.getElementById('chartForce');
       if(chartForce) {
@@ -510,10 +572,14 @@ function runSelfTest(caseId){
       }
     };
 
+    addNewCard('A. 弯矩与刚度', `<div class="selfTestCard" data-selftest="axial-hinge"><div class="stcTitle">形常数的陷阱（轴向变形）</div><div class="stcDesc">单层单跨 · 强柱弱梁 · 竖向荷载。形常数推导反弯点为 0.33h，但这建立在无侧移假定上。本工况考虑梁的轴向变形，微小侧移导致反弯点偏移至 0.30h。切换“忽略轴向变形”验证 0.33h。</div><span class="stcAction">▶ 加载</span></div>`);
     addNewCard('A. 弯矩与刚度', `<div class="selfTestCard" data-selftest="system-stiffness-match"><div class="stcTitle">体系刚度匹配与演化</div><div class="stcDesc">两层两跨 · 水平力。扫掠梁端刚度 β_j (0→1)，观察右侧「体系判定」从"铰接排架"逐渐变为"典型刚接框架"，理解林同炎对刚度匹配的定性判断。</div><span class="stcAction">▶ 播放</span></div>`);
     addNewCard('A. 弯矩与刚度', `<div class="selfTestCard" data-selftest="p-moment"><div class="stcTitle">集中力弯矩尖角</div><div class="stcDesc">单层单跨 · 跨中集中力。扫掠 P₁ (0→200)，观察集中力作用点处弯矩图的"尖角"，以及跨中正弯矩的线性增长。</div><span class="stcAction">▶ 播放</span></div>`);
-    addNewCard('A. 弯矩与刚度', `<div class="selfTestCard" data-selftest="anti-rho"><div class="stcTitle">反弯点 vs ρ 联动</div><div class="stcDesc">两层两跨 · 纯水平力。扫掠梁高 h<sub>b</sub>，注意看「反弯点 x/h vs ρ」小图（可点击⤢浮动拖到图旁）。梁高增加使梁线刚度上升，各柱反弯点逐渐向 x/h=0.5 靠拢。</div><span class="stcAction">▶ 播放</span></div>`);
+    addNewCard('A. 弯矩与刚度', `<div class="selfTestCard" data-selftest="beam-inflection-vs-col"><div class="stcTitle">柱刚度对梁反弯点的影响</div><div class="stcDesc">单层单跨 · 竖向均布荷载。扫掠边柱高 hc (300→800)。柱越细，对梁端约束越弱（趋近铰接），反弯点靠近支座；柱越粗，约束越强（趋近固接），反弯点向跨中移动。</div><span class="stcAction">▶ 播放</span></div>`);
+    addNewCard('A. 弯矩与刚度', `<div class="selfTestCard" data-selftest="inflection-point-theory"><div class="stcTitle">水平力下的反弯点偏移</div><div class="stcDesc">单层单跨 · 纯水平力。扫掠梁高 hb (400→1000)，观察柱反弯点 x/h 的演变。理论精确解为 y/h = (1+3k)/(1+6k)。梁越刚，反弯点向 0.5h 靠拢；梁越柔，反弯点上移逼近 1.0h。</div><span class="stcAction">▶ 播放</span></div>`);
+    addNewCard('A. 弯矩与刚度', `<div class="selfTestCard" data-selftest="anti-rho"><div class="stcTitle">反弯点 vs ρ 联动</div><div class="stcDesc">两层两跨 · 纯水平力。扫掠梁高 h<sub>b</sub> (400→900)，注意看「反弯点 x/h vs ρ」小图（可点击⤢浮动拖到图旁）。梁高增加使梁线刚度上升，各柱反弯点逐渐向 x/h=0.5 靠拢。</div><span class="stcAction">▶ 播放</span></div>`);
     addNewCard('D. 水平力与二阶', `<div class="selfTestCard" data-selftest="pdelta-h1"><div class="stcTitle">P-Δ 层高敏感性</div><div class="stcDesc">两层单跨 · 柔性框架 · 开启P-Δ。扫掠一层的 h₁ (2.5→7)，看层高增加时 N_cr 平方级下降，导致 B 值急剧放大并逼近失稳。</div><span class="stcAction">▶ 播放</span></div>`);
+    addNewCard('D. 水平力与二阶', `<div class="selfTestCard" data-selftest="remove-beam-pierce"><div class="stcTitle">穿层柱模拟</div><div class="stcDesc">两层两跨 · 水平力。移除第1、2层左跨梁，中间柱失去侧向约束（计算长度增加），变形图呈现明显的“穿孔”侧移。</div><span class="stcAction">▶ 播放</span></div>`);
     addNewCard('D. 水平力与二阶', `<div class="selfTestCard" data-selftest="pdelta-vs-pdelta">
       <div class="stcTitle">P-δ 与 P-Δ 的区别</div>
       <div class="stcDesc">本工具只计算 P-Δ（结构侧移引起的二阶效应），不计算 P-δ（构件自身挠曲）。
@@ -540,8 +606,13 @@ function runSelfTest(caseId){
     </div>`);
     addNewCard('F. 非荷载作用', `<div class="selfTestCard" data-selftest="temp-axial"><div class="stcTitle">均匀升温的轴力</div><div class="stcDesc">单层两跨 · 无外荷载。扫掠均匀升温 ΔT (0→50℃)，看超静定框架因膨胀受阻产生的内部轴力。</div><span class="stcAction">▶ 播放</span></div>`);
     addNewCard('F. 非荷载作用', `<div class="selfTestCard" data-selftest="temp-grad"><div class="stcTitle">单侧温差的反弯点</div><div class="stcDesc">单层两跨 · 无外荷载。扫掠截面温差 ΔT，看梁柱因温度梯度产生弯曲，及框架侧移带来的二阶附加内力。</div><span class="stcAction">▶ 播放</span></div>`);
+    
+    // 新增的 2 张自检卡
+    addNewCard('F. 非荷载作用', `<div class="selfTestCard" data-selftest="support-uplift"><div class="stcTitle">支座上移 (抗浮)</div><div class="stcDesc">两层两跨 · 无外荷载。扫掠左柱竖向位移 (0→-100mm)，模拟地下水浮力导致的基础上抬。观察框架整体上拱以及梁柱内力的反向重分布。</div><span class="stcAction">▶ 播放</span></div>`);
+    addNewCard('F. 非荷载作用', `<div class="selfTestCard" data-selftest="support-rotation"><div class="stcTitle">基础强迫扭转</div><div class="stcDesc">两层两跨 · 无外荷载。扫掠柱底强迫转角 (0°→30°)，模拟基础局部不均匀沉降产生的强制扭动。观察柱底巨大的抗弯弯矩以及框架被强行带偏的侧移。</div><span class="stcAction">▶ 播放</span></div>`);
     addNewCard('E. 支撑系统', `<div class="selfTestCard" data-selftest="stiffness-jump-mid-braced"><div class="stcTitle">刚度突变 · 仅中间层设支撑</div><div class="stcDesc">三层两跨 · 仅第2层两跨设 X 撑，上下层无撑。扫掠 H₁，看侧移沿高度呈"沙漏"分布：上下层柔、中间层刚，层间位移角在第1、3层放大。</div><span class="stcAction">▶ 播放</span></div>`);
     addNewCard('E. 支撑系统', `<div class="selfTestCard" data-selftest="weak-story-mid-unbraced"><div class="stcTitle">软弱层 · 仅中间层无支撑</div><div class="stcDesc">三层两跨 · 第1、3层两跨设 X 撑，唯独第2层裸框架。扫掠 H₁，看层间位移角如何向第2层集中——这就是"软弱层"的力学本质，也是抗震设计中最危险的竖向刚度突变。</div><span class="stcAction">▶ 播放</span></div>`);
+    addNewCard('B. 轴力与框架', `<div class="selfTestCard" data-selftest="overturning-pier"><div class="stcTitle">柱脚刚度与倾覆力矩</div><div class="stcDesc">单层单跨 · 纯水平力。扫掠柱脚 β_f (0→1)，看倾覆力矩如何分配。刚接时柱脚弯矩吃掉大部分倾覆力矩，轴力小；铰接时柱脚弯矩为0，倾覆力矩100%转化为两侧柱子的拉压轴力。</div><span class="stcAction">▶ 播放</span></div>`);
 
     // 3. 统一重排所有卡片的序号（从 ① 开始按大类递增）
     panel.querySelectorAll('.stCatGroup').forEach(det => {

@@ -102,15 +102,9 @@ let PROBE_HOVER = null;
         if(typeof showToast === 'function') showToast('反力图 R 不支持冻结对比，请先切到 M / N / V 图再冻结。');
         return;
       }
-      BASE = {
-        nodes: MODEL.nodes, els: MODEL.els,
-        results: MODEL.results, U: MODEL.U,
-        p: { ...MODEL.p,
-             braceMap: { ...MODEL.p.braceMap },
-             braceTensionMap: { ...MODEL.p.braceTensionMap },
-             qSpanMap: JSON.parse(JSON.stringify(MODEL.p.qSpanMap || {})),
-             pLoadMap: JSON.parse(JSON.stringify(MODEL.p.pLoadMap || {})) }
-      };
+      /* 统一调用 _freezeCurrentModel（10-boot.js），它额外深拷贝
+         supportMap / removeBeamMap，避免冻结后修改这两项时 BASE 与 S 同引用。 */
+      _freezeCurrentModel();
       if(btn) btn.classList.add('on');
       if(btnD) btnD.classList.add('on');
     }
@@ -237,6 +231,7 @@ function exportCanvasPNG(canvasId, baseName){
   };
 
   cv.addEventListener('pointermove', (e) => {
+    if(S.rec && S.rec.active) return;
     const h = getClosest(e);
     if(h) {
       /* 阈值从 0.005 放宽到 0.05，避免沿杆件缓慢移动时产生大量无意义重绘。 */
@@ -260,6 +255,7 @@ function exportCanvasPNG(canvasId, baseName){
   });
 
   cv.addEventListener('click', (e) => {
+    if(S.rec && S.rec.active) return;
     /* R 图不绘制探针，点击后切回 M 图会突现靶心。R 图下拒绝并提示。 */
     if(MODEL && MODEL.p.forceType === 'R'){
       if(typeof showToast === 'function') showToast('反力图 R 不支持截面探针，请先切到 M / N / V 图。');
@@ -344,7 +340,7 @@ const SHARE_KEYS = [
   'q1','q2','q3','qSpanMap','P1','P2','P3','pLoadMap',
   'qc1','qc2','qc3','H1','H2','H3',
   'tempAll','tempGrad','tempT0',
-  'Hmode','settleDy','settleCol','supportMap','movingLoad','braceMap','braceTensionMap','brushBrace','betaF','betaJ',
+  'Hmode','supportMap','movingLoad','braceMap','braceTensionMap','removeBeamMap','brushBrace','betaF','betaJ',
   'frameMat','braceMat','As','braceI','axialMode',
   'mScale','dScale','forceType','elFilter','displayMode',
   'showVals','showIds','showAntiPts','showPDelta'
@@ -359,11 +355,11 @@ function encodeState(){
     q1: 0, q2: 0, q3: 0, qSpanMap: {},
     P1: 0, P2: 0, P3: 0, pLoadMap: {},
     qc1: 0, qc2: 0, qc3: 0,
-    H1: 0, H2: 0, H3: 0, Hmode: 'none', settleDy: 0, settleCol: 0,
+    H1: 0, H2: 0, H3: 0, Hmode: 'none',
     tempAll: 0, tempGrad: 0, tempT0: 20,
     supportMap: {},
     movingLoad: { enabled: false, lev: 1, bay: 1, P: 0, t: 0.5, speed: 1 },
-    braceMap: {}, braceTensionMap: {}, brushBrace: 'none',
+    braceMap: {}, braceTensionMap: {}, removeBeamMap: {}, brushBrace: 'none',
     betaF: 1, betaJ: 1,     frameMat: 'conc', braceMat: 'steel',
     As: 2000, braceI: 30, axialMode: 'real', mScale: 1, dScale: 30,
     forceType: 'M', elFilter: 'all', displayMode: 'all',
@@ -442,8 +438,22 @@ function encodeState(){
     if(Object.keys(clean).length > 0) obj.qSpanMap = clean;
     else delete obj.qSpanMap;
   }
+  /* removeBeamMap 越界键剔除（与 qSpanMap 同步，去掉对 11-construct 事件监听的隐式依赖） */
+  if(obj.removeBeamMap && typeof obj.removeBeamMap === 'object'){
+    const cleanRB = {};
+    for(const kk of Object.keys(obj.removeBeamMap)){
+      const parts = kk.split('-');
+      const lv = parseInt(parts[0]), c = parseInt(parts[1]);
+      if(lv >= 1 && lv <= S.nLev && c >= 1 && c <= S.nBay && obj.removeBeamMap[kk] === true){
+        cleanRB[kk] = true;
+      }
+    }
+    if(Object.keys(cleanRB).length > 0) obj.removeBeamMap = cleanRB;
+    else delete obj.removeBeamMap;
+  }
   if(!S.hasCant){ obj.Lc = 1.5; obj.qc1 = 0; obj.qc2 = 0; obj.qc3 = 0; }
-  if(!Number.isFinite(obj.settleDy)){ obj.settleDy = 0; obj.settleCol = 0; }
+  /* obj.settleDy/settleCol 不在 SHARE_KEYS 中，永远不存在；
+     此行原为死代码，已删除。 */
   try{
     return btoa(JSON.stringify(obj))
       .replace(/\+/g, '-')
@@ -478,10 +488,10 @@ function applyStateFromObj(obj){
     q1: 0, q2: 0, q3: 0, qSpanMap: {},
     P1: 0, P2: 0, P3: 0, pLoadMap: {},
     qc1: 0, qc2: 0, qc3: 0,
-    H1: 0, H2: 0, H3: 0, Hmode: 'none', settleDy: 0, settleCol: 0,
+    H1: 0, H2: 0, H3: 0, Hmode: 'none',
     tempAll: 0, tempGrad: 0, tempT0: 20,
     supportMap: {},
-    braceMap: {}, braceTensionMap: {}, brushBrace: 'none',
+    braceMap: {}, braceTensionMap: {}, removeBeamMap: {}, brushBrace: 'none',
     betaF: 1, betaJ: 1,     frameMat: 'conc', braceMat: 'steel',
     As: 2000, braceI: 30, axialMode: 'real', mScale: 1, dScale: 30,
     forceType: 'M', elFilter: 'all', displayMode: 'all',
@@ -496,7 +506,8 @@ function applyStateFromObj(obj){
     }
   }
   /* 强制重置 movingLoad，防止 DEFAULTS 遗漏导致状态残留 */
-  S.movingLoad = { enabled: false, lev: 1, bay: 1, P: 0, t: 0.5, playing: false, speed: 1, rafId: null, t0: 0 };
+  if (typeof movingLoadStop === 'function') movingLoadStop();
+S.movingLoad = { enabled: false, lev: 1, bay: 1, P: 0, t: 0.5, playing: false, speed: 1, rafId: null, t0: 0 };
 
   const nb = parseInt(obj.nBay);
   const nl = parseInt(obj.nLev);
@@ -570,7 +581,7 @@ function applyStateFromObj(obj){
             /* 放宽到闭区间，与 solver 的 a ∈ (0.001, L-0.001) 钳制口径对齐；
                边界值由 solver 内部钳制，避免白名单静默拒收造成“分享丢失集中力”。 */
             if(lv >= 1 && lv <= S.nLev && c >= 1 && c <= S.nBay &&
-               isFinite(P) && P >= 0 && P <= 200 &&
+               isFinite(P) && Math.abs(P) <= 200 &&
                isFinite(a) && a >= 0 && a <= Lmax){
               clean[kk] = { P, a };
             }
@@ -605,12 +616,27 @@ function applyStateFromObj(obj){
           const e = v[kk];
           if(!e || typeof e !== 'object') continue;
           const entry = {};
-          if(e.type && ['fixed','pin','roller','spring'].includes(e.type)) entry.type = e.type;
+          /* 废弃“局部弹簧”选项，旧链接若包含 spring，降级为默认跟随 */
+          if(e.type && ['fixed','pin','roller'].includes(e.type)) entry.type = e.type;
           const dy = parseFloat(e.dy);
           if(isFinite(dy) && Math.abs(dy) <= 200) entry.dy = dy;
           const rot = parseFloat(e.rot);
           if(isFinite(rot) && Math.abs(rot) <= 0.1) entry.rot = rot;
           if(Object.keys(entry).length > 0) clean[kk] = entry;
+        }
+        S[k] = clean;
+      }
+    } else if(k === 'removeBeamMap'){
+      if(v && typeof v === 'object' && !Array.isArray(v)){
+        const clean = {};
+        for(const kk of Object.keys(v)){
+          if(/^\d+-\d+$/.test(kk) && v[kk] === true){
+            const parts = kk.split('-');
+            const lv = parseInt(parts[0]), c = parseInt(parts[1]);
+            if(lv >= 1 && lv <= S.nLev && c >= 1 && c <= S.nBay){
+              clean[kk] = true;
+            }
+          }
         }
         S[k] = clean;
       }
@@ -744,16 +770,12 @@ function applyStateFromObj(obj){
     }
   }
 
-  /* settleCol 越界钳制到当前柱数范围；settleDy 钳制到 0–100 mm */
-  if(typeof S.settleCol !== 'number' || isNaN(S.settleCol)){
-    S.settleCol = 0;
-  } else {
-    S.settleCol = Math.max(0, Math.min(S.nBay, S.settleCol | 0));
-  }
-  if(typeof S.settleDy !== 'number' || isNaN(S.settleDy)){
-    S.settleDy = 0;
-  } else {
-    S.settleDy = Math.max(-100, Math.min(100, S.settleDy));
+  /* 兼容旧链接：若携带 settleDy/settleCol，自动转换到 supportMap */
+  if(obj.settleDy !== undefined && obj.settleCol !== undefined) {
+    const c = String(Math.max(0, parseInt(obj.settleCol) || 0));
+    if(!S.supportMap) S.supportMap = {};
+    if(!S.supportMap[c]) S.supportMap[c] = {};
+    S.supportMap[c].dy = parseFloat(obj.settleDy) || 0;
   }
 
   applyTopoState();
@@ -1149,14 +1171,12 @@ if(btnReset) btnReset.addEventListener('click', ()=>{
   S.qSpanMap = {};
   S.pLoadMap = {};
   S.supportMap = {};
-  S.movingLoad = { enabled: false, lev: 1, bay: 1, P: 50, t: 0.5, playing: false, speed: 1, rafId: null, t0: 0 };
+  S.movingLoad = { enabled: false, lev: 1, bay: 1, P: 0, t: 0.5, playing: false, speed: 1, rafId: null, t0: 0 };
   if(typeof movingLoadStop === 'function') movingLoadStop();
   if(typeof renderMovingLoadUI === 'function') renderMovingLoadUI();
   S.P1 = 0; S.P2 = 0; S.P3 = 0;
   S.tempAll = 0; S.tempGrad = 0; S.tempT0 = 20;
   S.brushBrace = 'none';
-  S.settleDy = 0;
-  S.settleCol = 0;
   const segFMR = document.getElementById('segFrameMat');
   if(segFMR) segFMR.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.mat === 'conc'));
   const segBMR = document.getElementById('segBraceMat');

@@ -13,6 +13,19 @@ function drawDeform(canvas, model, dprOverride){
   ctx.fillStyle=T.bg; ctx.fillRect(0,0,W,H);
   drawGrid(ctx, W, H);
   drawHUD(ctx, W, H, 'DEFORMED SHAPE', false);
+  
+  /* 读 model.isDeformFail（由 updateReadout 在 drawDeform 之前设置），
+     避免读 DOM 拿到上一轮的值。
+     此处为居中底部版本，与 drawInternal 左上角版本位置/文本不同，
+     保留内联（不使用 drawSlsWarning）以免引入位置参数。 */
+  if(model.isDeformFail) {
+    ctx.save();
+    ctx.font = 'bold 12px "JetBrains Mono", sans-serif';
+    ctx.fillStyle = 'rgba(248,113,113,0.9)';
+    ctx.textAlign = 'center';
+    ctx.fillText('⚠️ 受弯挠度超出规范限值 (SLS)', W/2, H - 20);
+    ctx.restore();
+  }
 
   const NP = 26;
   const curves = [];

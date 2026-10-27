@@ -17,6 +17,53 @@ function sweepUpdatePlayBtn(){
 }
 
 function sweepSetValue(key, v){
+  /* 沉降与转角扫掠，代理到 supportMap 上 */
+  if (key === 'settleDy' || key === 'supportRot0') {
+    if (!S.supportMap) S.supportMap = {};
+    if (!S.supportMap['0']) S.supportMap['0'] = {};
+    
+    if (key === 'settleDy') {
+      v = Math.max(-100, Math.min(100, v));
+      /* S.settleDy 仅为兼容旧分享链接/旧逻辑保留，solve 不读此字段；
+         真正驱动计算的是 supportMap['0'].dy。 */
+      S.settleDy = v;
+      S.supportMap['0'].dy = v;
+    } else if (key === 'supportRot0') {
+      v = Math.max(-30, Math.min(30, v)); // v 是扫掠的度数
+      // 按照 30° 对应 0.01 rad 的约定，同步给底层
+      S.supportMap['0'].rot = v * 0.01 / 30;
+    }
+    
+    // 直接更新左侧面板对应 UI，不触发整块重绘以防滑块卡顿
+    if (key === 'settleDy') {
+      const input = document.querySelector(`.supportDyRange[data-col="0"]`);
+      const out = document.getElementById('v-support-dy-0');
+      if(input) { input.value = v; updateRangeProgress(input); }
+      if(out) out.textContent = v.toFixed(0);
+    } else {
+      const input = document.querySelector(`.supportRotRange[data-col="0"]`);
+      const out = document.getElementById('v-support-rot-0');
+      if(input) { 
+        input.value = v / 3; // 转回 mrad 去改变滑块位置
+        updateRangeProgress(input); 
+      }
+      if(out) out.textContent = v.toFixed(1) + '°';
+    }
+    
+    // 同步进度条
+    const progEl = document.getElementById('sweepProgress');
+    const progOut = document.getElementById('v-sweepProgress');
+    if(progEl) {
+      progEl.min = key === 'settleDy' ? -100 : -30;
+      progEl.max = key === 'settleDy' ? 100 : 30;
+      progEl.step = key === 'settleDy' ? 1 : 0.1;
+      progEl.value = v;
+      updateRangeProgress(progEl);
+    }
+    if(progOut) progOut.textContent = v.toFixed(key === 'settleDy' ? 0 : 1) + (key === 'settleDy' ? ' mm' : '°');
+    return;
+  }
+
   const el = document.getElementById(key);
   if(!el) return;
   const min = parseFloat(el.min);
@@ -96,6 +143,13 @@ function sweepStop(){
 function sweepReset(){
   sweepStop();
   const key = S.sweep.param;
+  /* settleDy / supportRot0 没有对应的 <input id=...>，
+     必须走 sweepSetValue 的代理分支（写 supportMap['0']）。 */
+  if(key === 'settleDy' || key === 'supportRot0'){
+    sweepSetValue(key, key === 'settleDy' ? -100 : -30);
+    run();
+    return;
+  }
   const el = document.getElementById(key);
   if(!el) return;
   sweepSetValue(key, parseFloat(el.min));
@@ -112,28 +166,44 @@ function sweepPlay(loop, forcedRange){
 
   S.probe = { elIndex: null, xRatio: 0.5 }; // 扫掠开始时清空探针，防止索引失效
   const key = S.sweep.param;
-  const el  = document.getElementById(key);
-  if(!el) return;
+  
+  let min, max, cur;
+  if (key === 'settleDy' || key === 'supportRot0') {
+    min = key === 'settleDy' ? -100 : -30;
+    max = key === 'settleDy' ? 100 : 30;
+    const colEntry = (S.supportMap && S.supportMap['0']) || {};
+    if (key === 'settleDy') {
+      cur = colEntry.dy || 0;
+    } else {
+      cur = (colEntry.rot || 0) * 3000; // rad 转成度
+    }
+  } else {
+    const el = document.getElementById(key);
+    if(!el) return;
+    min = parseFloat(el.min);
+    max = parseFloat(el.max);
+    cur = parseFloat(el.value);
+  }
 
   const rowEl = document.getElementById('row-'+key);
   if(rowEl && rowEl.classList.contains('is-disabled')) return;
+  S.sweep.forcedMin = (forcedRange && forcedRange[0] != null) ? forcedRange[0] : min;
+  S.sweep.forcedMax = (forcedRange && forcedRange[1] != null) ? forcedRange[1] : max;
 
-  const min = parseFloat(el.min);
-  const max = parseFloat(el.max);
-  const cur = parseFloat(el.value);
-  const startVal = (max - cur < 1e-9) ? min : cur;
-  const span = max - startVal;
+  // 如果传入了强制区间（如自检卡），则第一圈必须立刻使用强制区间的起点和跨度
+  if (forcedRange && forcedRange[0] != null && forcedRange[1] != null) {
+    S.sweep.startVal = S.sweep.forcedMin;
+    S.sweep.span     = S.sweep.forcedMax - S.sweep.forcedMin;
+  } else {
+    // 正常手动播放，从当前滑块值开始
+    const startVal = (max - cur < 1e-9) ? min : cur;
+    S.sweep.startVal = startVal;
+    S.sweep.span     = max - startVal;
+  }
 
-  S.sweep.startVal = startVal;
-  S.sweep.span     = span;
   S.sweep.t0       = performance.now();
   S.sweep.playing  = true;
   S.sweep.loop     = loop !== false;
-
-  // ====== 新增：记录强制区间 ======
-  S.sweep.forcedMin = (forcedRange && forcedRange[0] != null) ? forcedRange[0] : min;
-  S.sweep.forcedMax = (forcedRange && forcedRange[1] != null) ? forcedRange[1] : max;
-  // ================================
 
   sweepUpdatePlayBtn();
 
@@ -310,7 +380,14 @@ function setSweepLocked(locked){
   });
   const braceWrap = document.getElementById('braceGridWrap');
   if(braceWrap) braceWrap.style.pointerEvents = locked ? 'none' : '';
+  const removeWrap = document.getElementById('removeBeamGridWrap');
+  if(removeWrap) removeWrap.style.pointerEvents = locked ? 'none' : '';
   document.querySelectorAll('.spanEditToggle, .spanEditClear').forEach(el => {
+    el.disabled = locked;
+  });
+
+  /* 锁定顶部右侧的显示模式切换，防止录制中画面布局突变 */
+  document.querySelectorAll('#stageModeBar button').forEach(el => {
     el.disabled = locked;
   });
   document.querySelectorAll('.spanEditBox input[type=range]').forEach(el => {

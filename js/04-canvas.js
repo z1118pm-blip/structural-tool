@@ -180,8 +180,40 @@ function drawFrameLines(ctx, model, toS, color, lwBase, dashed, useSectionWidth)
   ctx.restore();
 }
 
-function drawSingleSupport(ctx, sx, sy, type, T, colW) {
-  /* 兼容旧调用：传 betaF 数值时按阈值转成 type */
+function drawSingleSupport(ctx, sx, sy, type, T, colW, rotDraw, rotText) {
+  if (rotText === undefined) rotText = rotDraw;
+
+  // 画角度标注（纯文字，彻底删除圆弧和虚线）
+  if (rotText && Math.abs(rotText) > 1e-6) {
+    ctx.save();
+    const deg = Math.abs(rotText * 180 / Math.PI).toFixed(1);
+    const txt = `∠ ${deg}°`;
+    ctx.font = 'bold 11px ui-sans-serif,system-ui,sans-serif';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    
+    // 把文字放在支座左侧稍下的位置
+    const tx = sx - 16;
+    const ty = sy + 16;
+    
+    // 加个半透明背景防止被线挡住
+    const tw = ctx.measureText(txt).width;
+    ctx.fillStyle = 'rgba(30,41,59,0.85)';
+    ctx.fillRect(tx - tw - 2, ty - 7, tw + 4, 14);
+    
+    ctx.fillStyle = T.hArrow;
+    ctx.fillText(txt, tx, ty);
+    ctx.restore();
+  }
+
+  ctx.save();
+  /* 使用 rotDraw 进行整个支座的旋转对齐 */
+  if (rotDraw && Math.abs(rotDraw) > 1e-6) {
+    ctx.translate(sx, sy);
+    ctx.rotate(-rotDraw); 
+    ctx.translate(-sx, -sy);
+  }
+  
   if(typeof type === 'number'){
     type = type >= BETA_FIXED ? 'fixed' : (type <= BETA_HINGE ? 'pin' : 'spring');
   }
@@ -189,17 +221,16 @@ function drawSingleSupport(ctx, sx, sy, type, T, colW) {
   ctx.strokeStyle = T.support;
   ctx.lineWidth = colW;
   
+  // 【修改】删除了原来的连接竖线，将支座直接上移到节点下方 2px 处
   if(type === 'fixed'){
-    const topY = sy + 9;
-    ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx, topY); ctx.stroke();
+    const topY = sy + 2; 
     ctx.lineWidth = 1.6;
-    ctx.beginPath(); ctx.moveTo(sx-11, sy+9); ctx.lineTo(sx+11, sy+9); ctx.stroke();
-    for(let k=-9;k<=9;k+=6){
-      ctx.beginPath(); ctx.moveTo(sx+k, sy+9); ctx.lineTo(sx+k-5, sy+16); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(sx-12, topY); ctx.lineTo(sx+12, topY); ctx.stroke();
+    for(let k=-10;k<=10;k+=5){
+      ctx.beginPath(); ctx.moveTo(sx+k, topY); ctx.lineTo(sx+k-5, topY+7); ctx.stroke();
     }
   } else if(type === 'pin'){
-    const topY = sy + 11;
-    ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx, topY); ctx.stroke();
+    const topY = sy + 2;
     ctx.lineWidth = 1.6;
     ctx.beginPath();
     ctx.moveTo(sx, topY);
@@ -212,8 +243,7 @@ function drawSingleSupport(ctx, sx, sy, type, T, colW) {
       ctx.beginPath(); ctx.moveTo(sx+k, topY+8); ctx.lineTo(sx+k-5, topY+15); ctx.stroke();
     }
   } else if(type === 'roller'){
-    const topY = sy + 11;
-    ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx, topY); ctx.stroke();
+    const topY = sy + 2;
     ctx.lineWidth = 1.6;
     ctx.beginPath();
     ctx.moveTo(sx, topY);
@@ -224,13 +254,12 @@ function drawSingleSupport(ctx, sx, sy, type, T, colW) {
     ctx.beginPath(); ctx.arc(sx-5, topY+11, 3, 0, Math.PI*2); ctx.stroke();
     ctx.beginPath(); ctx.arc(sx+5, topY+11, 3, 0, Math.PI*2); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(sx-11, topY+14); ctx.lineTo(sx+11, topY+14); ctx.stroke();
-    /* 水平滑动指示双箭头 */
     ctx.lineWidth = 1.2;
     ctx.beginPath(); ctx.moveTo(sx-14, topY+14); ctx.lineTo(sx+14, topY+14); ctx.stroke();
   } else {
     /* spring：弹簧符号 */
-    const y0 = sy + 4;
-    const yBottom = sy + 22;
+    const y0 = sy + 2;
+    const yBottom = sy + 20;
     ctx.beginPath();
     ctx.moveTo(sx, y0);
     const nZig = 5;
@@ -249,6 +278,7 @@ function drawSingleSupport(ctx, sx, sy, type, T, colW) {
       ctx.beginPath(); ctx.moveTo(sx+k, yBottom+2); ctx.lineTo(sx+k-5, yBottom+9); ctx.stroke();
     }
   }
+  ctx.restore();
 }
 
 function drawSupports(ctx, model, toS, base, isDeform, deformF, W, H){
@@ -258,9 +288,7 @@ function drawSupports(ctx, model, toS, base, isDeform, deformF, W, H){
   const colW = 2.5;
   const supportMap = model.p.supportMap || {};
   
-  /* 旧字段兼容：单柱沉降 */
-  const hasLegacySettle = (Math.abs(parseFloat(model.p.settleDy) || 0) > 1e-6);
-  const legacySettleCol = hasLegacySettle ? Math.max(0, Math.min(nCol - 1, model.p.settleCol | 0)) : -1;
+
 
   for(let c=0;c<nCol;c++){
     const n = model.nodes[c*(nLev+1)];
@@ -272,16 +300,17 @@ function drawSupports(ctx, model, toS, base, isDeform, deformF, W, H){
       supType = base >= BETA_FIXED ? 'fixed' : (base <= BETA_HINGE ? 'pin' : 'spring');
     }
     
-    /* 竖向位移（mm）：supportMap 优先，否则旧 settleDy */
+    /* 竖向位移（mm）：仅从 supportMap 读取 */
     let dyMm = entry.dy != null ? entry.dy : 0;
-    if(Math.abs(dyMm) < 1e-6 && hasLegacySettle && c === legacySettleCol){
-      dyMm = parseFloat(model.p.settleDy) || 0;
-    }
     
     /* 强迫转角（rad） */
     const rotRad = entry.rot || 0;
     const hasDy  = Math.abs(dyMm) > 1e-6;
     const hasRot = Math.abs(rotRad) > 1e-6;
+    
+    // 新增：将滑块最大输入的 10mrad (0.01 rad) 映射为视觉上的 30° (0.5236 rad)
+    // 以满足手绘示意图中夸张而清晰的倾斜视觉效果。
+    const VISUAL_ROT_SCALE = (Math.PI / 6) / 0.01; 
 
     let sx, sy;
     if (isDeform) {
@@ -310,12 +339,12 @@ function drawSupports(ctx, model, toS, base, isDeform, deformF, W, H){
       [sx, sy] = toS(n.x, n.y);
     }
 
-    if (!isDeform && (hasDy || hasRot)) {
-      /* 1. 原位虚线支座 */
+    if (!isDeform && hasDy) {
+      /* 1. 原位虚线支座（仅在发生竖向沉降时才保留，单纯旋转不保留，避免圆圈重影） */
       ctx.save();
       ctx.globalAlpha = 0.3;
       ctx.setLineDash([3, 3]);
-      drawSingleSupport(ctx, sx, sy, supType, T, colW);
+      drawSingleSupport(ctx, sx, sy, supType, T, colW, 0);
       ctx.restore();
       
       /* 2. 竖向位移偏移（dy>0 向下，dy<0 向上） */
@@ -363,14 +392,21 @@ function drawSupports(ctx, model, toS, base, isDeform, deformF, W, H){
         ctx.restore();
       }
       
-      /* 4. 新位置实心支座 */
-      drawSingleSupport(ctx, sx, syDrop, supType, T, colW);
-      
-      /* 5. 强迫转角弧线 */
-      if(hasRot) drawForcedRotation(ctx, sx, syDrop, rotRad, T);
+      /* 4. 新位置实心支座（带旋转） */
+      const staticRot = rotRad * VISUAL_ROT_SCALE;
+      drawSingleSupport(ctx, sx, syDrop, supType, T, colW, staticRot, staticRot);
     } else {
-      drawSingleSupport(ctx, sx, sy, supType, T, colW);
-      if(!isDeform && hasRot) drawForcedRotation(ctx, sx, sy, rotRad, T);
+      // 只要有强迫转角，无论是静态图还是变形图，视觉上都统一倾斜 30°
+      let finalRotDraw = rotRad * VISUAL_ROT_SCALE;
+      let finalRotText = rotRad * VISUAL_ROT_SCALE;
+      
+      // 如果是变形图，且用户没有输入强迫转角，则按照真实的节点变形来绘制（随缩放系数变化）
+      if (isDeform && !hasRot) {
+        finalRotDraw = (model.U[c * (nLev + 1) * 3 + 2] || 0) * (deformF || 1);
+        finalRotText = finalRotDraw;
+      }
+      
+      drawSingleSupport(ctx, sx, sy, supType, T, colW, finalRotDraw, finalRotText);
     }
   }
 }
@@ -383,11 +419,27 @@ function drawForcedRotation(ctx, sx, sy, rotRad, T){
   ctx.fillStyle = color;
   ctx.lineWidth = 1.8;
   
-  const r = 18;
+  const r = 22;
   const cx = sx;
   const cy = sy - 4;
-  const start = -Math.PI / 2;
-  const arcSpan = Math.min(Math.PI * 0.8, Math.abs(rotRad) * 30);
+  
+  // 原位参考线（向左水平伸出）
+  ctx.beginPath();
+  ctx.setLineDash([3, 3]);
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(cx - r - 12, cy);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  
+  // 旋转后参考线（实线倾斜）
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(cx - (r + 12) * Math.cos(rotRad), cy - (r + 12) * Math.sin(rotRad));
+  ctx.stroke();
+
+  // 画从水平位置开始旋转的弧线
+  const start = Math.PI;
+  const arcSpan = Math.min(Math.PI * 0.6, Math.abs(rotRad) * 30);
   const end = rotRad > 0 ? start - arcSpan : start + arcSpan;
   
   ctx.beginPath();
@@ -405,10 +457,13 @@ function drawForcedRotation(ctx, sx, sy, rotRad, T){
   ctx.fill();
   
   ctx.font = 'bold 10px ui-sans-serif,system-ui,sans-serif';
-  ctx.textAlign = 'right';
+  ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   const txt = (rotRad > 0 ? '+' : '') + (rotRad * 1000).toFixed(1) + 'mrad';
-  ctx.fillText(txt, cx - r - 6, cy);
+  const midA = (start + end) / 2;
+  const txtX = cx + (r + 18) * Math.cos(midA);
+  const txtY = cy + (r + 18) * Math.sin(midA);
+  ctx.fillText(txt, txtX, txtY);
   ctx.restore();
 }
 
@@ -510,8 +565,9 @@ function drawLoadDiagram(canvas, model, dprOverride){
     let q = 0, showLabel = false, labelTxt = '';
     
     // 集中力打断梁后，右子单元的起点是集中力节点，只在左段画标签
-    const isLeftSub = model.nodes[el.i] && model.nodes[el.i].pLoad;
-    const skipLabel = isLeftSub;
+    /* 打断梁的子单元：若 el.i 是打断节点（带 pLoad），则该单元实为右子单元。 */
+    const isAfterPLoad = model.nodes[el.i] && model.nodes[el.i].pLoad;
+    const skipLabel = isAfterPLoad;
 
     if(el.isCant){
       q = p['qc'+lv]; labelTxt = q.toFixed(1); showLabel = true;
@@ -555,7 +611,7 @@ function drawLoadDiagram(canvas, model, dprOverride){
   }
 
   function drawFloorH(level, H){
-    if(H <= 0) return;
+    if(Math.abs(H) < 1e-9) return;
     /* 力统一加在左柱顶，刚性楼板分配不改变力的作用点 */
     drawHF(ctx, toS, model.nodes[model.nid(0, level)], H, H.toFixed(1));
   }
@@ -730,13 +786,14 @@ function drawUDL(ctx, toS, ni, nj, q, showLabel, labelTxt, placeAbove, labelMidY
 function drawHF(ctx, toS, node, H, label){
   const T = theme();
   const [sx, sy] = toS(node.x, node.y);
-  const arrowLen = Math.min(72, 34 + H/22);
-  const tipX  = sx, tailX = sx - arrowLen;
-  ctx.beginPath(); ctx.moveTo(tailX, sy); ctx.lineTo(tipX, sy);
-  ctx.strokeStyle = T.hArrow; ctx.lineWidth = 2; ctx.stroke();
-  const headLen = 10;
-  ctx.beginPath();
-  ctx.moveTo(tipX, sy); ctx.lineTo(tipX - headLen, sy - 4.5); ctx.lineTo(tipX - headLen, sy + 4.5);
+const arrowLen = Math.min(72, 34 + Math.abs(H)/22);
+const dir = H >= 0 ? 1 : -1;
+const tipX  = sx, tailX = sx - dir * arrowLen;
+ctx.beginPath(); ctx.moveTo(tailX, sy); ctx.lineTo(tipX, sy);
+ctx.strokeStyle = T.hArrow; ctx.lineWidth = 2; ctx.stroke();
+const headLen = 10;
+ctx.beginPath();
+ctx.moveTo(tipX, sy); ctx.lineTo(tipX - dir * headLen, sy - 4.5); ctx.lineTo(tipX - dir * headLen, sy + 4.5);
   ctx.closePath(); ctx.fillStyle = T.hArrow; ctx.fill();
   if(label){
     const midX = (tailX + tipX)/2;

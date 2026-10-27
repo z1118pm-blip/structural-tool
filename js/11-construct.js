@@ -104,3 +104,63 @@ function renderBraceGrid() {
   // 初始化
   renderBraceGrid();
 })();
+
+/* =====================================================================
+   梁系移除网格画笔绑定（穿层柱模拟）
+   ===================================================================== */
+function renderRemoveBeamGrid() {
+  const wrap = document.getElementById('removeBeamGridWrap');
+  if(!wrap) return;
+  
+  let html = '';
+  for(let lv = S.nLev; lv >= 1; lv--) { 
+    html += '<div class="braceGridRow">';
+    html += `<div class="braceGridLabel">${lv}层</div>`;
+    for(let c = 1; c <= S.nBay; c++) {
+      const key = lv + '-' + c;
+      const isRemoved = !!S.removeBeamMap[key];
+      const txt = isRemoved ? '✕' : '━';
+      const colorStyle = isRemoved ? 'color: #f43f5e !important; border-color: rgba(244,63,94,0.5) !important; background: rgba(244,63,94,0.1) !important;' : '';
+      html += `<div class="braceGridCell" data-key="${key}" style="${colorStyle}">` +
+              `<span class="braceGridMark">${txt}</span>` +
+              `</div>`;
+    }
+    html += '</div>';
+  }
+  wrap.innerHTML = html;
+
+  if (!wrap._delegated) {
+    wrap._delegated = true;
+    wrap.addEventListener('click', (e) => {
+      if (S.rec && S.rec.active) return;
+      const cell = e.target.closest('.braceGridCell');
+      if (!cell) return;
+      const key = cell.dataset.key;
+      
+      if (S.removeBeamMap[key]) {
+        delete S.removeBeamMap[key];
+      } else {
+        S.removeBeamMap[key] = true;
+      }
+      
+      renderRemoveBeamGrid();
+      if (typeof applyTopoState === 'function') applyTopoState(); // 联动禁用荷载输入
+      if(typeof scheduleRender === 'function') scheduleRender(); else run();
+    });
+  }
+}
+
+(function bindRemoveBeamGrid() {
+  window.addEventListener('structura-topo-change', () => {
+    for(const k of Object.keys(S.removeBeamMap)) {
+      const [lv, c] = k.split('-').map(Number);
+      if(lv > S.nLev || c > S.nBay) delete S.removeBeamMap[k];
+    }
+    renderRemoveBeamGrid();
+  });
+  if(document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', renderRemoveBeamGrid);
+  } else {
+    renderRemoveBeamGrid();
+  }
+})();

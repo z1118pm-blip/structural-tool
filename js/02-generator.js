@@ -3,12 +3,15 @@
 /* =====================================================================
    ParametricGenerator：p → Model
    ---------------------------------------------------------------------
-   这是 02-solver.js 中 analyze() 前 8 步（坐标、节点、单元、荷载、
-   支座、约束）的等价抽取。solve(Model) 下一轮实现后，
-   analyze(p) 将改为 solve(parametricGenerator(p))。
+   ✅ 状态：已接入主流程（单轨化完成）
+   ---------------------------------------------------------------------
+   analyze(p) 的底层实现为 solve(parametricGenerator(p))。
+   本文件是「参数 p → 结构化 Model」的唯一真相源（Single Source of Truth）。
 
-   本轮目标：parametricGenerator 输出的 Model 与现有 analyze(p)
-   内部生成的 nodes/els 结构一一对应，供人工对比验证。
+   02-solver.js 的 solve(Model) 只负责纯数值计算（组装 K、F，高斯消元，
+   算反力），不再包含任何几何/拓扑生成逻辑。
+   修改建模逻辑（截面 / 梁柱生成 / 支撑 / 悬挑 / 温度 / 支座 / 楼板）时，
+   只需修改本文件。
    ===================================================================== */
 
 /* 常量 E_STEEL / E_CONC / BETA_HINGE / BETA_FIXED 由 01-state.js 全局提供 */
@@ -17,6 +20,13 @@
 const _M = (typeof require !== "undefined" && typeof module !== "undefined")
   ? require("./02-model.js")
   : { createModel, addNode, addElement, validateModel, resetIdCounter };
+
+/* Node 环境下 01-state.js 的全局 const 不存在，提供兜底；
+   浏览器里 typeof 检测到全局已声明，走原值，行为不变。 */
+const _BETA_FIXED = (typeof BETA_FIXED !== "undefined") ? BETA_FIXED : 0.99;
+const _BETA_HINGE = (typeof BETA_HINGE !== "undefined") ? BETA_HINGE : 0.01;
+const _E_STEEL    = (typeof E_STEEL    !== "undefined") ? E_STEEL    : 2.06e8;
+const _E_CONC     = (typeof E_CONC     !== "undefined") ? E_CONC     : 3.0e7;
 
 function parametricGenerator(p) {
   const { createModel, addNode, addElement, validateModel, resetIdCounter } = _M;
@@ -43,7 +53,11 @@ function parametricGenerator(p) {
   for (let c = 0; c < nCol; c++) {
     nodeGrid.push([]);
     for (let lv = 0; lv <= nLev; lv++) {
-      nodeGrid[c].push(addNode(model, X[c], Y[lv]));
+      const nd = addNode(model, X[c], Y[lv]);
+      /* solve(Model) 需要从节点上直接读到 col/lev，避免按顺序反推 */
+      nd.col = c;
+      nd.lev = lv;
+      nodeGrid[c].push(nd);
     }
   }
 
@@ -54,16 +68,22 @@ function parametricGenerator(p) {
     if (!(Lc > 1e-9)) throw new Error("悬挑长度必须为正");
     cantNodes = [];
     for (let lv = 1; lv <= nLev; lv++) {
-      cantNodes.push(addNode(model, X[nBay] + Lc, Y[lv], "cant"));
+      const nd = addNode(model, X[nBay] + Lc, Y[lv], "cant");
+      nd.col = nBay;
+      nd.lev = lv;
+      nd.cant = true;
+      cantNodes.push(nd);
     }
   }
 
   /* ---- 截面特性 ---- */
-  const E_frame = (p.frameMat === "steel") ? E_STEEL : E_CONC;
-  const E_brace = (p.braceMat === "steel") ? E_STEEL : E_CONC;
+  const E_frame = (p.frameMat === "steel") ? _E_STEEL : _E_CONC;
+  const E_brace = (p.braceMat === "steel") ? _E_STEEL : _E_CONC;
 
-  const bcM = Number(p.bc) / 1000, hcM = Number(p.hc) / 1000;
-  const bbM = Number(p.bb) / 1000, hbM = Number(p.hb) / 1000;
+  const bcM = Math.max(300, Number(p.bc)) / 1000;
+  const hcM = Math.max(300, Number(p.hc)) / 1000;
+  const bbM = Math.max(200, Number(p.bb)) / 1000;
+  const hbM = Math.max(400, Number(p.hb)) / 1000;
   if (![bcM, hcM, bbM, hbM].every(v => Number.isFinite(v) && v > 0)) {
     throw new Error("截面尺寸必须为正");
   }
@@ -103,11 +123,15 @@ function parametricGenerator(p) {
   /* ---- 半刚接参数（与原 analyze 一致） ---- */
   const betaJ = Number(p.betaJ);
   let alphaJ = 0;
+  /* beamHinge 当前始终为 false：βj ≤ BETA_HINGE 时走 alphaJ=1e4
+     的半刚接公式近似铰接，而不是释放真正的 free release。
+     保留此变量名是为了保留"铰接意图"的语义，但 solve 中 flat.hinge
+     不读取它（始终 false），因此 localK/localEqLoad 的 hinge 分支不触发。 */
   let beamHinge = false;
-  if (betaJ < BETA_FIXED) {
-    if (betaJ <= BETA_HINGE) {
-      beamHinge = true;
-      alphaJ = Infinity;
+  if (betaJ < _BETA_FIXED) {
+    if (betaJ <= _BETA_HINGE) {
+      beamHinge = false;
+      alphaJ = 1e4;
     } else {
       alphaJ = (1 - betaJ) / (4 * betaJ);
     }
@@ -131,6 +155,11 @@ function parametricGenerator(p) {
 
     for (let c = 0; c < nBay; c++) {
       const spanKey = lv + "-" + (c + 1);
+
+      /* 拦截被移除的梁（穿层柱模拟） */
+      if (p.removeBeamMap && p.removeBeamMap[spanKey]) {
+        continue;
+      }
 
       const q = Object.prototype.hasOwnProperty.call(qSpanMap, spanKey)
         ? (parseFloat(qSpanMap[spanKey]) || 0)
@@ -167,6 +196,10 @@ function parametricGenerator(p) {
           i.x + dx * a / L,
           i.y + dy * a / L,
           "sub");
+        midNode.col = c;
+        midNode.lev = lv;
+        midNode.isSub = true;
+        midNode.pLoad = P;
 
         const alphaLeft  = Number.isFinite(alphaJ) ? alphaJ * L / a       : alphaJ;
         const alphaRight = Number.isFinite(alphaJ) ? alphaJ * L / (L - a) : alphaJ;
@@ -176,7 +209,7 @@ function parametricGenerator(p) {
           i: i.id, j: midNode.id,
           L: a, cs: dx / L, sn: dy / L,
           section: { E: E_frame, A: Ab, I: Ib, axialBoost },
-          releaseI: mkRelease(alphaLeft,  beamHinge),
+          releaseI: mkRelease(alphaLeft,  false),
           releaseJ: { type: "fixed", k: 0 },   /* 内部节点：强制刚接 */
           loads: [
             { type: "udl", w: -q },
@@ -192,14 +225,13 @@ function parametricGenerator(p) {
           L: L - a, cs: dx / L, sn: dy / L,
           section: { E: E_frame, A: Ab, I: Ib, axialBoost },
           releaseI: { type: "fixed", k: 0 },   /* 内部节点：强制刚接 */
-          releaseJ: mkRelease(alphaRight, beamHinge),
+          releaseJ: mkRelease(alphaRight, false),
           loads: [{ type: "udl", w: -q }],
           _meta: { kind: "beam", lev: lv, bay: c + 1,
                    startOffset: a, spanL: L },
         });
 
-        /* 集中力施加在中间节点 */
-        model.nodeLoads.push({ node: midNode.id, Fx: 0, Fy: -P, Mz: 0 });
+        /* 集中力由 midNode.pLoad 携带，solve 直接读取，无需 nodeLoads */
       } else {
         addElement(model, {
           type: "beam",
@@ -287,7 +319,7 @@ function parametricGenerator(p) {
       if (meta.kind === "col") {
         if (meta.col === 0) gf = 1.0;
         else if (meta.col === nBay) gf = -1.0;
-      } else if (meta.kind === "beam" && meta.lev === nLev) {
+      } else if (meta.kind === "beam" && meta.lev === nLev && !meta.isCant) {
         gf = 1.0;
       }
       if (gf === 0) continue;
@@ -296,30 +328,18 @@ function parametricGenerator(p) {
         ? (Number(p.hc) / 1000)
         : (Number(p.hb) / 1000);
 
-      /* 判断是否真端：打断梁只有柱侧端是真端 */
-      let endI = true, endJ = true;
-      if (meta.startOffset != null && meta.spanL != null) {
-        endI = (meta.startOffset === 0);
-        endJ = Math.abs(meta.startOffset + el.L - meta.spanL) < 1e-9;
-      }
-
+      /* endI/endJ 仅供 solve 的 localEqLoad 使用；
+         由于 solve 中 flat 不接收这两个字段（localEqLoad 独立重算），
+         此处不再写入，避免产生死字段。 */
       el.loads.push({
         type: "temp",
         grad: Number(p.tempGrad),
         h, alphaT, gradFactor: gf,
-        endI, endJ,
       });
     }
   }
 
-  /* ---- 均匀温度 ---- */
-  if (Math.abs(Number(p.tempAll) || 0) > 1e-9) {
-    for (const el of model.elements) {
-      const meta = el._meta;
-      if (!meta || meta.kind === "brace" || el.type === "brace") continue;
-      el.loads.push({ type: "temp_uniform", dT: Number(p.tempAll) });
-    }
-  }
+  /* ---- 均匀温度：由 localEqLoad 按 p.tempAll 计算，temp_uniform 死数据已移除 ---- */
 
   /* ---- 支座 ---- */
   const supportMapSolver = (p.supportMap && typeof p.supportMap === "object") ? p.supportMap : {};
@@ -330,8 +350,8 @@ function parametricGenerator(p) {
     if (entry && entry.type) {
       if (["fixed", "pin", "roller", "spring"].includes(entry.type)) return entry.type;
     }
-    if (betaF >= BETA_FIXED) return "fixed";
-    if (betaF <= BETA_HINGE) return "pin";
+    if (betaF >= _BETA_FIXED) return "fixed";
+    if (betaF <= _BETA_HINGE) return "pin";
     return "spring";
   };
 
@@ -354,10 +374,10 @@ function parametricGenerator(p) {
         sup.rz = "fixed";
       } else if (supType === "spring") {
         const entryBeta = (entry.betaF != null) ? Number(entry.betaF) : betaF;
-        if (!(entryBeta > BETA_HINGE && entryBeta < BETA_FIXED)) {
+        if (!(entryBeta > _BETA_HINGE && entryBeta < _BETA_FIXED)) {
           throw new Error(
             `柱 ${c} 设为弹簧支座，但 betaF=${entryBeta} 不在开区间 ` +
-            `(${BETA_HINGE}, ${BETA_FIXED})，无法确定弹簧刚度`
+            `(${_BETA_HINGE}, ${_BETA_FIXED})，无法确定弹簧刚度`
           );
         }
         const kc = isMidCol(c) ? (Number(p.r) || 1.0) : 1.0;
@@ -382,27 +402,13 @@ function parametricGenerator(p) {
     model.supports.push(sup);
   }
 
-  /* ---- 旧 settleDy 兼容 ---- */
-  const settleDyVal = parseFloat(p.settleDy) || 0;
-  if (Math.abs(settleDyVal) > 1e-6) {
-    const sc = Math.max(0, Math.min(nCol - 1, Number(p.settleCol) | 0));
-    const entry = supportMapSolver[String(sc)];
-    const alreadyHasDy = entry && entry.dy != null;
-    if (!alreadyHasDy) {
-      const sup = model.supports.find(s => s.node === nodeGrid[sc][0].id);
-      if (sup) {
-        sup.prescribed = sup.prescribed || {};
-        sup.prescribed.uy = -settleDyVal * 1e-3;
-      }
-    }
-  }
+  /* 旧 settleDy 已废弃，沉降统一由 supportMap 的 prescribed 属性接管 */
 
   /* ---- 水平力 ---- */
   for (let lv = 1; lv <= nLev; lv++) {
     const H = Number(p["H" + lv]) || 0;
     if (Math.abs(H) <= 1e-12) continue;
-    const topNode = nodeGrid[0][lv];
-    model.nodeLoads.push({ node: topNode.id, Fx: H, Fy: 0, Mz: 0 });
+    /* 水平力由 p.H1/H2/H3 携带，solve 直接读取，无需 nodeLoads */
   }
 
   /* ---- 刚性楼板：diaphragm 约束 ---- */

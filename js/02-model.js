@@ -27,6 +27,8 @@ function createModel() {
   return {
     nodes: [],
     elements: [],
+    /* 预留：节点集中力当前由 node.pLoad 携带，水平力由 p.H* 携带；
+       nodeLoads 目前未被 solve 消费，仅为 Model 结构完整性保留。 */
     nodeLoads: [],
     supports: [],
     constraints: [],
@@ -46,7 +48,6 @@ function addNode(model, x, y, tag) {
 
 function addElement(model, el) {
   const e = Object.assign({ id: newId() }, el);
-  if (e.id == null) e.id = newId();
   model.elements.push(e);
   return e;
 }

@@ -5,6 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Structura（测试版）· 平面刚架线弹性静力分析</title>
 <script>
+  // =========================================================
+  // 🌟 全站唯一版本号修改处！
+  // 以后升级版本，只需修改下面这个字符串，全站标题、UI、JS防缓存全部自动联动。
+  // =========================================================
+  window.APP_VERSION = 'v0.1.9';
+
+  // 动态加载核心状态文件（自动带上版本号防缓存）
+  document.write(`<script src="js/01-state.js?${window.APP_VERSION}"><\/script>`);
+
   document.addEventListener('DOMContentLoaded', () => {
     if (typeof APP_VERSION !== 'undefined') {
       document.title = `Structura ${APP_VERSION} · 平面刚架线弹性静力分析`;
@@ -296,7 +305,7 @@ var _hmt = _hmt || [];
           </div>
           <div class="selfTestCard" data-selftest="col-h3">
             <div class="stcTitle">⑱ 柱截面三次方效应</div>
-            <div class="stcDesc">单层单跨 · 水平力。扫掠柱高 h_c (200→800)，看侧移随 h_c 增大急剧减小（I_c ∝ h_c³），柱端弯矩被吸引增大。</div>
+            <div class="stcDesc">单层单跨 · 水平力。扫掠柱高 h_c (300→800)，看侧移随 h_c 增大急剧减小（I_c ∝ h_c³），柱端弯矩被吸引增大。</div>
             <span class="stcAction">▶ 播放</span>
           </div>
           <div class="selfTestCard" data-selftest="load-moment">
@@ -406,7 +415,6 @@ var _hmt = _hmt || [];
           </div>
         </div>
       </div>
-
       <!-- ============ Tab 2: 模型 ============ -->
       <div class="tabPanel" data-tab="model">
         
@@ -468,6 +476,17 @@ var _hmt = _hmt || [];
                 <input type="range" id="Lc" min="0.5" max="4" step="0.1" value="1.5">
               </div>
             </div>
+
+            <!-- 合并进来的梁系移除网格 -->
+            <div class="group" style="margin-top:14px;">
+              <div class="gtitle" style="display:none">梁系移除</div>
+              <div class="ctrl">
+                <div class="head"><span>梁系移除（点击网格移除/恢复跨内梁）</span></div>
+                <div id="removeBeamGridWrap" class="braceGridWrap"></div>
+              </div>
+              <div class="hint">移除某跨梁后，该跨失去侧向刚度及梁自重，用于模拟穿层柱或抽梁工况。悬挑梁不受影响。如想模拟“既抽梁又无楼板”，请去「荷载」Tab 将楼板设为“无楼板”。</div>
+            </div>
+
           </div>
         </details>
 
@@ -486,19 +505,19 @@ var _hmt = _hmt || [];
               </div>
               <div class="ctrl" id="row-bc">
                 <div class="head"><span>边柱宽 b<sub>c</sub>（出平面）</span><b id="v-bc">400 mm</b></div>
-                <input type="range" id="bc" min="200" max="800" step="50" value="400">
+                <input type="range" id="bc" min="300" max="800" step="50" value="400">
               </div>
               <div class="ctrl" id="row-hc">
                 <div class="head"><span>边柱高 h<sub>c</sub>（平面内）</span><b id="v-hc">400 mm</b></div>
-                <input type="range" id="hc" min="200" max="800" step="50" value="400">
+                <input type="range" id="hc" min="300" max="800" step="50" value="400">
               </div>
               <div class="ctrl" id="row-bb">
                 <div class="head"><span>梁宽 b<sub>b</sub></span><b id="v-bb">250 mm</b></div>
-                <input type="range" id="bb" min="50" max="500" step="50" value="250">
+                <input type="range" id="bb" min="200" max="500" step="50" value="250">
               </div>
               <div class="ctrl" id="row-hb">
                 <div class="head"><span>梁高 h<sub>b</sub></span><b id="v-hb">500 mm</b></div>
-                <input type="range" id="hb" min="50" max="900" step="50" value="500">
+                <input type="range" id="hb" min="400" max="900" step="50" value="500">
               </div>
               <div class="ctrl" id="row-r">
                 <div class="head"><span>内柱 / 边柱刚度比 r</span><b id="v-r">1.00</b></div>
@@ -560,7 +579,7 @@ var _hmt = _hmt || [];
             </div>
           </div>
         </details>
-        
+
       </div>
       <!-- ============ Tab 2: 荷载 ============ -->
       <div class="tabPanel" data-tab="load">
@@ -691,23 +710,7 @@ var _hmt = _hmt || [];
           <summary>非荷载作用（温度 / 沉降）</summary>
           <div class="groupContent">
             <div class="group" id="group-load-other-placeholder" style="display:none"></div>
-            <div class="group">
-              <div class="gtitle">支座沉降</div>
-              <div class="ctrl" id="row-settleCol">
-                <div class="head"><span>沉降柱位置</span></div>
-                <select id="settleCol" class="sweepSel">
-                  <option value="0">左柱</option>
-                  <option value="1">中柱</option>
-                  <option value="2">右柱</option>
-                </select>
-              </div>
-              <div class="ctrl" id="row-settleDy">
-                <div class="head"><span>柱脚竖向位移 Δ（正=沉降 / 负=上抬）</span><b id="v-settleDy">0 mm</b></div>
-                <input type="range" id="settleDy" min="-100" max="100" step="1" value="0">
-              </div>
-              <div class="hint">超静定结构在<strong>无外荷载</strong>时，支座沉降也会产生内力。内力与沉降量成正比、与刚度成正比。仅支持单柱竖向沉降；可与「冻结」对比，查看沉降前后的内力重分布。</div>
-            </div>
-            
+
             <div class="group">
               <div class="gtitle">支座类型与强迫位移（每柱独立）</div>
               <div id="supportMapPanel"></div>
@@ -777,7 +780,8 @@ var _hmt = _hmt || [];
             <option value="betaJ">梁端 β_j</option>
           </optgroup>
           <optgroup label="非荷载作用">
-            <option value="settleDy">柱脚沉降 Δ</option>
+            <option value="settleDy">左柱竖向位移 (mm)</option>
+            <option value="supportRot0">左柱强迫转角 (°)</option>
           </optgroup>
         </select>
       </div>
@@ -969,7 +973,8 @@ var _hmt = _hmt || [];
         <div class="deformOverlay">
           <div class="dTitle">变形图</div>
           <div class="dRow"><span title="对于受温度弯曲等工况，位移极值可能发生在构件中部，而非节点处">最大水平位移 u<sub>x</sub></span><b id="r-maxDx">—</b></div>
-          <div class="dRow"><span title="对于受温度弯曲等工况，位移极值可能发生在构件中部，而非节点处">最大竖向位移 u<sub>y</sub></span><b id="r-maxDy">—</b></div>
+          <div class="dRow"><span title="结构发生整体沉降或刚体平动时的最大竖向绝对位移">最大刚体竖向位移</span><b id="r-rigidDy">—</b></div>
+          <div class="dRow"><span title="扣除支座刚体位移后，梁体自身的真实弯曲挠度（用于判定 1/200 限值）">最大受弯挠度 v<sub>bend</sub></span><b id="r-maxDy">—</b></div>
           <div id="r-drift-list" style="margin: 4px 0 8px 0; display: flex; flex-direction: column; gap: 4px; font-size: 11.5px; font-family: 'JetBrains Mono', ui-monospace, monospace;"></div>
           <div class="dRow"><span>表观侧移刚度 K</span><b id="r-K">—</b></div>
           <div class="dRow" id="rowPD" style="display:none"><span>P-Δ 放大系数 B</span><b id="r-pd">—</b></div>
@@ -1085,6 +1090,7 @@ var _hmt = _hmt || [];
             <ul>
               <li><strong>线弹性与小变形假定</strong>：本工具严格遵循线弹性理论。这意味着无论你施加多大的荷载，材料都不会屈服，杆件也不会发生大变形。工具中没有“极限承载力”的概念，所有结果都可以直接线性叠加。但这不代表可以无限制地输入大荷载，一旦超过现实中的比例极限，算出的内力就失去了工程意义。</li>
               <li><strong>平面梁单元</strong>：每根杆件被离散为一个标准的 Euler-Bernoulli 梁单元，每个节点具有 3 个自由度（水平位移 u、竖向位移 v、转角 θ）。工具忽略剪切变形（即 Timoshenko 梁效应），因此对于跨高比极小的“深梁”，计算结果会存在一定误差。</li>
+              <li><strong>“形常数”与“真实侧移”的差异（重点）</strong>：在手算位移法中，我们常背“形常数”表，认为单层单跨框架的柱子反弯点必然在 <code>0.33h</code> 处。但这有一个严苛的前提：<strong>两端节点无相对侧移</strong>。在矩阵位移法中（特别是默认开启“考虑轴向变形”时），梁受压会产生微小的轴向缩短，导致柱顶发生极其微小的侧移。这种极微小的侧移，在超静定结构中会通过刚度矩阵迅速放大，导致柱端弯矩比例不再严格是 4:2，反弯点随之偏离 0.33h。本工具不做近似，因此算出的反弯点会随侧移偏离理论假定。</li>
             </ul>
 
             <h3>二、半刚接节点的力学本质（核心）</h3>
@@ -1119,6 +1125,12 @@ var _hmt = _hmt || [];
               <li>转动：β<sub>f</sub> = 1 时完全固定；β<sub>f</sub> = 0 时完全铰接；0 &lt; β<sub>f</sub> &lt; 1 时按弹性转动弹簧处理。</li>
               <li>弹簧刚度采用启发式公式 <code>k_θ = (4EI_c/h₁)·β_f/(1−β_f)</code>，使 β<sub>f</sub> 在 0.5 附近时弹簧刚度量级与柱自身转动刚度相近。<strong>它不是从节点平衡精确推导的弹簧刚度</strong>，只用于演示"从铰接到固定的连续过渡"。</li>
               <li>绘制柱脚符号：β<sub>f</sub> ≥ 0.99 画固定支座，β<sub>f</sub> ≤ 0.01 画铰接，中间画弹簧符号。</li>
+            </ul>
+            <p style="margin-top:8px"><strong>强迫位移与支座类型（每柱独立）</strong></p>
+            <ul>
+              <li>可在「荷载」Tab 下对每根柱子独立设置 <b>固接 / 铰接 / 滚轴</b> 支座。</li>
+              <li><b>竖向位移：</b>正数表示沉降向下，负数表示基础上抬（如抗浮工况）。</li>
+              <li><b>强迫转角：</b>正数表示逆时针旋转，用于模拟基础不均匀沉降造成的柱底强迫扭转。为了便于视觉观察，程序在绘制静态简图时会自动将其放大为 30° 左右的直观倾角。</li>
             </ul>
             <p style="margin-top:8px"><strong>梁端（β<sub>j</sub>）</strong></p>
             <ul>
@@ -1191,6 +1203,14 @@ var _hmt = _hmt || [];
               <li>X 撑两根共用一个格子的 A<sub>s</sub>，不支持同一格内两根斜杆取不同截面。</li>
               <li>支撑与框架节点按理想铰接处理，未考虑节点板、螺栓群、节点域剪切变形。</li>
             </ul>
+
+            <h3>六、梁系移除与穿层柱</h3>
+            <p>「模型」Tab 新增了「梁系移除」网格，允许用户抽掉特定楼层的局部梁，用于模拟大堂、挑空区等造成的<strong>穿层柱</strong>工况。</p>
+            <ul>
+              <li><strong>物理本质</strong>：点击网格上的梁将其移除后，该跨梁的单元将<strong>彻底从刚度矩阵中剔除</strong>，连带其自重和传递水平/竖向荷载的能力一并消失。</li>
+              <li><strong>交互联动</strong>：如果某一层的梁被全部移除，程序会自动禁用该层的水平力与竖向荷载输入滑块，防止将荷载施加在“真空”上。</li>
+              <li><strong>刚性楼板的陷阱</strong>：如果在移除梁的同时开启了「刚性楼板」，程序底层的自由度缩并依然会强制同层柱顶水平位移一致。这意味着未断开的楼板会起到“隔空传力”的作用，掩盖穿层柱真实的软弱性。若想观察纯框架的穿层效应，请务必切换到<strong>无楼板</strong>模式。</li>
+            </ul>
           </div>
 
           <!-- ====== Tab 3 ====== -->
@@ -1249,6 +1269,7 @@ var _hmt = _hmt || [];
               <li style="margin-bottom:5px"><strong>无节点域</strong>：节点处按纯刚接或纯铰接处理，未考虑节点域剪切变形。</li>
               <li style="margin-bottom:5px"><strong>悬挑梁简化</strong>：悬挑梁按标准刚接单元处理，不参与 β<sub>j</sub> 半刚接修正；悬挑端为自由端，未建模实际边梁的弹性约束。</li>
               <li style="margin-bottom:5px"><strong>两端完全铰接的梁</strong>：当 β<sub>j</sub> 降至 0 时，梁单元弯曲刚度归零，仅保留轴向刚度（类似链杆）。因此多跨连续梁若中间跨两端完全铰接，无法传递剪力，结构侧向柔度会显著增大。这是标准有限元处理方式，并非程序错误。</li>
+              <li style="margin-bottom:5px"><strong>刚性楼板与梁系解耦</strong>：在刚性楼板假设下，只要楼板存在，即使梁被抽空，水平力依然能通过虚拟的刚性隔板在柱间传递。这是为了模拟无梁楼盖或局部抽梁但现浇板完好的真实受力状态，并非计算错误。</li>
               <li style="margin-bottom:5px"><strong>支撑仅受拉的非线性</strong>：采用「一次性受压失效 + 矩阵重算」的迭代法（最多 15 次）。一旦检测到某根仅受拉支撑轴力受压（&lt; −1e−4 kN），即将其标记为失效、从 K 矩阵中移除并重新求解，直至不再有新的支撑失效。若某格 X 撑两根全部失效导致矩阵奇异，程序会提示「仅受拉支撑全部退出，结构可能失稳」。该法<strong>未考虑支撑在反复荷载下的滞回性能</strong>，仅适用于静力单向加载的概念演示，不适用于动力时程或往复荷载分析。逐格指定「仅受拉」仅影响该格支撑，普通支撑受压时仍正常工作。</li>
               <li style="margin-bottom:5px"><strong>每根杆件一个单元</strong>：对于只有均布荷载的情况已足够精确，但对有多个集中力或复杂荷载的杆件精度有限。</li>
               <li style="margin-bottom:5px"><strong>无剪切变形</strong>：按 Euler-Bernoulli 梁理论，忽略 Timoshenko 梁的剪切效应。</li>
@@ -1256,14 +1277,13 @@ var _hmt = _hmt || [];
               <li style="margin-bottom:5px"><strong>线弹性范围</strong>：计算结果可用于叠加，但不适用于承载能力极限状态验算。</li>
               <li><strong>规范背景</strong>：默认采用中国现行规范体系（GB 50010、GB 50011 等），但<strong>不做规范校核</strong>，仅作为量级参考。</li>
             </ol>
-            <h3>四、支座沉降</h3>
-            <p>在「荷载」Tab 的「非荷载作用 · 支座沉降」组中，可指定单根柱的柱脚竖向沉降，范围 0–100 mm。</p>
+            <h3>四、支座沉降与强迫位移</h3>
+            <p>在「荷载」Tab 的「支座类型与强迫位移」组中，可对每根柱独立指定竖向位移或强迫转角。</p>
             <ul>
-              <li><strong>力学本质</strong>：支座沉降是非齐次边界条件。求解方程由 <code>K_ff·U_f = F_f</code> 变为 <code>K_ff·U_f = F_f − K_fc·U_c</code>，右端多出的等效荷载即"约束位移通过刚度耦合传到自由节点的力"。</li>
-              <li><strong>核心概念</strong>：超静定结构在<strong>无外荷载</strong>时，支座沉降也会产生内力，且内力与沉降量成正比、与构件刚度成正比。静定结构（如简支梁）对支座沉降不敏感。</li>
-              <li><strong>符号约定</strong>：UI 输入正数（如 20 表示沉降 20mm），代码内部转换为 <code>U[uy] = −0.02 m</code>（向下为负）。</li>
-              <li><strong>与冻结对比</strong>：先关闭沉降、点击「冻结」保存基线，再拖动沉降滑块，变形图与内力图会以浅灰虚线（基线）与实线（当前）对比，沉降前后差异一目了然。</li>
-              <li><strong>局限</strong>：仅支持单柱竖向沉降；不支持水平位移与转角；不支持多柱独立沉降；未考虑土体固结时间效应。</li>
+              <li><strong>竖向沉降/上抬</strong>：沉降会引起超静定结构内部产生附加内力（类似于拉压杆效应）。输入负值（如 -50mm）可模拟抗浮工况下基础上抬。</li>
+              <li><strong>强迫转角（局部不均匀沉降）</strong>：模拟基础转动造成的柱底强迫转角。这会在柱底产生极大的约束弯矩，并带动上部框架发生侧移和内力重分布。</li>
+              <li><strong>与冻结对比</strong>：先关闭强迫位移、点击「冻结」保存基线，再拖动强迫位移滑块，变形图与内力图会以浅灰虚线（基线）与实线（当前）对比，前后差异一目了然。</li>
+              <li><strong>局限</strong>：不支持多柱之间的沉降差相互作用（分别单独输入），未考虑土体固结时间效应。</li>
             </ul>
             <h3>五、P-Δ 放大系数与侧移刚度的说明</h3>
             <p><strong>P-Δ 放大系数 B</strong>（仅在「荷载」Tab 开启 P-Δ 开关后显示）：</p>
@@ -1318,16 +1338,21 @@ var _hmt = _hmt || [];
                   <li><strong>梁端弯矩释放</strong>：扫掠梁端 β<sub>j</sub> (0→1)，看梁端弯矩逐渐产生、跨中正弯矩随之减小。</li>
                   <li><strong>柱脚弯矩释放</strong>：扫掠柱脚 β<sub>f</sub> (0→1)，看柱脚弯矩逐渐产生、底层侧移随之减小。</li>
                   <li><strong>梁刚度与反弯点</strong>：扫掠梁高 h<sub>b</sub>，看梁刚度变大如何使柱反弯点下移。</li>
+                  <li><strong>柱截面三次方效应</strong>：扫掠柱高 h<sub>c</sub> (300→800)，看侧移随 h<sub>c</sub> 增大急剧减小（I<sub>c</sub> ∝ h<sub>c</sub>³）。</li>
+                  <li><strong>形常数的陷阱（轴向变形）</strong>：单层单跨 · 强柱弱梁。形常数推导反弯点为 0.33h，但建立在无侧移假定上。切换“忽略轴向变形”与“考虑轴向变形”，观察微小侧移如何导致反弯点在 0.33h 与 0.30h 之间跳变。</li>
                   <li><strong>悬挑长度平方效应</strong>：扫掠悬挑长度 L<sub>c</sub>，看均布荷载下根部弯矩的平方级增长（M ∝ L<sub>c</sub>²），以及端部挠度的四次方级剧增（Δ ∝ L<sub>c</sub>⁴）。</li>
                   <li><strong>跨中与支座弯矩</strong>：扫掠均布荷载 q<sub>1</sub> (0→100)，观察跨中正弯矩与支座负弯矩线性增长。</li>
                   <li><strong>集中力弯矩尖角</strong>：单层单跨 · 跨中集中力。扫掠 P<sub>1</sub>，观察集中力作用点处弯矩图的“尖角”。</li>
                   <li><strong>反弯点 vs ρ 联动</strong>：两层两跨 · 纯水平力。扫掠梁高 h<sub>b</sub>，看反弯点小图中，随着梁柱线刚度比 ρ 的增加，反弯点如何向 x/h=0.5 靠拢（可拖出悬浮窗看）。</li>
+                  <li><strong>柱刚度对梁反弯点的影响</strong>：单层单跨 · 竖向均布荷载。扫掠边柱高 hc (300→800)。柱越细，对梁端约束越弱（趋近铰接），梁反弯点靠近支座；柱越粗，约束越强（趋近固接），反弯点向跨中移动。</li>
+                  <li><strong>水平力下的反弯点偏移</strong>：单层单跨 · 纯水平力。扫掠梁高 h<sub>b</sub>，验证反弯点精确解 y/h = (1+3k)/(1+6k)。观察梁越刚，反弯点如何从 0.6h 以上回落到 0.5h。</li>
                 </ol>
                 
                 <p><strong>B. 轴力与框架</strong></p>
                 <ol style="margin-top:2px; margin-bottom:8px;">
                   <li><strong>框架作用传递</strong>：扫掠梁端 β<sub>j</sub> (0→1)，看中柱轴力如何随梁约束的增强而增大。</li>
                   <li><strong>悬挑偏心拉力</strong>：扫掠悬挑荷载 q<sub>c1</sub> (0→100)，看悬挑倾覆力矩导致的柱拉力。</li>
+                  <li><strong>柱脚刚度与倾覆力矩</strong>：单层单跨 · 纯水平力。扫掠柱脚 β<sub>f</sub> (0→1)，验证 M<sub>倾覆</sub> = M<sub>柱脚</sub> + N×L。铰接时柱脚弯矩为0，柱轴力极大；刚接时弯矩被柱脚分担，轴力减小。</li>
                 </ol>
 
                 <p><strong>C. 变形与侧移</strong></p>
@@ -1344,6 +1369,7 @@ var _hmt = _hmt || [];
                   <li><strong>P-Δ 二阶效应</strong>：扫掠均布荷载 q<sub>1</sub>，看竖向荷载如何使 B 值急剧放大并逼近失稳。</li>
                   <li><strong>P-Δ 层高敏感性</strong>：扫掠层高 h<sub>1</sub>，看层高增加时 N<sub>cr</sub> 平方级下降，导致 B 值急剧放大。</li>
                   <li><strong>P-δ 与 P-Δ 的区别</strong>：静态概念卡，展示整体侧移（P-Δ，本工具计算）与构件自身挠曲（P-δ，本工具不计算）的力学差异。</li>
+                  <li><strong>穿层柱模拟</strong>：两层两跨 · 无楼板。移除底层左跨梁形成悬空柱，观察顶部水平力下左柱夸张的弯曲变形，以及因失去侧向约束导致的刚度体系突变。</li>
                 </ol>
 
                 <p><strong>E. 支撑系统</strong></p>
@@ -1356,6 +1382,8 @@ var _hmt = _hmt || [];
                 <p><strong>F. 非荷载作用</strong></p>
                 <ol style="margin-top:2px; margin-bottom:8px;">
                   <li><strong>支座沉降的附加内力</strong>：扫掠左柱沉降 (0→100mm)，看超静定结构在"什么都没加"的情况下 M 图从零逐渐出现、反力重新分配、结构整体倾斜。</li>
+                  <li><strong>支座上移（抗浮）</strong>：扫掠左柱竖向位移 (0→-100mm)，模拟地下水浮力导致的基础上抬。观察框架整体上拱以及梁柱内力的反向重分布。</li>
+                  <li><strong>基础强迫扭转</strong>：扫掠柱底强迫转角 (0°→30°)，模拟基础局部不均匀沉降产生的强制扭动。观察柱底巨大的抗弯弯矩以及框架被强行带偏的侧移。</li>
                   <li><strong>均匀升温的轴力</strong>：扫掠整体温升 ΔT，看超静定框架因膨胀受阻产生的内部轴力重分布。</li>
                   <li><strong>单侧温差的反弯点</strong>：扫掠截面内外温差 ΔT，看梁柱因温度梯度产生弯曲及对应的反弯点变化。</li>
                 </ol>
@@ -1446,23 +1474,32 @@ var _hmt = _hmt || [];
   </div>
 </div>
 
-<script src="js/01-state.js?v=0.1.8"></script>
-<script src="js/02-model.js?v=0.1.8"></script>
-<script src="js/02-generator.js?v=0.1.8"></script>
-<script src="js/02-solver.js?v=0.1.8"></script>
-<script src="js/03-internal.js?v=0.1.8"></script>
-<script src="js/04-canvas.js?v=0.1.8"></script>
-<script src="js/05-force.js?v=0.1.8"></script>
-<script src="js/06-deform.js?v=0.1.8"></script>
-
-<script src="js/07-run.js?v=0.1.8"></script>
-<script src="js/08-sweep-record.js?v=0.1.8"></script>
-<script src="js/09-ui-share.js?v=0.1.8"></script>
-<!-- 注意加载顺序：11-construct.js 必须在 10-boot.js 之前，
-     因为 10-boot.js 顶层的 applyTopoState() 会 dispatch 'structura-topo-change'，
-     而该事件的监听器在 11-construct.js 的 bindBraceTopo 里注册。 -->
-<script src="js/11-construct.js?v=0.1.6.5"></script>
-<script src="js/10-boot.js?v=0.1.6.5"></script>
+<script>
+  // =========================================================
+  // 自动挂载所有依赖脚本（按顺序同步执行，保持原有依赖关系）
+  // 它们会自动读取上面 <head> 中定义的 window.APP_VERSION
+  // 注意：01-state.js 已经在 <head> 中加载过了，这里不再重复加载
+  // =========================================================
+  const scriptFiles = [
+    'js/02-model.js',
+    'js/02-generator.js',
+    'js/02-solver.js',
+    'js/03-internal.js',
+    'js/04-canvas.js',
+    'js/05-force.js',
+    'js/06-deform.js',
+    'js/07-run.js',
+    'js/07b-ui-builder.js',
+    'js/08-sweep-record.js',
+    'js/09-ui-share.js',
+    'js/11-construct.js',
+    'js/10-boot.js'
+  ];
+  
+  scriptFiles.forEach(src => {
+    document.write(`<script src="${src}?${window.APP_VERSION}"><\/script>`);
+  });
+</script>
 
 <!-- 使用说明 Tab 切换逻辑 -->
 <script>

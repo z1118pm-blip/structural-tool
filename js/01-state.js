@@ -6,8 +6,8 @@
 const E_CONC = 3.0e7;
 const E_STEEL = 2.06e8;
 
-// 全局版本号：以后升级版本只需修改这里，全站自动联动
-const APP_VERSION = 'v0.1.8';
+// 全局版本号：优先读取 index.html 头部注入的 window.APP_VERSION
+const APP_VERSION = window.APP_VERSION || 'v0.1.9';
 
 // ⚠️ 重要：线上部署地址。本地 file:// 打开时，分享二维码指向这里。
 // 如果你更换了 GitHub 仓库名或部署到自定义域名，请务必同步修改此处的 URL，否则本地生成的分享二维码会失效。
@@ -61,6 +61,7 @@ const S = {
   braceI:30,           /* 支撑回转半径 i (mm)，长细比 λ = μL/i 由杆长实时计算 */
   braceTensionMap:{},
   braceMap:{},
+  removeBeamMap:{},     /* 逐跨移除梁：键 "层-跨"，值为 true 表示该梁被移除（用于模拟穿层柱） */
   brushBrace:'none',
   forceType:'M',
   probe: { elIndex: null, xRatio: 0.5 }, /* 截面探针：锁定单元索引与沿杆件比例位置 */

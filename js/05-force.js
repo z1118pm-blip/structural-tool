@@ -54,6 +54,22 @@ function forceStyleOf(type, kind){
   return (kind === 'col') ? s.col : s.beam;
 }
 
+function drawSlsWarning(ctx, model) {
+  if (!model.isDeformFail) return;
+  ctx.save();
+  ctx.font = 'bold 12px "JetBrains Mono", ui-monospace, monospace';
+  ctx.fillStyle = '#ef4444';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  const rStr = Math.round(1 / model.dyRatioValue);
+  ctx.fillText(`⚠️ 警告：梁受弯挠度超限 (挠跨比 1/${rStr})`, 26, 28);
+  
+  ctx.font = '10px ui-sans-serif,system-ui,sans-serif';
+  ctx.fillStyle = 'rgba(239, 68, 68, 0.75)';
+  ctx.fillText('注：内力结果为线弹性理论值，但截面已不满足正常使用要求。', 26, 44);
+  ctx.restore();
+}
+
 function drawInternal(canvas, model, dprOverride){
   const type = model.p.forceType;
   const FSTYLE = S.lightBg ? FORCE_STYLE_LIGHT[type] : FORCE_STYLE[type];
@@ -66,6 +82,9 @@ function drawInternal(canvas, model, dprOverride){
   ctx.fillStyle=T.bg; ctx.fillRect(0,0,W,H);
   drawGrid(ctx, W, H);
   drawHUD(ctx, W, H, 'INTERNAL FORCE · ' + type);
+
+  /* 在受力图上也添加超限警告 (SLS)，统一走 drawSlsWarning */
+  drawSlsWarning(ctx, model);
 
   const NP = 61;
   const targetPx = Math.min(W,H)*0.055;
@@ -209,6 +228,9 @@ function drawInternal(canvas, model, dprOverride){
       ctx.fillRect(sx-1.5, sy-1.5, 3, 3);
     }
     if(model.p.showIds) drawIds(ctx, model, toS);
+    
+    /* R 图警告已在函数开头统一绘制（if model.isDeformFail），此处不再重复 */
+    
     /* 恢复 textAlign / textBaseline，避免状态泄漏到下一次绘制 */
     ctx.textAlign = 'start';
     ctx.textBaseline = 'alphabetic';
@@ -243,7 +265,8 @@ function drawInternal(canvas, model, dprOverride){
         const bx = ni.x + (nj.x-ni.x)*xi, by = ni.y + (nj.y-ni.y)*xi;
         const [sx,sy] = toS(bx,by);
         base.push([sx, sy]);
-        const off = -(val/refDiv)*targetPx*model.p.mScale;
+        let off = -(val/refDiv)*targetPx*model.p.mScale;
+        if (type === 'V' && el.kind === 'beam') off = -off;
         curve.push([sx + nx*off, sy + ny*off]);
       }
       ctx.beginPath();
@@ -276,7 +299,8 @@ function drawInternal(canvas, model, dprOverride){
       const bx = ni.x + (nj.x-ni.x)*xi, by = ni.y + (nj.y-ni.y)*xi;
       const [sx,sy] = toS(bx,by);
       base.push([sx,sy]);
-      const off = -(val/refDiv)*targetPx*model.p.mScale;
+      let off = -(val/refDiv)*targetPx*model.p.mScale;
+      if (type === 'V' && el.kind === 'beam') off = -off;
       curve.push([sx + nx*off, sy + ny*off]);
     }
     ctx.beginPath();
@@ -339,14 +363,16 @@ function drawInternal(canvas, model, dprOverride){
         else if(ni.col === model.nCol - 1) side = 1; // 最右柱：文字移到外侧(右)
         else side = (ni.col % 2 === 1) ? -1 : 1; // 中间柱：交替左右
         /* 偏移随 mScale 对数增长，避免 mScale 放大时曲线穿过文字。 */
-        const off = 28 + 12 * Math.log2(Math.max(1, model.p.mScale));
+        const safeMScale = Math.max(1, model.p.mScale || 1);
+        const off = 28 + 12 * Math.log2(safeMScale);
         if(Math.abs(v0) > NZ) ctx.fillText(v0.toFixed(1), ix + side*off, iy + 12); // 底端向下错
         if(Math.abs(vL) > NZ) ctx.fillText(vL.toFixed(1), jx + side*off, jy - 12); // 顶端向上错，避开梁
       } else {
         const nx = -el.sn, ny = -el.cs;
         const paintTag = (v, xScreen, yScreen, inwardX) => {
           if(Math.abs(v) <= NZ) return;
-          const off = -(v / FSTYLE.ref) * targetPx * model.p.mScale;
+          let off = -(v / FSTYLE.ref) * targetPx * model.p.mScale;
+          if (type === 'V' && el.kind === 'beam') off = -off;
           const cx  = xScreen + nx * off, cy  = yScreen + ny * off;
           const sgn = (v >= 0) ? -1 : 1; 
           const lx  = cx + ux * inwardX + nx * sgn * 12;
@@ -356,7 +382,7 @@ function drawInternal(canvas, model, dprOverride){
           ctx.fillStyle = T.bg; ctx.fillRect(lx - tw/2 - 3, ly - 7.5, tw + 6, 15);
           ctx.fillStyle = forceStyleOf(type, el.kind).color; ctx.fillText(txt, lx, ly);
         };
-        paintTag(v0, ix, iy,  35); paintTag(vL, jx, jy, -35);
+        paintTag(v0, ix, iy,  45); paintTag(vL, jx, jy, -45);
         if(type === 'M' && Math.abs(el.w) > 1e-12){
           const xs = -res.f[1] / el.w;
           if(xs > 0.05*el.L && xs < 0.95*el.L){
@@ -434,53 +460,81 @@ function drawInternal(canvas, model, dprOverride){
       if(filter === 'col'  && el.kind !== 'col')  continue;
       if(filter === 'beam' && el.kind !== 'beam') continue;
       if(filter === 'brace' && el.kind !== 'brace') continue;
-      const N = NP;
-      let Mscale = 0;
-      for(let k=0;k<=N;k++) Mscale = Math.max(Mscale, Math.abs(internalAt(res, el.L*k/N, 'M')));
-      if(Mscale < 1e-9) continue;
-      const TOL = Mscale * 1e-3;
-      const M0 = internalAt(res, 0, 'M'), ML = internalAt(res, el.L, 'M');
-      const kStart = Math.abs(M0) < TOL ? 3 : 0, kEnd = Math.abs(ML) < TOL ? N-3 : N;
-      if(kStart >= kEnd) continue;
-      let prevV = internalAt(res, el.L*kStart/N, 'M'), prevX = el.L*kStart/N;
-      for(let k=kStart+1;k<=kEnd;k++){
-        const x = el.L*k/N, v = internalAt(res, x, 'M');
-                let isCross = false;
-        if ((prevV > 0 && v <= 0) || (prevV < 0 && v >= 0)) isCross = true;
-        /* 删除 `else if (v === 0)`：v===0 且 prevV!==0 已被上面条件覆盖；
-           prevV===0 && v===0 不应算穿越，否则后面插值除零产生 NaN。 */
-        if (k > kStart && isCross) {
-          const xz = prevX + (x-prevX) * (-prevV)/(v-prevV);
-          const xi = xz/el.L;
-          const ni = model.nodes[el.i], nj = model.nodes[el.j];
-          const bx = ni.x + (nj.x-ni.x)*xi, by = ni.y + (nj.y-ni.y)*xi;
-          const [sx,sy] = toS(bx,by);
-          ctx.beginPath(); ctx.arc(sx,sy,3.2,0,Math.PI*2); ctx.stroke();
-          /* 反弯点位置数值：柱标 x/h（从柱底），梁标 x/L（从左端）；悬挑与支撑跳过 */
-          if(el.kind !== 'brace' && !el.isCant){
-            const unit = (el.kind === 'col') ? 'h' : 'L';
-            /* 打断梁子段：xi 是子段内比例，需加上整跨偏移后归一化到整跨。 */
-            const xRatioFull = (el.startOffset != null && el.spanL)
-              ? (el.startOffset + xz) / el.spanL
-              : xi;
-            const txt  = xRatioFull.toFixed(2) + unit;
-            ctx.font = 'bold 9.5px "JetBrains Mono", ui-monospace, monospace';
-            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            const tw = ctx.measureText(txt).width;
-            let lx, ly;
-            if(el.kind === 'col'){
-              lx = sx + 18; ly = sy;          /* 柱：文字放右侧 */
-            } else {
-              lx = sx;      ly = sy - 13;     /* 梁：文字放上方 */
-            }
-            ctx.fillStyle = T.bg;
-            ctx.fillRect(lx - tw/2 - 3, ly - 7, tw + 6, 14);
-            ctx.fillStyle = T.antiCurve;
-            ctx.fillText(txt, lx, ly);
-            ctx.textAlign = 'start'; ctx.textBaseline = 'alphabetic';
-          }
+      
+                  const M0 = internalAt(res, 0, 'M');
+                  const ML = internalAt(res, el.L, 'M');
+                  const Mmid = internalAt(res, el.L/2, 'M');
+                  
+                  // 如果整根杆件的弯矩幅值都极小（例如完全铰接的柱子），不画反弯点
+                  if (Math.max(Math.abs(M0), Math.abs(ML), Math.abs(Mmid)) < 0.1) continue;
+                  
+                  let xz = null;
+                  
+                  // 1. 先求极值点（剪力为0的位置）
+                  let x_peak = null;
+                  if (Math.abs(el.w) > 1e-12) {
+                    const xs = -res.f[1] / el.w;
+                    if (xs > 0 && xs < el.L) x_peak = xs;
+                  }
+                  
+                  // 2. 检查区间(0, x_peak)和(x_peak, L)是否有零点
+                  if (x_peak !== null) {
+                    const M_peak = internalAt(res, x_peak, 'M');
+                    if (M0 * M_peak < 0) {
+                      // 左半段有零点，用二分法找
+                      let lo = 0, hi = x_peak;
+                      for (let it = 0; it < 20; it++) {
+                        const mid = (lo + hi) / 2;
+                        if (internalAt(res, mid, 'M') * M0 > 0) lo = mid;
+                        else hi = mid;
+                      }
+                      xz = (lo + hi) / 2;
+                    } else if (M_peak * ML < 0) {
+                      // 右半段有零点
+                      let lo = x_peak, hi = el.L;
+                      for (let it = 0; it < 20; it++) {
+                        const mid = (lo + hi) / 2;
+                        if (internalAt(res, mid, 'M') * M_peak > 0) lo = mid;
+                        else hi = mid;
+                      }
+                      xz = (lo + hi) / 2;
+                    }
+                  } else {
+                    // 没有极值点（线性弯矩），直接看两端
+                    if (M0 * ML < 0) {
+                      xz = el.L * Math.abs(M0) / (Math.abs(M0) + Math.abs(ML));
+                    }
+                  }
+                  
+                  if (xz === null) continue; // 无穿越零点
+      const xi = xz/el.L;
+      const ni = model.nodes[el.i], nj = model.nodes[el.j];
+      const bx = ni.x + (nj.x-ni.x)*xi, by = ni.y + (nj.y-ni.y)*xi;
+      const [sx,sy] = toS(bx,by);
+      
+      ctx.beginPath(); ctx.arc(sx,sy,3.2,0,Math.PI*2); ctx.stroke();
+      /* 反弯点位置数值：柱标 x/h（从柱底），梁标 x/L（从左端）；悬挑与支撑跳过 */
+      if(el.kind !== 'brace' && !el.isCant){
+        const unit = (el.kind === 'col') ? 'h' : 'L';
+        /* 打断梁子段：xi 是子段内比例，需加上整跨偏移后归一化到整跨。 */
+        const xRatioFull = (el.startOffset != null && el.spanL)
+          ? (el.startOffset + xz) / el.spanL
+          : xi;
+        const txt  = xRatioFull.toFixed(2) + unit;
+        ctx.font = 'bold 9.5px "JetBrains Mono", ui-monospace, monospace';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        const tw = ctx.measureText(txt).width;
+        let lx, ly;
+        if(el.kind === 'col'){
+          lx = sx + 18; ly = sy;          /* 柱：文字放右侧 */
+        } else {
+          lx = sx;      ly = sy - 13;     /* 梁：文字放上方 */
         }
-        prevV = v; prevX = x;
+        ctx.fillStyle = T.bg;
+        ctx.fillRect(lx - tw/2 - 3, ly - 7, tw + 6, 14);
+        ctx.fillStyle = T.antiCurve;
+        ctx.fillText(txt, lx, ly);
+        ctx.textAlign = 'start'; ctx.textBaseline = 'alphabetic';
       }
     }
   }

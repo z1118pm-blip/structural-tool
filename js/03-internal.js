@@ -39,7 +39,7 @@ function elemDisp(res, x){
 
   const ulx = (1-xi)*ul[0] + xi*ul[3];
   const vi  = ul[1], vj = ul[4];
-  const ti  = ul[2], tj = ul[5]; // 提取节点转角
+  let ti  = ul[2], tj = ul[5]; // 提取节点转角
 
   /* 二力杆（支撑）EI=0：位移沿杆轴线性插值，无弯曲挠度 */
   if(!(EI > 0)){
@@ -49,18 +49,53 @@ function elemDisp(res, x){
 
   /* 完全铰接梁：弯曲刚度已被移除，节点转角不再代表该梁真实端转角。
      改用「端点弦线 + 简支梁均布特解 + 温度自由曲率」。 */
-  if(el.kind === 'beam' && el.hinge){
+  /* 完全铰接梁：弯曲刚度已移除。同时兼容大 α 近似铰接
+     （α ≥ 1e3，对应 β ≤ 2.5e-4，弯曲刚度已可忽略，
+     generator 中 β_j=0 时 alphaJ=1e4 走此分支）。 */
+  const _alI0 = (el.alphaI != null) ? el.alphaI : (el.alpha || 0);
+  const _alJ0 = (el.alphaJ != null) ? el.alphaJ : (el.alpha || 0);
+  if(el.kind === 'beam' && (el.hinge || (_alI0 >= 1e3 && _alJ0 >= 1e3))){
     const vUDL = (w !== 0)
       ? w * x * (L*L*L - 2*L*x*x + x*x*x) / (24 * EI)
       : 0;
-    const vTempH = 0.5 * (el.tempGradEff || 0) * x * (x - L);
+    /* κ = -tempGradEff（由 localEqLoad 推出 M(0) = -baseT），
+       正确挠度满足 v'' = κ → v = +0.5·tempGradEff·x(L-x)（向上拱）。 */
+    const vTempH = 0.5 * (el.tempGradEff || 0) * x * (L - x);
     const vly = (1-xi)*vi + xi*vj + vUDL + vTempH;
     return [cs*ulx - sn*vly, sn*ulx + cs*vly];
   }
 
-  /* 使用标准的 Hermite 形函数插值，确保节点处的转角严格等于求解出的节点转角。
-     对于半刚接、悬挑、温度等工况，节点转角已由整体求解器精确算出，
-     直接通过形函数插值即可保证变形曲线在节点处切向连续（满足刚接夹角不变）。 */
+  /* 核心修复：半刚接梁的端部转角修正。
+     彻底废弃基于内力 f 的数值反推（在柔度 alpha 极大时会产生浮点灾难）。
+     改用刚度折减比例，在「节点实际转角」和「无弯曲的弦线斜率」之间进行平滑过渡：
+     1. 柔度 alpha=0 (刚接) 时，因子为 1，真实转角 = 节点转角。
+     2. 柔度 alpha->∞ (铰接) 时，因子为 0，真实转角 = 弦线斜率（直线）。
+     从数学上保证整个过渡过程绝对平滑，彻底消除突变。 */
+  if (el.kind === 'beam') {
+    const alI = (el.alphaI != null) ? el.alphaI : (el.alpha || 0);
+    const alJ = (el.alphaJ != null) ? el.alphaJ : (el.alpha || 0);
+    
+    /* 温度梯度工况：Hermite 三次插值使用 solve 精确给出的 ti/tj 本身
+       就能精确表示二次挠度曲线，不能做 relax 折减（会丢失温度信息，
+       使半刚接梁的温度挠度被系统性压小，betaJ→0.01 处出现视觉跳变）。
+       relax 仅用于均布荷载下"梁端切线 ≠ 弦线"的半刚接过渡。 */
+    const hasTempGrad = Math.abs(el.tempGradEff || 0) > 1e-12;
+    if (!hasTempGrad && (alI > 0 || alJ > 0)) {
+      // 梁端弦线斜率（即如果梁是一根直杆，它应有的刚体倾角）
+      const theta_chord = (vj - vi) / L;
+      
+      if (alI > 0) {
+        const relaxI = 1 / (1 + 4 * alI);
+        ti = theta_chord + (ti - theta_chord) * relaxI;
+      }
+      if (alJ > 0) {
+        const relaxJ = 1 / (1 + 4 * alJ);
+        tj = theta_chord + (tj - theta_chord) * relaxJ;
+      }
+    }
+  }
+
+  /* 使用修正后的真实梁端转角进行 Hermite 插值，确保节点处位移与弹簧相对转角解耦 */
   const N1 = 1 - 3*xi*xi + 2*xi*xi*xi;
   const N2 = L*(xi - 2*xi*xi + xi*xi*xi);
   const N3 = 3*xi*xi - 2*xi*xi*xi;
@@ -68,10 +103,10 @@ function elemDisp(res, x){
   
   let vly = N1*vi + N2*ti + N3*vj + N4*tj;
 
-  // 附加挠度：满足 f(0)=f'(0)=f(L)=f'(L)=0 的特解，修正中间段挠曲。
-  // 对两端固定梁与悬挑梁形式相同：v_add = w·x²(L-x)²/(24EI)。
-  // 悬挑梁 j 端位移/转角由整体求解精确给出，Hermite 端点精确，
-  // 此处补上剩余部分，避免中间段挠度显示偏差。
+  // 附加挠度：两端固定梁特解 v_add = w·x²(L-x)²/(24EI)。
+  // 对任意边界条件，Hermite(精确端点) + 该特解 = 精确解（齐次解由 Hermite 捕捉，
+  // 特解负责非齐次项）。悬挑梁 alphaI=alphaJ=0，端点由求解器精确给出，
+  // 因此 H+A 严格等于悬臂梁精确挠度，不是近似。
   if (w !== 0) {
     vly += (w * x*x * (L-x)*(L-x)) / (24 * EI);
   }
