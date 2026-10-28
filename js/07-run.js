@@ -39,7 +39,9 @@ function updateReadout(model, skipAux){
     if(el && el.textContent !== v) el.textContent = v;
   };
 
-  setTxt('r-colsec', `柱 ${Math.round(p.bc)}×${Math.round(p.hc)} · 梁 ${Math.round(p.bb)}×${Math.round(p.hb)}`);
+  let colTxt = p.colSecType === 'HW' ? `${p.colHW}(${p.colAxis==='strong'?'强':'弱'}轴)` : `${Math.round(p.bc)}×${Math.round(p.hc)}`;
+  let beamTxt = p.beamSecType === 'HN' ? p.beamHN : `${Math.round(p.bb)}×${Math.round(p.hb)}`;
+  setTxt('r-colsec', `柱 ${colTxt} · 梁 ${beamTxt}`);
   setTxt('r-kmid', p.r.toFixed(2));
   
   /* 支撑截面积显示（有支撑时才显示） */
@@ -147,13 +149,24 @@ function updateReadout(model, skipAux){
           const theta_i = res.ug[2];
           dy_chord = uyi + theta_i * x;
         } else {
-          // 跨内梁：弦线取两端节点刚体插值
-          dy_chord = (1 - xi) * uyi + xi * uyj;
+          if (el.startOffset != null && el.spanL != null && model.nid) {
+            // 集中力打断梁：使用整跨真实端点的弦线
+            const nodeL = model.nid(el.bay - 1, el.lev);
+            const nodeR = model.nid(el.bay, el.lev);
+            const uy_global_i = model.U[nodeL * 3 + 1];
+            const uy_global_j = model.U[nodeR * 3 + 1];
+            const xRatioFull = (el.startOffset + x) / el.spanL;
+            dy_chord = (1 - xRatioFull) * uy_global_i + xRatioFull * uy_global_j;
+          } else {
+            // 跨内完整梁：弦线取两端节点刚体插值
+            dy_chord = (1 - xi) * uyi + xi * uyj;
+          }
         }
         const dy_bend = Math.abs(dy - dy_chord);
         
         if (dy_bend > maxBendDy) maxBendDy = dy_bend;
-        const ratio = dy_bend / el.L;
+        const L_check = (el.spanL != null) ? el.spanL : el.L;
+        const ratio = dy_bend / L_check;
         if (ratio > maxDyRatio) maxDyRatio = ratio;
       }
     }
@@ -287,6 +300,7 @@ function updateReadout(model, skipAux){
         const cacheKey = [
           p.nBay, p.nLev, p.hasCant,
           p.L1, p.L2, p.L3, p.h1, p.h2, p.h3, p.Lc,
+          p.colSecType, p.colHW, p.colAxis, p.beamSecType, p.beamHN,
           p.bc, p.hc, p.bb, p.hb, p.r, p.betaF, p.betaJ,
           p.H1, p.H2, p.H3, p.Hmode,
           p.q1, p.q2, p.q3, p.qc1, p.qc2, p.qc3,
@@ -348,7 +362,7 @@ function updateReadout(model, skipAux){
               if(ee.type && ee.type !== 'auto') _nbSM2[kk].type = ee.type;
               if(ee.betaF != null) _nbSM2[kk].betaF = ee.betaF;
             }
-            const pPureStiff = { ...p, betaJ: 0, settleDy: 0, settleCol: 0, P1: 0, P2: 0, P3: 0, pLoadMap: {}, q1:0, q2:0, q3:0, qc1:0, qc2:0, qc3:0, qSpanMap:{}, supportMap: _nbSM2, movingLoad: { ...(p.movingLoad || {}), enabled:false, playing:false, P:0 } };
+            const pPureStiff = { ...p, betaJ: 0, settleDy: 0, settleCol: 0, tempAll: 0, tempGrad: 0, P1: 0, P2: 0, P3: 0, pLoadMap: {}, q1:0, q2:0, q3:0, qc1:0, qc2:0, qc3:0, qSpanMap:{}, supportMap: _nbSM2, movingLoad: { ...(p.movingLoad || {}), enabled:false, playing:false, P:0 } };
             const mNM = anyTension ? analyzeTensionOnly(pPureStiff) : analyze(pPureStiff);
             let uAvg = 0;
             for(let c=0;c<mNM.nCol;c++) uAvg += mNM.U[mNM.nid(c, mNM.nLev)*3];
@@ -409,6 +423,7 @@ function updateReadout(model, skipAux){
       const pPureKey = [
         p.nBay, p.nLev, p.hasCant,
         p.L1, p.L2, p.L3, p.h1, p.h2, p.h3, p.Lc,
+        p.colSecType, p.colHW, p.colAxis, p.beamSecType, p.beamHN,
         p.bc, p.hc, p.bb, p.hb, p.r, p.betaF, p.betaJ,
         p.H1, p.H2, p.H3, p.Hmode,
         p.frameMat, p.braceMat, p.As, p.braceI, p.axialMode,
@@ -425,12 +440,21 @@ function updateReadout(model, skipAux){
            扫掠结束后 sweepStop 会触发 scheduleRender() 补算到准确值 */
         uPure = Math.abs(uTopAvg) || 1e-9;
       } else {
-        const pPure = { ...p, q1:0, q2:0, q3:0, qc1:0, qc2:0, qc3:0,
-                        qSpanMap:{}, P1:0, P2:0, P3:0, pLoadMap:{},
-                        tempAll:0, tempGrad:0,
-                        settleDy:0, settleCol:0,
-                        supportMap: _pureSM,
-                        movingLoad: { ...(p.movingLoad || {}), enabled:false, playing:false, P:0 } };
+      const pPure = { ...p, q1:0, q2:0, q3:0, qc1:0, qc2:0, qc3:0,
+                      qSpanMap:{}, P1:0, P2:0, P3:0, pLoadMap:{},
+                      tempAll:0, tempGrad:0,
+                      settleDy:0, settleCol:0,
+                      supportMap: _pureSM,
+                      movingLoad: { ...(p.movingLoad || {}), enabled:false, playing:false, P:0 } };
+      /* 统一用倒三角分布重新施加水平力，消除 H1/H2/H3 分布差异对 Ncr 反推的干扰。
+         Ncr = totalH * hTot / uPure 的隐含假定是倒三角加载。 */
+      {
+        let _sH = 0;
+        for(let _lv=1; _lv<=p.nLev; _lv++) _sH += _lv;
+        for(let _lv=1; _lv<=p.nLev; _lv++){
+          pPure['H'+_lv] = totalH * _lv / _sH;
+        }
+      }
         try {
           let anyTension = false;
           for(const k of Object.keys(pPure.braceMap)){
@@ -652,12 +676,13 @@ function drawProbeCanvas(model){
     return;
   }
 
+  const sec = getSecProps(model.p);
+  const A = (el.kind === 'col') ? sec.Ac : sec.Ab;
+  const I = (el.kind === 'col') ? sec.Ic : sec.Ib;
   let b, h;
-  if(el.kind === 'col') { b = model.p.bc; h = model.p.hc; }
-  else                  { b = model.p.bb; h = model.p.hb; }
-
-  const A = (b/1000) * (h/1000);
-  const Wsec = (b/1000) * Math.pow(h/1000, 2) / 6;
+  if(el.kind === 'col') { b = sec.bcM * 1000; h = sec.hcM * 1000; }
+  else                  { b = sec.bbM * 1000; h = sec.hbM * 1000; }
+  const Wsec = I / (h / 2000); // 真实截面模量 (m^3)
   
   const sigTop = (N / A) - (M / Wsec);
   const sigBot = (N / A) + (M / Wsec);
@@ -929,10 +954,7 @@ function run(opts){
   if(BASE){
     const p0 = BASE.p;
     const geoChanged = (
-      p0.nBay !== S.nBay || p0.nLev !== S.nLev || p0.hasCant !== S.hasCant ||
-      p0.L1 !== S.L1 || p0.L2 !== S.L2 || p0.L3 !== S.L3 ||
-      p0.h1 !== S.h1 || p0.h2 !== S.h2 || p0.h3 !== S.h3 ||
-      p0.Lc !== S.Lc
+      p0.nBay !== S.nBay || p0.nLev !== S.nLev
     );
     if(geoChanged){
       BASE = null;
@@ -1005,10 +1027,15 @@ function run(opts){
     return;
   }
 
-  /* 拓扑变化或集中力打断后单元数可能变化，探针索引可能越界或指向错误子单元。 */
-  if(S.probe && S.probe.elIndex != null && S.probe.elIndex >= MODEL.els.length){
-    S.probe = { elIndex: null, xRatio: 0.5 };
+  /* 拓扑变化或集中力打断后单元数可能变化，探针索引可能越界或指向错误子单元。
+     除了越界检测，还需检测单元总数变化（拓扑改变但总数未越界的场景）。 */
+  if(S.probe && S.probe.elIndex != null){
+    if(S.probe.elIndex >= MODEL.els.length ||
+       (S._lastModelElCount != null && S._lastModelElCount !== MODEL.els.length)){
+      S.probe = { elIndex: null, xRatio: 0.5 };
+    }
   }
+  S._lastModelElCount = MODEL.els.length;
 
   MODEL.maxF = getMaxInternal(MODEL, MODEL.p.forceType, MODEL.p.elFilter);
 
@@ -1200,22 +1227,31 @@ function updateSweepOptions(){
   const sel = document.getElementById('sweepParam');
   if(!sel) return;
 
+  const _anyBeamAlive = (lv) => {
+    for(let c = 1; c <= S.nBay; c++){
+      if(!S.removeBeamMap || !S.removeBeamMap[lv + '-' + c]) return true;
+    }
+    return false;
+  };
   const req = {
     L2: ()=>S.nBay  >= 2,
     L3: ()=>S.nBay  >= 3,
     h2: ()=>S.nLev  >= 2,
     h3: ()=>S.nLev  >= 3,
     Lc: ()=>S.hasCant,
-    q2: ()=>S.nLev  >= 2,
-    q3: ()=>S.nLev  >= 3,
+    q1: ()=>_anyBeamAlive(1),
+    q2: ()=>S.nLev >= 2 && _anyBeamAlive(2),
+    q3: ()=>S.nLev >= 3 && _anyBeamAlive(3),
     qc1:()=>S.hasCant,
     qc2:()=>S.hasCant && S.nLev >= 2,
     qc3:()=>S.hasCant && S.nLev >= 3,
     H2: ()=>S.nLev  >= 2,
     H3: ()=>S.nLev  >= 3,
-    P2: ()=>S.nLev >= 2,
-    P3: ()=>S.nLev >= 3,
-    As: ()=>Object.keys(S.braceMap || {}).some(k => S.braceMap[k] && S.braceMap[k] !== 'none')
+    P1: ()=>_anyBeamAlive(1),
+    P2: ()=>S.nLev >= 2 && _anyBeamAlive(2),
+    P3: ()=>S.nLev >= 3 && _anyBeamAlive(3),
+    As: ()=>Object.keys(S.braceMap || {}).some(k => S.braceMap[k] && S.braceMap[k] !== 'none'),
+    braceI: ()=>Object.keys(S.braceMap || {}).some(k => S.braceMap[k] && S.braceMap[k] !== 'none')
   };
 
   let firstVisible = null;
@@ -1455,7 +1491,7 @@ function bindRange(id, key, fmt){
           if(obj && (obj.a == null || obj.a >= L)) obj.a = L / 2;
         }
       }
-      if(typeof renderPSpanEditors === 'function') renderPSpanEditors(1);
+      if(typeof renderPSpanEditors === 'function') renderPSpanEditors();
     }
   });
   S[key] = parseFloat(el.value);
@@ -1620,6 +1656,7 @@ function movingLoadStop() {
 
 function movingLoadPlay() {
   if (S.movingLoad.playing) return;
+  if (S.movingLoad.P > 0) S.movingLoad.enabled = true;
   if (S.sweep.playing) sweepStop();
   S.movingLoad.playing = true;
   S.movingLoad.t0 = performance.now();

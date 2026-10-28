@@ -336,6 +336,7 @@ function exportCanvasPNG(canvasId, baseName){
 const SHARE_KEYS = [
   'nBay','nLev','hasCant',
   'L1','L2','L3','h1','h2','h3','Lc',
+  'colSecType','colHW','colAxis','beamSecType','beamHN',
   'bc','hc','bb','hb','r',
   'q1','q2','q3','qSpanMap','P1','P2','P3','pLoadMap',
   'qc1','qc2','qc3','H1','H2','H3',
@@ -351,6 +352,8 @@ function encodeState(){
   const defaults = {
     nBay: 1, nLev: 1, hasCant: false,
     L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5,
+    colSecType: 'rect', colHW: 'HW300x300', colAxis: 'strong',
+    beamSecType: 'rect', beamHN: 'HN400x200',
     bc: 400, hc: 400, bb: 250, hb: 500, r: 1,
     q1: 0, q2: 0, q3: 0, qSpanMap: {},
     P1: 0, P2: 0, P3: 0, pLoadMap: {},
@@ -478,12 +481,15 @@ function decodeState(str){
 
 function applyStateFromObj(obj){
   if(!obj) return false;
+  if(typeof sweepStop === 'function') sweepStop();
 
   /* 先把所有可分享字段重置为默认值，防止分享链接省略默认值时，
      继承当前页面残留的支撑/荷载/显示开关等脏状态。 */
   const DEFAULTS = {
     nBay: 1, nLev: 1, hasCant: false,
     L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5,
+    colSecType: 'rect', colHW: 'HW300x300', colAxis: 'strong',
+    beamSecType: 'rect', beamHN: 'HN400x200',
     bc: 400, hc: 400, bb: 250, hb: 500, r: 1,
     q1: 0, q2: 0, q3: 0, qSpanMap: {},
     P1: 0, P2: 0, P3: 0, pLoadMap: {},
@@ -523,6 +529,14 @@ S.movingLoad = { enabled: false, lev: 1, bay: 1, P: 0, t: 0.5, playing: false, s
       if(v === 'none' || v === 'rigid') S[k] = v;
       else if(v === 'left') S[k] = 'none';  // 兼容老链接
       else if(v === 'dstiff') S[k] = 'rigid'; // 兼容老链接
+    } else if(k === 'colSecType'){
+      if(v === 'rect' || v === 'HW') S[k] = v;
+    } else if(k === 'beamSecType'){
+      if(v === 'rect' || v === 'HN') S[k] = v;
+    } else if(k === 'colHW' || k === 'beamHN'){
+      if(typeof v === 'string' && v.length > 0) S[k] = v;
+    } else if(k === 'colAxis'){
+      if(v === 'strong' || v === 'weak') S[k] = v;
     } else if(k === 'forceType'){
       if(v === 'M' || v === 'N' || v === 'V' || v === 'R') S[k] = v;
     } else if(k === 'elFilter'){
@@ -787,7 +801,11 @@ S.movingLoad = { enabled: false, lev: 1, bay: 1, P: 0, t: 0.5, playing: false, s
   // 清理可能残留的扫掠慢放倍率和高亮状态（防止分享链接或自检后污染普通扫掠）
   S.sweep.durMul = 1;
   S.highlight = null;
-  S.probe = { elIndex: null, xRatio: 0.5 }; // 强行重置探针
+  S.probe = { elIndex: null, xRatio: 0.5 };
+  S._uPureCache = null;
+  S._stiffDecompCache = null;
+  PROBE_HOVER = null;
+  if(typeof syncSecTypeUI === 'function') syncSecTypeUI();
 
   run();
   return true;
@@ -1161,6 +1179,11 @@ if(btnReset) btnReset.addEventListener('click', ()=>{
   S.nLev = 1;
   S.hasCant = false;
   S.Hmode = 'none';
+  S.colSecType = 'rect';
+  S.colHW = 'HW300x300';
+  S.colAxis = 'strong';
+  S.beamSecType = 'rect';
+  S.beamHN = 'HN400x200';
   S.frameMat = 'conc';
   S.braceMat = 'steel';
   S.axialMode = 'real';
@@ -1171,6 +1194,7 @@ if(btnReset) btnReset.addEventListener('click', ()=>{
   S.qSpanMap = {};
   S.pLoadMap = {};
   S.supportMap = {};
+  S.removeBeamMap = {};
   S.movingLoad = { enabled: false, lev: 1, bay: 1, P: 0, t: 0.5, playing: false, speed: 1, rafId: null, t0: 0 };
   if(typeof movingLoadStop === 'function') movingLoadStop();
   if(typeof renderMovingLoadUI === 'function') renderMovingLoadUI();
@@ -1191,6 +1215,7 @@ if(btnReset) btnReset.addEventListener('click', ()=>{
   if(typeof renderSpanEditors === 'function') renderSpanEditors();
   if(typeof renderPSpanEditors === 'function') renderPSpanEditors();
   if(typeof renderSupportMapPanel === 'function') renderSupportMapPanel();
+  if(typeof renderRemoveBeamGrid === 'function') renderRemoveBeamGrid();
   try{ window.dispatchEvent(new CustomEvent('structura-topo-change')); }catch(e){}
   
   // 重置所有新注入的滑块 UI
@@ -1242,6 +1267,7 @@ if(btnReset) btnReset.addEventListener('click', ()=>{
   if(segF) segF.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.force === 'M'));
   const segE = document.getElementById('segElem');
   if(segE) segE.querySelectorAll('button[data-filter]').forEach(b=>b.classList.toggle('on', b.dataset.filter === 'all'));
+  if(typeof syncSecTypeUI === 'function') syncSecTypeUI();
   applyTopoState();
   /* 重置后扫掠进度条需要与当前参数同步（因为 btn-reset 把 sweepProgress 重置为 0，
      但主参数比如 bc 的默认值是 400，进度条会与主滑块不一致） */

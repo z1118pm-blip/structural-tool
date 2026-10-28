@@ -468,7 +468,7 @@ function drawInternal(canvas, model, dprOverride){
                   // 如果整根杆件的弯矩幅值都极小（例如完全铰接的柱子），不画反弯点
                   if (Math.max(Math.abs(M0), Math.abs(ML), Math.abs(Mmid)) < 0.1) continue;
                   
-                  let xz = null;
+                  const zeroXs = [];
                   
                   // 1. 先求极值点（剪力为0的位置）
                   let x_peak = null;
@@ -477,65 +477,63 @@ function drawInternal(canvas, model, dprOverride){
                     if (xs > 0 && xs < el.L) x_peak = xs;
                   }
                   
-                  // 2. 检查区间(0, x_peak)和(x_peak, L)是否有零点
+                  // 2. 检查区间(0, x_peak)和(x_peak, L)是否有零点（可能有两处）
                   if (x_peak !== null) {
                     const M_peak = internalAt(res, x_peak, 'M');
                     if (M0 * M_peak < 0) {
-                      // 左半段有零点，用二分法找
                       let lo = 0, hi = x_peak;
                       for (let it = 0; it < 20; it++) {
                         const mid = (lo + hi) / 2;
                         if (internalAt(res, mid, 'M') * M0 > 0) lo = mid;
                         else hi = mid;
                       }
-                      xz = (lo + hi) / 2;
-                    } else if (M_peak * ML < 0) {
-                      // 右半段有零点
+                      zeroXs.push((lo + hi) / 2);
+                    }
+                    if (M_peak * ML < 0) {
                       let lo = x_peak, hi = el.L;
                       for (let it = 0; it < 20; it++) {
                         const mid = (lo + hi) / 2;
                         if (internalAt(res, mid, 'M') * M_peak > 0) lo = mid;
                         else hi = mid;
                       }
-                      xz = (lo + hi) / 2;
+                      zeroXs.push((lo + hi) / 2);
                     }
                   } else {
-                    // 没有极值点（线性弯矩），直接看两端
                     if (M0 * ML < 0) {
-                      xz = el.L * Math.abs(M0) / (Math.abs(M0) + Math.abs(ML));
+                      zeroXs.push(el.L * Math.abs(M0) / (Math.abs(M0) + Math.abs(ML)));
                     }
                   }
                   
-                  if (xz === null) continue; // 无穿越零点
-      const xi = xz/el.L;
-      const ni = model.nodes[el.i], nj = model.nodes[el.j];
-      const bx = ni.x + (nj.x-ni.x)*xi, by = ni.y + (nj.y-ni.y)*xi;
-      const [sx,sy] = toS(bx,by);
-      
-      ctx.beginPath(); ctx.arc(sx,sy,3.2,0,Math.PI*2); ctx.stroke();
-      /* 反弯点位置数值：柱标 x/h（从柱底），梁标 x/L（从左端）；悬挑与支撑跳过 */
-      if(el.kind !== 'brace' && !el.isCant){
-        const unit = (el.kind === 'col') ? 'h' : 'L';
-        /* 打断梁子段：xi 是子段内比例，需加上整跨偏移后归一化到整跨。 */
-        const xRatioFull = (el.startOffset != null && el.spanL)
-          ? (el.startOffset + xz) / el.spanL
-          : xi;
-        const txt  = xRatioFull.toFixed(2) + unit;
-        ctx.font = 'bold 9.5px "JetBrains Mono", ui-monospace, monospace';
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        const tw = ctx.measureText(txt).width;
-        let lx, ly;
-        if(el.kind === 'col'){
-          lx = sx + 18; ly = sy;          /* 柱：文字放右侧 */
-        } else {
-          lx = sx;      ly = sy - 13;     /* 梁：文字放上方 */
-        }
-        ctx.fillStyle = T.bg;
-        ctx.fillRect(lx - tw/2 - 3, ly - 7, tw + 6, 14);
-        ctx.fillStyle = T.antiCurve;
-        ctx.fillText(txt, lx, ly);
-        ctx.textAlign = 'start'; ctx.textBaseline = 'alphabetic';
-      }
+                  if (zeroXs.length === 0) continue;
+                  for (const xz of zeroXs) {
+                    const xi = xz/el.L;
+                    const ni = model.nodes[el.i], nj = model.nodes[el.j];
+                    const bx = ni.x + (nj.x-ni.x)*xi, by = ni.y + (nj.y-ni.y)*xi;
+                    const [sx,sy] = toS(bx,by);
+                    
+                    ctx.beginPath(); ctx.arc(sx,sy,3.2,0,Math.PI*2); ctx.stroke();
+                    if(el.kind !== 'brace' && !el.isCant){
+                      const unit = (el.kind === 'col') ? 'h' : 'L';
+                      const xRatioFull = (el.startOffset != null && el.spanL)
+                        ? (el.startOffset + xz) / el.spanL
+                        : xi;
+                      const txt  = xRatioFull.toFixed(2) + unit;
+                      ctx.font = 'bold 9.5px "JetBrains Mono", ui-monospace, monospace';
+                      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                      const tw = ctx.measureText(txt).width;
+                      let lx, ly;
+                      if(el.kind === 'col'){
+                        lx = sx + 18; ly = sy;
+                      } else {
+                        lx = sx;      ly = sy - 13;
+                      }
+                      ctx.fillStyle = T.bg;
+                      ctx.fillRect(lx - tw/2 - 3, ly - 7, tw + 6, 14);
+                      ctx.fillStyle = T.antiCurve;
+                      ctx.fillText(txt, lx, ly);
+                    }
+                  }
+                  ctx.textAlign = 'start'; ctx.textBaseline = 'alphabetic';
     }
   }
 

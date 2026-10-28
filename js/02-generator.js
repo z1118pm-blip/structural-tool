@@ -80,18 +80,9 @@ function parametricGenerator(p) {
   const E_frame = (p.frameMat === "steel") ? _E_STEEL : _E_CONC;
   const E_brace = (p.braceMat === "steel") ? _E_STEEL : _E_CONC;
 
-  const bcM = Math.max(300, Number(p.bc)) / 1000;
-  const hcM = Math.max(300, Number(p.hc)) / 1000;
-  const bbM = Math.max(200, Number(p.bb)) / 1000;
-  const hbM = Math.max(400, Number(p.hb)) / 1000;
-  if (![bcM, hcM, bbM, hbM].every(v => Number.isFinite(v) && v > 0)) {
-    throw new Error("截面尺寸必须为正");
-  }
-
-  const Ic = bcM * Math.pow(hcM, 3) / 12;
-  const Ib = bbM * Math.pow(hbM, 3) / 12;
-  const Ac = bcM * hcM;
-  const Ab = bbM * hbM;
+  const sec = getSecProps(p);
+  const Ac = sec.Ac, Ic = sec.Ic, Ab = sec.Ab, Ib = sec.Ib;
+  const bcM = sec.bcM, hcM = sec.hcM, bbM = sec.bbM, hbM = sec.hbM;
 
   const axialBoost = (p.axialMode === "rigid") ? 1e6 : 1;
 
@@ -111,7 +102,7 @@ function parametricGenerator(p) {
         type: "col",
         i: i.id, j: j.id,
         L, cs: dx / L, sn: dy / L,
-        section: { E: E_frame, A: Ac * kc, I: Ic * kc, axialBoost },
+        section: { E: E_frame, A: Ac * kc, I: Ic * kc, axialBoost, h: hcM },
         releaseI: { type: "fixed", k: 0 },
         releaseJ: { type: "fixed", k: 0 },
         loads: [],
@@ -121,15 +112,15 @@ function parametricGenerator(p) {
   }
 
   /* ---- 半刚接参数（与原 analyze 一致） ---- */
-  const betaJ = Number(p.betaJ);
+  let betaJ = Number(p.betaJ);
   let alphaJ = 0;
-  /* beamHinge 当前始终为 false：βj ≤ BETA_HINGE 时走 alphaJ=1e4
-     的半刚接公式近似铰接，而不是释放真正的 free release。
-     保留此变量名是为了保留"铰接意图"的语义，但 solve 中 flat.hinge
-     不读取它（始终 false），因此 localK/localEqLoad 的 hinge 分支不触发。 */
+  /* alphaJ 连续性修复：
+     仅在 betaJ === 0（严格铰接）时使用 alphaJ=1e4 的近似，
+     其余情况一律走 (1-betaJ)/(4*betaJ) 公式，保证扫掠 0→1 时刚度连续，
+     避免在 0.01 边界因 1e4 突变导致内力图/变形图闪烁。 */
   let beamHinge = false;
   if (betaJ < _BETA_FIXED) {
-    if (betaJ <= _BETA_HINGE) {
+    if (betaJ <= 0) {
       beamHinge = false;
       alphaJ = 1e4;
     } else {
@@ -216,7 +207,7 @@ function parametricGenerator(p) {
             /* 温度荷载由下方统一追加，此处留空 */
           ],
           _meta: { kind: "beam", lev: lv, bay: c + 1,
-                   startOffset: 0, spanL: L },
+                   startOffset: 0, spanL: L, origAlpha: alphaJ },
         });
 
         addElement(model, {
@@ -228,7 +219,7 @@ function parametricGenerator(p) {
           releaseJ: mkRelease(alphaRight, false),
           loads: [{ type: "udl", w: -q }],
           _meta: { kind: "beam", lev: lv, bay: c + 1,
-                   startOffset: a, spanL: L },
+                   startOffset: a, spanL: L, origAlpha: alphaJ },
         });
 
         /* 集中力由 midNode.pLoad 携带，solve 直接读取，无需 nodeLoads */
@@ -324,9 +315,9 @@ function parametricGenerator(p) {
       }
       if (gf === 0) continue;
 
-      const h = (meta.kind === "col")
-        ? (Number(p.hc) / 1000)
-        : (Number(p.hb) / 1000);
+      /* 温度梯度 h：优先用真实截面高度（含 HW/HN 型钢）。
+         sec 在本文件上方已由 getSecProps(p) 得到。 */
+      const h = (meta.kind === "col") ? sec.hcM : sec.hbM;
 
       /* endI/endJ 仅供 solve 的 localEqLoad 使用；
          由于 solve 中 flat 不接收这两个字段（localEqLoad 独立重算），

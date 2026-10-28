@@ -145,6 +145,8 @@ function renderRemoveBeamGrid() {
       
       renderRemoveBeamGrid();
       if (typeof applyTopoState === 'function') applyTopoState(); // 联动禁用荷载输入
+      if (typeof renderSpanEditors === 'function') renderSpanEditors();
+      if (typeof renderPSpanEditors === 'function') renderPSpanEditors();
       if(typeof scheduleRender === 'function') scheduleRender(); else run();
     });
   }

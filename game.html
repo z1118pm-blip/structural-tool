@@ -420,7 +420,7 @@
     hitStop: 0,
     stuckSamples: [],
     soundOn: true,
-    musicOn: true,
+    musicOn: false,
     volume: 35,        /* 0~100，同时作用于 BGM 与 SFX */
     stars: [],
     layoutName: '满铺',
@@ -787,6 +787,7 @@
             b.row = k;
             b.gridRow = k;
             b.gridCol = col;
+            b.cracks = [];
           });
         }
       } else {
@@ -1423,7 +1424,11 @@
       comboHudEl.classList.remove('bump');
       void comboHudEl.offsetWidth; // 强制重排触发动画
       comboHudEl.classList.add('bump');
-      setTimeout(() => { if(comboHudEl) comboHudEl.classList.remove('bump'); }, 100);
+      if(G._comboBumpTimer) clearTimeout(G._comboBumpTimer);
+      G._comboBumpTimer = setTimeout(() => {
+        G._comboBumpTimer = null;
+        if(comboHudEl) comboHudEl.classList.remove('bump');
+      }, 100);
     }
 
     const base = brick.score * G.level;
@@ -2043,13 +2048,13 @@
         const r = stepBall(G.ball, sdt);
         if(r === 'out'){
           if(G.extraBalls.length > 0){
+            const deadBall = G.ball;
             const next = G.extraBalls.shift();
-            /* 修复内存泄漏：额外球被 consume 后其对象不再移动，
-               若它残留在某砖的穿透免疫集合里将永远无法被清理。
-               先将其从所有砖块 Set 中移除，再由 G.ball 接管位置与速度。 */
+            /* 精确清理：只删除出界球（deadBall）的引用，不影响其他额外球
+               正在进行的穿透免疫记录，避免额外球瞬间对已有砖块二次伤害。 */
             for(const br of G.bricks){
               if(br._piercedSet && br._piercedSet.size > 0){
-                br._piercedSet.clear();
+                br._piercedSet.delete(deadBall);
               }
             }
             G.ball.x = next.x;
@@ -2371,8 +2376,8 @@
         ctx.restore();
       }
 
-      /* 耐久数字角标 */
-      if(isArmored){
+      /* 耐久数字角标：仅在 hp > 1 时显示，避免 1 血砖块残留数字误导 */
+      if(isArmored && b.hp > 1){
         ctx.font = 'bold 11px "JetBrains Mono",Menlo,monospace';
         ctx.textAlign = 'right';
         ctx.textBaseline = 'bottom';

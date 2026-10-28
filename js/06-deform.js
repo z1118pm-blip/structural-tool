@@ -47,9 +47,23 @@ function drawDeform(canvas, model, dprOverride){
   const F = model.p.dScale;
   drawFrameLines(ctx, model, toS, T.frameGhost, 1.5, true, false);
 
-  // 绘制冻结基准的变形图（虚线）
+    // 绘制冻结基准的变形图（虚线）
   if(BASE){
     ctx.save();
+    
+    // 新增：先把旧框架的杆件用浅灰色虚线画出来（便于对比被抽掉的梁）
+    ctx.strokeStyle = T.frameGhost;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([2, 3]);
+    for(const el of BASE.els){
+      const a = BASE.nodes[el.i], b = BASE.nodes[el.j];
+      if(!a || !b) continue;
+      const [ax,ay] = toS(a.x, a.y);
+      const [bx,by] = toS(b.x, b.y);
+      ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(bx,by); ctx.stroke();
+    }
+
+    // 然后正常画旧框架的变形曲线
     ctx.strokeStyle = T.freezeLine;
     ctx.lineWidth = 1.5;
     ctx.setLineDash([5,4]);

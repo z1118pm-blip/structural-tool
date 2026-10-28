@@ -152,7 +152,8 @@ function localEqLoad(el, p){
     const alpha = 1.0e-5;
     const tempAll = p.tempAll || 0;
     const tempGrad = p.tempGrad || 0;
-    const h = (el.kind === 'col') ? (p.hc/1000) : (p.hb/1000);
+    /* 优先用真实截面高度（含 HW/HN 型钢），不要用矩形参数 p.hc/p.hb 重算。 */
+    const h = el.secH || el.h || ((el.kind === 'col') ? (p.hc/1000) : (p.hb/1000));
 
     /* 均匀升温：产生固端轴力。
        不能用 el.EA（axialMode='rigid' 时含 1e6 放大），否则温度轴力被错误放大。
@@ -163,6 +164,8 @@ function localEqLoad(el, p){
        会向中间节点注入虚构的固端轴力，污染整根梁的温度轴力分配。
        悬挑梁也没有 el.bay，若沿用旧逻辑会错误回退到 p.L1 触发缩放。 */
     {
+      /* 用真实截面面积（含 HW/HN 型钢），不要用矩形参数 p.bc/hc/bb/hb 重算。
+         flat.secA 由 solve() 从 getSecProps(p) 写入，兜底回退到矩形面积。 */
       const E_frame_real = (p.frameMat === 'steel') ? E_STEEL : E_CONC;
       const bcM = p.bc/1000, hcM = p.hc/1000;
       const bbM = p.bb/1000, hbM = p.hb/1000;
@@ -170,9 +173,9 @@ function localEqLoad(el, p){
       let realEA;
       if(el.kind === 'col'){
         const kc = (el.col > 0 && el.col < p.nBay) ? (p.r || 1.0) : 1.0;
-        realEA = E_frame_real * Ac * kc;
+        realEA = E_frame_real * (el.secA || Ac) * kc;
       } else {
-        realEA = E_frame_real * Ab;
+        realEA = E_frame_real * (el.secA || Ab);
       }
       pFeN = -realEA * alpha * tempAll;
     }
@@ -199,17 +202,18 @@ function localEqLoad(el, p){
         } else {
           /* 【修复 A1 & A4】梁端热梯度产生同号的固端弯矩（产生均匀曲率）。
              均匀曲率的半刚接固端弯矩释放系数为 (1+2α)/Δ，而非均布荷载的 (1+6α)/Δ。 */
-          let endI = true, endJ = true;
-          if (el.startOffset != null && el.spanL != null) {
-            endI = (el.startOffset === 0);
-            endJ = Math.abs(el.startOffset + el.L - el.spanL) < 1e-9;
-          }
+          /* 温度梯度为均匀曲率 κ = α·ΔT/h。打断梁两侧子单元共享打断点，
+             两个子单元在打断点处都应携带固端弯矩 baseT，节点处自然抵消。
+             不能只在"真实端"施加，否则打断点两侧丢失固端弯矩，弯矩图 ≈ 0。
+             对半刚接真实端，固端弯矩按 (1+3α)/DT 折减；打断点内部刚接（α=0）不折减。 */
           const baseT = (el.EI * alpha * tempGrad * gradFactor / h);
           const alI = (el.alphaI != null) ? el.alphaI : (el.alpha || 0);
           const alJ = (el.alphaJ != null) ? el.alphaJ : (el.alpha || 0);
-          if(alI === 0 && alJ === 0){
-            pFeTI = endI ? baseT : 0; 
-            pFeTJ = endJ ? baseT : 0;
+          const alI_t = (el.origAlpha != null) ? el.origAlpha : alI;
+          const alJ_t = (el.origAlpha != null) ? el.origAlpha : alJ;
+          if(alI_t === 0 && alJ_t === 0){
+            pFeTI = baseT;
+            pFeTJ = baseT;
           } else {
             /* 均匀曲率下温度梯度的半刚接固端力，不能套用均布荷载的 (1+2α)/D。
                经极限校准的近似公式，满足：
@@ -218,9 +222,9 @@ function localEqLoad(el, p){
                  αI=αJ→∞（两端铰接）→ 系数→0
                严格解需按 Monforton-Wu 修正形函数积分，此式在已知极限下正确，
                有限 αI≠αJ 情形需数值回归。 */
-            const DT = (1 + 2*alI) * (1 + 2*alJ);
-            pFeTI = endI ? (baseT * (1 + 3*alJ) / DT) : 0;
-            pFeTJ = endJ ? (baseT * (1 + 3*alI) / DT) : 0;
+            const DT = (1 + 2*alI_t) * (1 + 2*alJ_t);
+            pFeTI = baseT * (1 + 3*alJ_t) / DT;
+            pFeTJ = baseT * (1 + 3*alI_t) / DT;
           }
         }
       } else {
@@ -250,6 +254,10 @@ function localEqLoad(el, p){
   const vTempJ = (pFeTI - pFeTJ) / L;
   Vi -= vTempJ;
   Vj += vTempJ;
+  /* 半刚接不等柔度时 pFeI + pFeJ ≠ 0，补充端剪力使力系严格平衡 */
+  const vFW = (pFeI + pFeJ) / L;
+  Vi -= vFW;
+  Vj += vFW;
   return [pFeN, Vi, pFeI - pFeTI, -pFeN, Vj, pFeJ + pFeTJ];
 }
 function globalEqLoad(el, p){
@@ -300,6 +308,9 @@ function solve(model, opts = {}) {
 
   const nid = (c, lv) => c * (nLev + 1) + lv;
 
+  /* ---- 1.5 截面（前置，供 flat 化与支座共同使用） ---- */
+  const sec = getSecProps(p);
+
   /* ---- 2. 单元：Model.elements → 扁平 els（旧 analyze 风格） ---- */
   const alphaFromRelease = (r) => {
     if (!r) return 0;
@@ -334,9 +345,14 @@ function solve(model, opts = {}) {
       isCant: !!meta.isCant,
       startOffset: meta.startOffset,
       spanL: meta.spanL,
+      origAlpha: meta.origAlpha,
       braceUid: meta.braceUid,
       tensionOnly: !!meta.tensionOnly,
       col: meta.col,
+      /* 真实截面面积/高度（含 HW/HN 型钢），仅供温度路径使用，
+         不受 axialBoost 影响。 */
+      secA: (kind === 'col') ? sec.Ac : sec.Ab,
+      secH: (kind === 'col') ? sec.hcM : sec.hbM,
     };
 
     const tempLoad = loads.find(l => l.type === 'temp');
@@ -383,9 +399,8 @@ function solve(model, opts = {}) {
   const hFloor1 = (nodes.length > nid(0,1)) ? (nodes[nid(0,1)].y - nodes[nid(0,0)].y) : 0;
 
   const E_frame = (p.frameMat === 'steel') ? E_STEEL : E_CONC;
-  const bcM = Math.max(300, Number(p.bc)) / 1000;
-  const hcM = Math.max(300, Number(p.hc)) / 1000;
-  const Ic = bcM * Math.pow(hcM, 3) / 12;
+  /* sec 已在 solve 开头前置声明，此处不再重复 getSecProps。 */
+  const Ic = sec.Ic;
   const EIc = E_frame * Ic;
   const isMidCol = (c) => (c > 0 && c < nBay);
 
@@ -614,9 +629,7 @@ function solve(model, opts = {}) {
   const residY = appliedFy + Ry;
 
   /* ---- 9. rho：逐层逐跨 ---- */
-  const bbM = Math.max(200, Number(p.bb)) / 1000;
-  const hbM = Math.max(400, Number(p.hb)) / 1000;
-  const Ib = bbM * Math.pow(hbM, 3) / 12;
+  const Ib = sec.Ib; // sec 已在支座计算处声明，这里直接复用，避免重复 const 报错
   const EIb = E_frame * Ib;
 
   const X = [], Y = [];

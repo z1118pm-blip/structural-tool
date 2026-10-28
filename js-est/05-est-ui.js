@@ -32,6 +32,8 @@ function updateUseDetailFlag(id) {
       const rangeEl = gkGroup.querySelector('input[type="range"]');
       if (rangeEl) rangeEl.removeAttribute('tabindex');
     }
+    const gkNumEl = document.getElementById('in-gkBase');
+    if (gkNumEl) gkNumEl.readOnly = false;
   } else if (DETAIL_IDS.indexOf(id) !== -1) {
     EST.useDetail = true;
     if (tag) {
@@ -46,6 +48,8 @@ function updateUseDetailFlag(id) {
       const rangeEl = gkGroup.querySelector('input[type="range"]');
       if (rangeEl) rangeEl.setAttribute('tabindex', '-1');
     }
+    const gkNumEl = document.getElementById('in-gkBase');
+    if (gkNumEl) gkNumEl.readOnly = true;
   }
   // 其他基本参数：不改变 useDetail
 }
@@ -401,7 +405,10 @@ function updateEst() {
     const displayGk = lastLoadData.g_detail.toFixed(1);
     const gkNum = document.getElementById('in-gkBase');
     const gkRange = document.getElementById('range-gkBase');
-    if (gkNum) gkNum.value = displayGk;
+    if (gkNum) {
+      gkNum.value = displayGk;
+      gkNum.readOnly = true;   /* 细部模式下禁止手动输入，避免 EST.gkBase 与滑块脱节 */
+    }
     if (gkRange) {
       const mn = parseFloat(gkRange.min);
       const mx = parseFloat(gkRange.max);
@@ -939,6 +946,7 @@ function applyStructTypeDefaults() {
     }
     cRange.value = cfg.C;
     cNum.value = cfg.C.toFixed(3);
+    EST.C_period = cfg.C;   /* 同步写入 EST，避免异步 triggerUpdate 读到旧值 */
     const pct = ((cfg.C - parseFloat(cRange.min)) / (parseFloat(cRange.max) - parseFloat(cRange.min))) * 100;
     cRange.style.background = `linear-gradient(to right, #38bdf8 0%, #38bdf8 ${pct}%, #334155 ${pct}%, #334155 100%)`;
     if (cLabel) cLabel.textContent = cfg.p === 0.75 ? '钢结构周期经验系数 C' : '周期估算系数 C';

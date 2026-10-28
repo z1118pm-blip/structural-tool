@@ -107,7 +107,7 @@ function elemDisp(res, x){
   // 对任意边界条件，Hermite(精确端点) + 该特解 = 精确解（齐次解由 Hermite 捕捉，
   // 特解负责非齐次项）。悬挑梁 alphaI=alphaJ=0，端点由求解器精确给出，
   // 因此 H+A 严格等于悬臂梁精确挠度，不是近似。
-  if (w !== 0) {
+  if (w !== 0 && !el.isCant) {
     vly += (w * x*x * (L-x)*(L-x)) / (24 * EI);
   }
   /* 温度梯度特解：截面内外温差使杆产生均匀曲率 κ = α·ΔT/h。

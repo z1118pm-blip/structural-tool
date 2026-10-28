@@ -716,8 +716,11 @@ function drawSectionInfo(ctx, model, W, T){
   ctx.font = '11px ui-sans-serif,system-ui,sans-serif';
   ctx.textAlign = 'right'; ctx.textBaseline = 'top';
   ctx.fillStyle = T.frameThin;
-  ctx.fillText(`柱 ${Math.round(p.bc)}×${Math.round(p.hc)}`, W - 14, 14);
-  ctx.fillText(`梁 ${Math.round(p.bb)}×${Math.round(p.hb)}`, W - 14, 30);
+  const sec = getSecProps(p);
+  let colTxt = p.colSecType === 'HW' ? `${p.colHW}(${p.colAxis==='strong'?'强':'弱'}轴)` : `柱 ${Math.round(p.bc)}×${Math.round(p.hc)}`;
+  let beamTxt = p.beamSecType === 'HN' ? p.beamHN : `梁 ${Math.round(p.bb)}×${Math.round(p.hb)}`;
+  ctx.fillText(colTxt, W - 14, 14);
+  ctx.fillText(beamTxt, W - 14, 30);
   
   /* 有支撑时，第三行显示支撑截面积 */
   const hasBrace = Object.keys(p.braceMap || {}).some(k => p.braceMap[k] && p.braceMap[k] !== 'none');

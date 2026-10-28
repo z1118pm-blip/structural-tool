@@ -393,6 +393,12 @@ function setSweepLocked(locked){
   document.querySelectorAll('.spanEditBox input[type=range]').forEach(el => {
     el.disabled = locked;
   });
+
+  /* 自检卡片是 div，不会被 disabled 覆盖，需要单独拦截点击 */
+  document.querySelectorAll('.selfTestCard').forEach(el => {
+    el.style.pointerEvents = locked ? 'none' : '';
+    el.style.opacity = locked ? '0.5' : '';
+  });
 }
 
 /* 统一收尾：正常停止、取消、构造失败、启动失败、运行错误、stop() 异常，

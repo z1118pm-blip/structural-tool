@@ -7,9 +7,64 @@
    保持主调度器 07-run.js 的纯粹性。
    ===================================================================== */
 
-/* =====================================================================
-   动态注入集中荷载 UI（避免修改 index.html 大段结构）
-   ===================================================================== */
+/* ===== 截面类型下拉框绑定 ===== */
+(function bindSecTypeUI() {
+  const updateVisFor = (val, wrapRect, wrapH) => {
+    const wR = document.getElementById(wrapRect);
+    const wH = document.getElementById(wrapH);
+    if(wR) wR.style.display = val === 'rect' ? '' : 'none';
+    if(wH) wH.style.display = val !== 'rect' ? '' : 'none';
+  };
+  const bind = (id, key, wrapRect, wrapH) => {
+    const sel = document.getElementById('in-' + id);
+    if(!sel) return;
+    sel.addEventListener('change', () => {
+      S[key] = sel.value;
+      updateVisFor(S[key], wrapRect, wrapH);
+      run();
+    });
+    updateVisFor(S[key], wrapRect, wrapH);
+  };
+  
+  bind('colSecType', 'colSecType', 'wrap-col-rect', 'wrap-col-HW');
+  bind('beamSecType', 'beamSecType', 'wrap-beam-rect', 'wrap-beam-HN');
+
+  const bindDrop = (id, key) => {
+    const sel = document.getElementById('in-' + id);
+    if(!sel) return;
+    sel.addEventListener('change', () => {
+      S[key] = sel.value;
+      run();
+    });
+  };
+  bindDrop('colHW', 'colHW');
+  bindDrop('colAxis', 'colAxis');
+  bindDrop('beamHN', 'beamHN');
+
+  /* 全局同步：从 S 状态刷新下拉框值与显隐。分享链接 / 自检 / 重置后调用。 */
+  window.syncSecTypeUI = function() {
+    const colSel = document.getElementById('in-colSecType');
+    if(colSel){
+      const v = S.colSecType || 'rect';
+      colSel.value = v;
+      updateVisFor(v, 'wrap-col-rect', 'wrap-col-HW');
+    }
+    const colHW = document.getElementById('in-colHW');
+    if(colHW) colHW.value = S.colHW || 'HW300x300';
+    const colAxis = document.getElementById('in-colAxis');
+    if(colAxis) colAxis.value = S.colAxis || 'strong';
+    const beamSel = document.getElementById('in-beamSecType');
+    if(beamSel){
+      const v = S.beamSecType || 'rect';
+      beamSel.value = v;
+      updateVisFor(v, 'wrap-beam-rect', 'wrap-beam-HN');
+    }
+    const beamHN = document.getElementById('in-beamHN');
+    if(beamHN) beamHN.value = S.beamHN || 'HN400x200';
+  };
+})();
+
+/* 动态注入集中荷载 UI（避免修改 index.html 大段结构） */
 (function injectPLoadUI(){
   const rowQ1 = document.getElementById('row-q1');
   if(!rowQ1) return;
@@ -129,10 +184,11 @@ function renderPSpanEditors(onlyLev){
     let html = '';
     for(let c=1; c<=S.nBay; c++){
       const key = lv + '-' + c;
+      if (S.removeBeamMap && S.removeBeamMap[key]) continue;
       const mapObj = S.pLoadMap[key] || {};
       const P = mapObj.P != null ? mapObj.P : (S['P'+lv] || 0);
       let a = mapObj.a != null ? mapObj.a : (S['L'+c] / 2);
-      a = Math.max(0.01, Math.min(S['L'+c] - 0.01, a));
+      a = Math.max(0.1 * S['L'+c], Math.min(0.9 * S['L'+c], a));
       if (mapObj.a != null && mapObj.a !== a) {
         S.pLoadMap[key].a = a;
       }
@@ -211,6 +267,7 @@ function renderSpanEditors(onlyLev){
     let html = '';
     for(let c=1; c<=S.nBay; c++){
       const key = lv + '-' + c;
+      if (S.removeBeamMap && S.removeBeamMap[key]) continue;
       const has = Object.prototype.hasOwnProperty.call(S.qSpanMap, key);
       const v = has ? S.qSpanMap[key] : (S['q'+lv] || 0);
       const dot = has ? ' <span style="color:#f97316">●</span>' : '';
