@@ -288,26 +288,54 @@ input[type=range]:hover::-webkit-slider-thumb{
 .segMini #btnVals.on{background:#6366f1;border-color:#818cf8;color:#fff;}
 .segMini #btnFreeze.on, .segMini #btnFreezeDeform.on{background:#10b981;border-color:#34d399;color:#fff;}
 
-/* 变形图浮层 */
+/* ==================== 变形图浮层 ==================== */
+/* 1. 默认状态（全部显示，左上角竖排） */
 .deformOverlay{
-  position:absolute;top:12px;left:12px;
-  background:rgba(15,23,42,0.96);border:1px solid #334155;
-  border-radius:8px;padding:8px 12px;
-  font-size:11px;color:#cbd5e1;
+  position:absolute; top:12px; left:12px; bottom:auto; transform:none;
+  background:rgba(15,23,42,0.96); border:1px solid #334155;
+  border-radius:8px; padding:8px 12px;
+  font-size:11px; color:#cbd5e1;
   font-variant-numeric:tabular-nums;
-  width: 215px; pointer-events:none;z-index:3;
+  width: 215px; pointer-events:none; z-index:3;
   box-shadow:0 4px 16px rgba(0,0,0,0.4);
+  display: flex; flex-direction: column; gap:0;
 }
 .deformOverlay .dTitle{
-  font-size:10.5px;font-weight:700;color:#94a3b8;
-  letter-spacing:.8px;margin-bottom:4px;
-  padding-bottom:4px;border-bottom:1px solid #334155;
+  font-size:10.5px; font-weight:700; color:#94a3b8;
+  letter-spacing:.8px; margin-bottom:4px;
+  padding-bottom:4px; border-bottom:1px solid #334155;
+  display: block;
 }
 .deformOverlay .dRow{
-  display:flex;flex-direction:row;justify-content:space-between;align-items:baseline;padding:2px 0;gap:12px;
+  display:flex; flex-direction:row; justify-content:space-between; align-items:baseline; padding:2px 0; gap:12px;
 }
-.deformOverlay .dRow span{color:#94a3b8;white-space:nowrap;font-size:10.5px}
-.deformOverlay .dRow b{color:#38bdf8;font-weight:600;font-size:12px;white-space:nowrap;}
+.deformOverlay .dRow span{color:#94a3b8; white-space:nowrap; font-size:10.5px}
+.deformOverlay .dRow b{color:#38bdf8; font-weight:600; font-size:12px; white-space:nowrap;}
+
+/* 2. 全屏模式（仅显示变形图，顶部横向） */
+#stage.mode-deform #chartDeform .deformOverlay {
+  top: 45px;
+  left: 12px;
+  transform: none;
+  width: calc(100% - 24px);
+  max-width: none;
+  display: flex; flex-direction: row; flex-wrap: wrap;
+  justify-content: center; align-items: center; gap: 16px;
+  background: rgba(15,23,42,0.6);
+  border: 1px dashed #334155;
+  padding: 6px 16px;
+}
+#stage.mode-deform .deformOverlay .dTitle { display: none; }
+#stage.mode-deform .deformOverlay .dRow { padding: 0; }
+
+/* 全屏模式下层间位移角专用横向排版 */
+#stage.mode-deform .deformOverlay #r-drift-list {
+  display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 12px;
+  margin: 0 !important;
+}
+#stage.mode-deform .deformOverlay #r-drift-list .drift-header { margin-bottom: 0 !important; }
+#stage.mode-deform .deformOverlay #r-drift-list > div { display: flex; align-items: baseline; gap: 4px; }
+#stage.mode-deform .deformOverlay #r-drift-list .drift-line { display: none; }
 
 /* 模态框 */
 .modal{
@@ -770,6 +798,8 @@ body.recording #leftCol { border-right-color: #f43f5e; }
 
 /* 修复变形图右上角按钮与左侧浮层重叠 */
 #chartDeform .tagBar { top: 9px; left: 235px; right: 12px; }
+/* 当切到全屏变形图时，没有了左侧浮层，按钮组回到左侧 */
+#stage.mode-deform #chartDeform .tagBar { left: 12px; }
 @media(max-width: 600px) {
   #chartDeform .tagBar { left: auto; right: 12px; top: 9px; flex-direction: column; align-items: flex-end; gap: 4px; }
   .deformOverlay { position: relative; top: 0; left: 0; margin-bottom: 8px; width: 100%; box-sizing: border-box; }
