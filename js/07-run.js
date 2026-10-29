@@ -186,7 +186,7 @@ function updateReadout(model, skipAux){
   const elDy = document.getElementById('r-maxDy');
   if(elDy) {
     if(maxDyRatio > dyLimit) {
-      elDy.innerHTML = `${bendDyMm.toFixed(2)} mm <span style="color:#f87171;font-size:10px;">⚠️超1/200</span>`;
+      elDy.innerHTML = `<span style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.6); padding:1px 6px; border-radius:4px; color:#f87171;">${bendDyMm.toFixed(2)} mm ⚠️超限</span>`;
       elDy.style.color = '#f87171';
       elDy.title = `挠跨比 1/${Math.round(1/maxDyRatio)}，已超规范限值 1/200`;
     } else {
@@ -955,6 +955,7 @@ function run(opts){
     const p0 = BASE.p;
     const geoChanged = (
       p0.nBay !== S.nBay || p0.nLev !== S.nLev
+      || !!p0.hasCant !== !!S.hasCant
     );
     if(geoChanged){
       BASE = null;

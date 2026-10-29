@@ -6,24 +6,37 @@
 function drawDeform(canvas, model, dprOverride){
   const T = theme();
   const {ctx,W,H} = setupCanvas(canvas, dprOverride);
-  // 统一 pad 与受力图一致（120,100,60,36），使得两张图的结构比例完全一样大
-  const pad = {padL: 120, padT: 100, padR: 60, padB: 36};
+  // 加大 padT 到 140，避免“仅变形图”模式下图形与顶部悬浮面板重叠
+  const pad = {padL: 100, padT: 140, padR: 100, padB: 36};
   const {toS} = makeTransform(model, W, H, pad);
 
   ctx.fillStyle=T.bg; ctx.fillRect(0,0,W,H);
   drawGrid(ctx, W, H);
   drawHUD(ctx, W, H, 'DEFORMED SHAPE', false);
   
-  /* 读 model.isDeformFail（由 updateReadout 在 drawDeform 之前设置），
-     避免读 DOM 拿到上一轮的值。
-     此处为居中底部版本，与 drawInternal 左上角版本位置/文本不同，
-     保留内联（不使用 drawSlsWarning）以免引入位置参数。 */
+  /* 读 model.isDeformFail（由 updateReadout 在 drawDeform 之前设置） */
   if(model.isDeformFail) {
     ctx.save();
-    ctx.font = 'bold 12px "JetBrains Mono", sans-serif';
-    ctx.fillStyle = 'rgba(248,113,113,0.9)';
+    const txt = '⚠️ 受弯挠度超出规范限值 (SLS)';
+    ctx.font = 'bold 14px "JetBrains Mono", sans-serif';
+    const tw = ctx.measureText(txt).width;
+    const bh = 34;
+    const bw = tw + 40;
+    const bx = W/2 - bw/2;
+    const by = H - 65; /* 稍微抬高，避免和底部状态栏贴太近 */
+    
+    ctx.fillStyle = 'rgba(239, 68, 68, 0.15)';
+    ctx.strokeStyle = '#ef4444';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    if(ctx.roundRect) ctx.roundRect(bx, by, bw, bh, 8); else ctx.rect(bx, by, bw, bh);
+    ctx.fill();
+    ctx.stroke();
+    
+    ctx.fillStyle = '#f87171';
     ctx.textAlign = 'center';
-    ctx.fillText('⚠️ 受弯挠度超出规范限值 (SLS)', W/2, H - 20);
+    ctx.textBaseline = 'middle';
+    ctx.fillText(txt, W/2, by + bh/2);
     ctx.restore();
   }
 
@@ -65,8 +78,8 @@ function drawDeform(canvas, model, dprOverride){
 
     // 然后正常画旧框架的变形曲线
     ctx.strokeStyle = T.freezeLine;
-    ctx.lineWidth = 1.5;
-    ctx.setLineDash([5,4]);
+    ctx.lineWidth = 2.0; // 加粗到 2.0
+    ctx.setLineDash([6,3]); // 虚线更紧凑，避免在长柱子上显得稀碎
     ctx.lineJoin = 'round'; ctx.lineCap = 'round';
     for(const res of BASE.results){
       const el = res.el;
@@ -165,4 +178,38 @@ function drawDeform(canvas, model, dprOverride){
 
   if(model.p.showIds) drawIds(ctx, model, toS);
   drawSupports(ctx, model, toS, model.p.betaF, true, F, W, H);
+
+  /* 绘制虚线/实线对比图例（仅当处于冻结对比模式时显示） */
+  if(BASE){
+    ctx.save();
+    ctx.font = '11px ui-sans-serif,system-ui,sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    const ly = H - 24;
+    
+    const curTxt = (S.uiLegend && S.uiLegend.current) ? S.uiLegend.current : '当前工况';
+    const baseTxt = (S.uiLegend && S.uiLegend.base) ? S.uiLegend.base : '冻结基线';
+
+    // 1. 当前实线图例
+    ctx.strokeStyle = T.deformCurve;
+    ctx.lineWidth = 2.5;
+    ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(20, ly); ctx.lineTo(36, ly); ctx.stroke();
+    ctx.fillStyle = T.frameThin;
+    ctx.fillText(curTxt, 44, ly);
+    
+    // 根据第一段文字宽度，动态计算第二段图例的起始位置
+    const curWidth = ctx.measureText(curTxt).width;
+    const nextX = 44 + curWidth + 24;
+
+    // 2. 冻结基线虚线图例
+    ctx.strokeStyle = T.freezeLine;
+    ctx.lineWidth = 2.0;
+    ctx.setLineDash([6, 3]);
+    ctx.beginPath(); ctx.moveTo(nextX, ly); ctx.lineTo(nextX + 16, ly); ctx.stroke();
+    ctx.fillStyle = T.frameThin;
+    ctx.fillText(baseTxt, nextX + 24, ly);
+    
+    ctx.restore();
+  }
 }

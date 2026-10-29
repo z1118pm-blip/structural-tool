@@ -195,7 +195,7 @@ function exportCanvasPNG(canvasId, baseName){
     const clickX = e.clientX - rect.left;
     const clickY = e.clientY - rect.top;
     const padB = MODEL.p.forceType === 'R' ? 80 : 36;
-    const {toS} = makeTransform(MODEL, rect.width, rect.height, { padL: 120, padT: 100, padR: 60, padB });
+    const {toS} = makeTransform(MODEL, rect.width, rect.height, { padL: 100, padT: 130, padR: 100, padB });
     
     let closest = null;
     let minDist = 45; // 容差 45px

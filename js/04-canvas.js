@@ -149,7 +149,10 @@ function makeTransform(model, W, H, pad){
   if (!isFinite(sc) || sc <= 0) sc = 1; // 增加 NaN 兜底
   const dw = (x1-x0)*sc, dh = (y1-y0)*sc;
   const left   = padL + (availW - dw)/2;
-  const bottom = H - padB - (availH - dh)/2;
+  /* 优化：当画布极宽时，多余空间 45% 给底部，55% 给顶部。
+     既不让底部出现大块黑洞，也不让结构彻底贴底导致重心下坠。 */
+  const extraH = Math.max(0, availH - dh);
+  const bottom = H - padB - extraH * 0.45;
   const toS = (x,y) => [ left + (x-x0)*sc , bottom - (y-y0)*sc ];
   return {toS, sc, x0, y0};
 }

@@ -139,6 +139,7 @@ const S = {
   displayMode:'all',
   highlight:null,
   lightBg:false,
+  uiLegend: { base: '冻结基线', current: '当前工况' }, // 用于变形图对比时的图例文字
   sweep:{
     active:false,
     param:'bc',

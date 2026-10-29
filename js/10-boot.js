@@ -52,12 +52,13 @@ requestAnimationFrame(()=>{
    ===================================================================== */
 const SELF_TEST_UI_CONFIG = {
   'moment-redist': { category: '📐 杆件与截面行为', level: 'L1', action: 'play', title: '梁端弯矩释放', desc: '两层两跨 · 满跨均布。扫掠梁端 β_j (1→0)，看梁端弯矩逐渐释放减小、跨中正弯矩随之增大。' },
+  'mid-support-ql2-trap': { category: '📐 杆件与截面行为', level: 'L2', action: 'play', title: '中间支座弯矩 ≠ ql²/12', desc: '单层两跨 · 满跨均布。扫掠柱截面 hc（柱越细，约束越弱）。看中支座负弯矩如何始终大于 ql²/12——因为真实框架的边柱会转动，无法提供理想固结。' },
   'colbase-hinge': { category: '🌪️ 抗侧力与二阶效应', level: 'L1', action: 'play', title: '柱脚弯矩释放', desc: '两层两跨 · 一层水平力。扫掠柱脚 β_f (1→0)，看柱脚弯矩逐渐释放减小、底层侧移随之增大。' },
   'strong-beam': { category: '📐 杆件与截面行为', level: 'L2', action: 'play', title: '梁刚度与反弯点', desc: '单层单跨 · 水平力。扫掠梁高 h_b (400→900)，看梁刚度变大如何使柱反弯点下移。' },
   'load-moment': { category: '📐 杆件与截面行为', level: 'L1', action: 'play', title: '跨中与支座弯矩', desc: '单层单跨 · 满跨均布。扫掠荷载 q_1 (0→100)，观察跨中正弯矩与支座负弯矩线性增长。' },
   'frame-action': { category: '🏢 整体受力与变形', level: 'L2', action: 'play', title: '框架作用传递', desc: '两层两跨 · 满跨均布。扫掠梁端 β_j (0→1)，看中柱轴力如何随梁约束的增强而增大。' },
   'cant-tension': { category: '🏢 整体受力与变形', level: 'L2', action: 'play', title: '悬挑偏心拉力', desc: '单层单跨+悬挑 · 无水平力。扫掠悬挑荷载 q_c1 (0→100)，看悬挑倾覆力矩导致的柱拉力。' },
-  'weak-story': { category: '🏢 整体受力与变形', level: 'L1', action: 'play', title: '层刚度变化与变形集中', desc: '两层两跨 · 水平力。扫掠二层层高 h_2 (2.5→7)，层高增大使二层线刚度降低，看层间位移角（变形）如何向该层集中。' },
+  'weak-story': { category: '🏢 整体受力与变形', level: 'L2', action: 'play', title: '层刚度变化与变形集中', desc: '两层两跨 · 水平力。扫掠二层层高 h_2 (2.5→7)，层高增大使二层线刚度降低，看层间位移角（变形）如何向该层集中。' },
   'asym-sway': { category: '🏢 整体受力与变形', level: 'L2', action: 'play', title: '不对称侧移', desc: '单层两跨 · 竖向均布。扫掠左跨长 L_1 (3→12)，看单侧竖向荷载偏心引起的框架侧移。' },
   'cant-sway': { category: '🏢 整体受力与变形', level: 'L2', action: 'play', title: '悬挑重力侧移', desc: '两层两跨+悬挑 · 无水平力。扫掠悬挑荷载 q_c1 (0→100)，看纯重力偏心侧移（放大显示）。' },
   'dstiff-alloc': { category: '🌪️ 抗侧力与二阶效应', level: 'L2', action: 'play', title: '刚性楼板内柱分配', desc: '两层三跨 · 水平力，刚性楼板。扫掠内柱刚度比 r (0.25→4)，看内柱刚度变大时，如何通过楼板自动分走更多剪力。' },
@@ -65,11 +66,11 @@ const SELF_TEST_UI_CONFIG = {
   'pdelta': { category: '🌪️ 抗侧力与二阶效应', level: 'L3', action: 'play', title: 'P-Δ 二阶效应', desc: '两层单跨 · 柔性框架（层高6m、梁铰接），开启P-Δ。扫掠均布 q_1 (0→100)，看竖向荷载如何使 B 值急剧放大并逼近失稳。' },
   'brace-stiffness': { category: '🧱 特殊构件与边界', level: 'L2', action: 'play', title: '支撑截面积与侧向刚度', desc: '单层单跨 · X 撑 · 水平力。扫掠支撑截面积 As (100→5000)，看支撑变粗后侧移显著减小、支撑轴力增大、柱端弯矩被分走。' },
   'brace-tension-only': { category: '🧱 特殊构件与边界', level: 'L2', action: 'play', title: '仅受拉支撑的单向工作', desc: '单层单跨 · X 撑（该格开启仅受拉）· 水平力。扫掠 H₁ (0→100)，N 图上始终只有受拉那根斜杆有数值，受压杆自动退出。' },
-  'brace-angle': { category: '🧱 特殊构件与边界', level: 'L2', action: 'play', title: '支撑角度与轴力分配', desc: '单层单跨 · X 撑 · 水平力。扫掠左跨 L₁ (3→12)，倾角变小使斜杆轴力减小；在截面积不变的纯线弹性假定下，整体侧向刚度的理论极值在 θ ≈ 35.3°（L₁ ≈ 5.7m），而非直觉上的 45°。' },
+  'brace-angle': { category: '🧱 特殊构件与边界', level: 'L3', action: 'play', title: '支撑角度与轴力分配', desc: '单层单跨 · X 撑 · 水平力。扫掠左跨 L₁ (3→12)，倾角变小使斜杆轴力减小；在截面积不变的纯线弹性假定下，整体侧向刚度的理论极值在 θ ≈ 35.3°（L₁ ≈ 5.7m），而非直觉上的 45°。' },
   'settlement': { category: '🧱 特殊构件与边界', level: 'L1', action: 'play', title: '支座沉降的附加内力', desc: '两层两跨 · 无外荷载、无水平力。扫掠左柱沉降 (0→100mm)，看超静定结构在"什么都没加"的情况下，M 图从零逐渐出现、反力重新分配、结构整体倾斜。' },
   'cant-L2': { category: '📐 杆件与截面行为', level: 'L1', action: 'play', title: '悬挑长度平方效应', desc: '单层单跨+悬挑 · 均布荷载。扫掠悬挑长度 L_c (0.5→4)，看悬挑根部弯矩呈平方级增长（M ∝ L_c²），以及悬挑端挠度呈四次方级剧增（Δ ∝ L_c⁴）。' },
-  'col-h3': { category: '📐 杆件与截面行为', level: 'L1', action: 'play', title: '柱截面三次方效应', desc: '单层单跨 · 水平力。扫掠柱高 h_c (300→800)，看侧移随 h_c 增大急剧减小（I_c ∝ h_c³），柱端弯矩被吸引增大。' },
-  'anti-rho': { category: '🌪️ 抗侧力与二阶效应', level: 'L2', action: 'play', title: '反弯点 vs ρ 联动', desc: '两层两跨 · 纯水平力。扫掠梁高 h_b (400→900)，注意看「反弯点 x/h vs ρ」小图。梁高增加使梁线刚度上升，各柱反弯点逐渐向 x/h=0.5 靠拢。' },
+  'col-h3': { category: '📐 杆件与截面行为', level: 'L1', action: 'play', title: '柱截面三次方效应', desc: '单层单跨 · 水平力。扫掠柱高 h_c (300→800)，专注看侧移随 h_c 增大而急剧减小（I_c ∝ h_c³）。' },
+  'anti-rho': { category: '🌪️ 抗侧力与二阶效应', level: 'L2', action: 'play', title: '反弯点 vs 刚度比联动', desc: '两层两跨 · 纯水平力。扫掠梁高 h_b (400→900)，注意看「反弯点 vs 刚度比」小图。梁高增加使梁线刚度上升，各柱反弯点逐渐向跨中（x/h=0.5）靠拢。' },
   'brace-dir-L': { category: '🧱 特殊构件与边界', level: 'L2', action: 'play', title: '╱ 单撑仅受拉', desc: '单层单跨 · ╱ 单撑 · 仅受拉 · 水平力。扫掠 H₁ (0→100)，观察该方向斜撑是受拉（N 有数值）还是受压（自动退出、N=0）。' },
   'stiffness-jump-mid-braced': { category: '🏢 整体受力与变形', level: 'L2', action: 'play', title: '刚度突变 · 仅中间层设支撑', desc: '三层两跨 · 仅第2层两跨设 X 撑，上下层无撑。扫掠 H₁，看侧移沿高度呈"沙漏"分布：上下层柔、中间层刚，层间位移角在第1、3层放大。' },
   'weak-story-mid-unbraced': { category: '🏢 整体受力与变形', level: 'L2', action: 'play', title: '软弱层 · 仅中间层无支撑', desc: '三层两跨 · 第1、3层两跨设 X 撑，唯独第2层裸框架。扫掠 H₁，看层间位移角如何向第2层集中——这就是"软弱层"的力学本质，也是抗震设计中最危险的竖向刚度突变。' },
@@ -77,32 +78,33 @@ const SELF_TEST_UI_CONFIG = {
   'load-mid-span': { category: '🔥 综合演练与概念', level: 'L2', action: 'compare', title: '中跨加载（不利布置）', desc: '单层三跨 · 仅中跨加载。自动冻结满跨基线后加载中跨工况，看中跨跨中正弯矩如何增大、边跨是否出现反号弯矩。' },
   'load-adj-span': { category: '🔥 综合演练与概念', level: 'L2', action: 'compare', title: '相邻两跨加载（不利布置）', desc: '单层三跨 · 左+中两跨加载。自动冻结满跨基线后加载相邻工况，看中间支座负弯矩如何达到最大（支座配筋控制工况）。' },
   'pdelta-h1': { category: '🌪️ 抗侧力与二阶效应', level: 'L3', action: 'play', title: 'P-Δ 层高敏感性', desc: '两层单跨 · 柔性框架 · 开启P-Δ。扫掠一层的 h₁ (2.5→7)，看层高增加时 N_cr 平方级下降，导致 B 值急剧放大并逼近失稳。' },
-  'pdelta-vs-pdelta': { category: '🌪️ 抗侧力与二阶效应', level: 'L1', action: 'toast', title: 'P-δ 与 P-Δ 的区别', desc: '本工具只计算 P-Δ（结构侧移引起的二阶效应），不计算 P-δ（构件自身挠曲）。<br><br><svg viewBox="0 0 240 120" style="width:100%;height:auto;margin:6px 0;background:#0f172a;border-radius:4px;display:block;"><text x="60" y="12" fill="#94a3b8" font-size="9" text-anchor="middle">P-Δ</text><line x1="20" y1="100" x2="100" y2="100" stroke="#475569" stroke-width="2"/><line x1="20" y1="100" x2="20" y2="30" stroke="#475569" stroke-width="1.5" stroke-dasharray="2,2"/><line x1="100" y1="100" x2="100" y2="30" stroke="#475569" stroke-width="1.5" stroke-dasharray="2,2"/><line x1="20" y1="100" x2="35" y2="30" stroke="#38bdf8" stroke-width="2"/><line x1="100" y1="100" x2="115" y2="30" stroke="#38bdf8" stroke-width="2"/><line x1="35" y1="30" x2="115" y2="30" stroke="#38bdf8" stroke-width="2"/><text x="125" y="40" fill="#f87171" font-size="8">δ_top</text><text x="180" y="12" fill="#94a3b8" font-size="9" text-anchor="middle">P-δ</text><line x1="140" y1="100" x2="220" y2="100" stroke="#475569" stroke-width="2"/><line x1="140" y1="100" x2="140" y2="30" stroke="#475569" stroke-width="1.5" stroke-dasharray="2,2"/><line x1="220" y1="100" x2="220" y2="30" stroke="#475569" stroke-width="1.5" stroke-dasharray="2,2"/><path d="M 140 100 Q 155 65 140 30" stroke="#38bdf8" stroke-width="2" fill="none"/><path d="M 220 100 Q 235 65 220 30" stroke="#38bdf8" stroke-width="2" fill="none"/><line x1="140" y1="30" x2="220" y2="30" stroke="#38bdf8" stroke-width="2"/><text x="160" y="70" fill="#fbbf24" font-size="8">δ_local</text></svg>P-Δ：整体侧移，节点位移放大；P-δ：柱中部挠曲，构件局部放大。' },
+  'pdelta-vs-pdelta': { category: '🌪️ 抗侧力与二阶效应', level: 'L2', action: 'toast', title: 'P-δ 与 P-Δ 的区别', desc: '本工具只计算 P-Δ（结构侧移引起的二阶效应），不计算 P-δ（构件自身挠曲）。<br><br><svg viewBox="0 0 240 120" style="width:100%;height:auto;margin:6px 0;background:#0f172a;border-radius:4px;display:block;"><text x="60" y="12" fill="#94a3b8" font-size="9" text-anchor="middle">P-Δ</text><line x1="20" y1="100" x2="100" y2="100" stroke="#475569" stroke-width="2"/><line x1="20" y1="100" x2="20" y2="30" stroke="#475569" stroke-width="1.5" stroke-dasharray="2,2"/><line x1="100" y1="100" x2="100" y2="30" stroke="#475569" stroke-width="1.5" stroke-dasharray="2,2"/><line x1="20" y1="100" x2="35" y2="30" stroke="#38bdf8" stroke-width="2"/><line x1="100" y1="100" x2="115" y2="30" stroke="#38bdf8" stroke-width="2"/><line x1="35" y1="30" x2="115" y2="30" stroke="#38bdf8" stroke-width="2"/><text x="125" y="40" fill="#f87171" font-size="8">δ_top</text><text x="180" y="12" fill="#94a3b8" font-size="9" text-anchor="middle">P-δ</text><line x1="140" y1="100" x2="220" y2="100" stroke="#475569" stroke-width="2"/><line x1="140" y1="100" x2="140" y2="30" stroke="#475569" stroke-width="1.5" stroke-dasharray="2,2"/><line x1="220" y1="100" x2="220" y2="30" stroke="#475569" stroke-width="1.5" stroke-dasharray="2,2"/><path d="M 140 100 Q 155 65 140 30" stroke="#38bdf8" stroke-width="2" fill="none"/><path d="M 220 100 Q 235 65 220 30" stroke="#38bdf8" stroke-width="2" fill="none"/><line x1="140" y1="30" x2="220" y2="30" stroke="#38bdf8" stroke-width="2"/><text x="160" y="70" fill="#fbbf24" font-size="8">δ_local</text></svg>P-Δ：整体侧移，节点位移放大；P-δ：柱中部挠曲，构件局部放大。' },
   'p-moment': { category: '📐 杆件与截面行为', level: 'L1', action: 'play', title: '集中力弯矩尖角', desc: '单层单跨 · 跨中集中力。扫掠 P₁ (0→200)，观察集中力作用点处弯矩图的"尖角"，以及跨中正弯矩的线性增长。' },
   'temp-axial': { category: '🧱 特殊构件与边界', level: 'L1', action: 'play', title: '均匀升温的轴力', desc: '单层两跨 · 无外荷载。扫掠均匀升温 ΔT (0→50℃)，看超静定框架因膨胀受阻产生的内部轴力。' },
   'remove-beam-pierce': { category: '🌪️ 抗侧力与二阶效应', level: 'L2', action: 'play', title: '穿层柱模拟', desc: '两层两跨 · 水平力。移除第1、2层左跨梁，左侧边柱失去侧向约束（计算长度增加），变形图呈现明显的“穿孔”侧移。' },
-  'temp-grad': { category: '🧱 特殊构件与边界', level: 'L1', action: 'play', title: '单侧温差的反弯点', desc: '单层两跨 · 无外荷载。扫掠截面温差 ΔT，看梁柱因温度梯度产生弯曲；本工具不做二阶内力放大，图中为一阶线弹性结果。' },
+  'temp-grad': { category: '🧱 特殊构件与边界', level: 'L2', action: 'play', title: '单侧温差的反弯点', desc: '单层两跨 · 无外荷载。扫掠截面温差 ΔT，看梁柱因温度梯度产生弯曲；本工具不做二阶内力放大，图中为一阶线弹性结果。' },
   'beam-inflection-vs-col': { category: '📐 杆件与截面行为', level: 'L2', action: 'play', title: '柱刚度对梁反弯点的影响', desc: '单层单跨 · 竖向均布荷载。扫掠边柱高 hc (300→800)。柱越细，对梁端约束越弱（趋近铰接），反弯点靠近支座；柱越粗，约束越强（趋近固接），反弯点向跨中移动。' },
-  'inflection-point-theory': { category: '📐 杆件与截面行为', level: 'L3', action: 'play', title: '水平力下的反弯点偏移', desc: '单层单跨 · 纯水平力。扫掠梁高 hb (400→900)，观察柱反弯点 x/h 的演变。理论精确解为 y/h = (1+3k)/(1+6k)。梁越刚，反弯点向 0.5h 靠拢。' },
+  'inflection-point-theory': { category: '📐 杆件与截面行为', level: 'L2', action: 'play', title: '水平力下的反弯点偏移', desc: '单层单跨 · 纯水平力。扫掠梁高 hb (400→900)，观察柱反弯点 x/h 的演变。理论精确解为 y/h = (1+3k)/(1+6k)。梁越刚，反弯点向 0.5h 靠拢。' },
   'load-path-layers': { category: '🏢 整体受力与变形', level: 'L2', action: 'play', title: '竖向荷载的跨层传递与衰减', desc: '三层两跨 · 仅底层受载。扫掠一层荷载 q1，观察一层巨大的弯矩如何向上传递，并在三层急剧衰减。' },
   'lateral-path-layers': { category: '🌪️ 抗侧力与二阶效应', level: 'L2', action: 'play', title: '底层水平荷载的悬臂效应', desc: '三层两跨 · 仅底层受水平力。扫掠 H1 (0→50)，观察水平力如何像“推倒积木”一样向上传递。' },
   'gravity-lateral-superposition': { category: '🔥 综合演练与概念', level: 'L2', action: 'compare', title: '重力与侧向力叠加 (含 P-Δ)', desc: '两层单跨 · 重力工况打底 · 开启P-Δ。扫掠水平力 H1，看结构内力在纯重力基线上的线性叠加；B 值仅作二阶效应量级提示，内力/位移图仍为一阶线弹性结果。' },
   'support-uplift': { category: '🧱 特殊构件与边界', level: 'L1', action: 'play', title: '支座上移 (抗浮)', desc: '两层两跨 · 无外荷载。扫掠左柱竖向位移 (0→-100mm)，模拟地下水浮力导致的基础上抬。观察框架整体上拱以及梁柱内力的反向重分布。' },
-  'support-rotation': { category: '🧱 特殊构件与边界', level: 'L1', action: 'play', title: '基础强迫扭转', desc: '两层两跨 · 无外荷载。扫掠柱底强迫转角（显示 0°→30°，实际 0→0.01 rad，视觉放大），模拟基础局部不均匀沉降产生的强制扭动。观察柱底巨大的抗弯弯矩以及框架被强行带偏的侧移。' },
+  'support-rotation': { category: '🧱 特殊构件与边界', level: 'L2', action: 'play', title: '基础强迫扭转', desc: '两层两跨 · 无外荷载。扫掠柱底强迫转角（显示 0°→30°，实际 0→0.01 rad，视觉放大），模拟基础局部不均匀沉降产生的强制扭动。观察柱底巨大的抗弯弯矩以及框架被强行带偏的侧移。' },
   'system-stiffness-match': { category: '🔥 综合演练与概念', level: 'L3', action: 'play', title: '体系刚度匹配与演化', desc: '两层两跨 · 水平力。扫掠梁端刚度 β_j (0→1)，观察右侧「体系判定」从"铰接排架"逐渐变为"典型刚接框架"，理解林同炎对刚度匹配的定性判断。' },
   'overturning-pier': { category: '🏢 整体受力与变形', level: 'L2', action: 'play', title: '柱脚刚度与倾覆力矩', desc: '单层单跨 · 纯水平力。扫掠柱脚 β_f (0→1)，看倾覆力矩如何分配。刚接时柱脚弯矩吃掉大部分倾覆力矩，轴力小；铰接时柱脚弯矩为0，倾覆力矩100%转化为两侧柱子的拉压轴力。' },
-  'axial-hinge': { category: '📐 杆件与截面行为', level: 'L3', action: 'toast', title: '形常数的陷阱（轴向变形）', desc: '单层单跨 · 强柱弱梁 · 竖向荷载。形常数推导反弯点为 0.33h，但这建立在无侧移假定上。本工况考虑梁的轴向变形，微小侧移导致反弯点偏移至 0.30h。切换“忽略轴向变形”验证 0.33h。' },
+  'axial-hinge': { category: '📐 杆件与截面行为', level: 'L3', action: 'toast', title: '为什么手算反弯点是 0.33h，软件却是 0.30h？', desc: '单层单跨 · 强柱弱梁 · 竖向荷载。老教材认为反弯点在 0.33h，但这建立在“无侧移”假定上。本工况考虑真实轴向变形，微小侧移导致反弯点偏移。切换“忽略轴向变形”即可见证奇迹。' },
   'concept-human-vs-ai': { category: '🔥 综合演练与概念', level: 'L1', action: 'toast', title: '理念：工程师的最后主战场', desc: 'AI 时代，结构工程师的核心价值在于“判断对错与承担责任”。软件可以算得很快，但判断对错永远属于人。' },
   'concept-strong-col-weak-beam': { category: '🔥 综合演练与概念', level: 'L1', action: 'toast', title: '强柱弱梁 (Strong-Column/Weak-Beam)', desc: '抗震设计的核心概念。保证框架在地震下，塑性铰优先在梁端形成（耗能），而非柱端（引发楼层倒塌）。' },
 
   /* ==================== 新增：材质 / 型钢 / 支座 / 荷载 / 支撑 / 楼板 / 二阶 / 陷阱 ==================== */
-  'mat-conc-vs-steel': { category: '📐 杆件与截面行为', level: 'L1', action: 'compare', title: '混凝土 vs 钢材：材料刚度', desc: '同一几何，只把 frameMat 从 C30 换到 Q355。看侧移缩小 6.87 倍——钢结构纤细的力学根源。' },
-  'hw-strong-vs-weak': { category: '📐 杆件与截面行为', level: 'L1', action: 'compare', title: 'H 型钢柱强轴 vs 弱轴', desc: 'HW300x300 摆错 90°：Iy/Ix≈0.33，侧移翻三倍。施工图必须标注强轴方向的原因。' },
-  'bc-linear-effect': { category: '📐 杆件与截面行为', level: 'L1', action: 'play', title: '柱宽 bc 的线性效应', desc: '单层单跨 · 水平力。扫掠 bc (300→800)，侧移线性下降。对照 col-h3：hc 是三次方。' },
-  'bb-linear-effect': { category: '📐 杆件与截面行为', level: 'L1', action: 'play', title: '梁宽 bb 的线性效应', desc: '单层单跨 · 满跨均布。扫掠 bb (200→500)。对照 strong-beam：hb 是三次方。' },
+  'mat-conc-vs-steel': { category: '📐 杆件与截面行为', level: 'L1', action: 'compare', title: '混凝土 vs 钢材：材料刚度', desc: '截面尺寸完全一样，只把材料从“混凝土 C30”换成“钢材 Q355”。看侧移直接缩小约 6.87 倍——这就是钢结构纤细的力学根源。' },
+  'hw-strong-vs-weak': { category: '📐 杆件与截面行为', level: 'L1', action: 'compare', title: 'H 型钢柱强轴 vs 弱轴', desc: '同一根 HW300x300，绕杆轴旋转 90°，平面内刚度直接从强轴（Ix）变为弱轴（Iy）。观察侧移翻三倍的直观差异。' },
+  'bc-linear-effect': { category: '📐 杆件与截面行为', level: 'L1', action: 'play', title: '柱宽 bc 的线性效应', desc: '单层单跨 · 水平力。扫掠 bc (300→800)，侧移线性下降。对照「柱截面三次方效应」：hc 是三次方。' },
+  'bb-linear-effect': { category: '📐 杆件与截面行为', level: 'L1', action: 'play', title: '梁宽 bb 的线性效应', desc: '单层单跨 · 满跨均布。扫掠 bb (200→500)，侧移/挠度线性下降。对照「梁高 hb 的三次方效应」：hb 是三次方。' },
+  'hb-linear-effect': { category: '📐 杆件与截面行为', level: 'L1', action: 'play', title: '梁高 hb 的三次方效应', desc: '单层单跨 · 满跨均布。扫掠 hb (400→900)，侧移/挠度急剧减小（I ∝ hb³）。对照「梁宽 bb 的线性效应」：bb 是线性。' },
   'support-type-mixed': { category: '🧱 特殊构件与边界', level: 'L1', action: 'toast', title: '支座类型：固 / 铰 / 滚轴', desc: '三根柱三种支座。滚轴柱不参与抗侧，水平力由固接柱和铰接柱分摊。' },
-  'sls-deflection': { category: '📐 杆件与截面行为', level: 'L1', action: 'toast', title: '梁挠度超限与 SLS 报警', desc: '12m 跨、400 高小梁 · 60kN/m。受弯挠度超 1/200，状态栏 DEFORM·超限亮起，r-maxDy 标红。' },
-  'hn-vs-rect': { category: '📐 杆件与截面行为', level: 'L2', action: 'compare', title: 'HN 型钢梁 vs 矩形混凝土梁', desc: '同高度 600mm：型钢与混凝土的 I 差 2~3 倍。选型不能按"同高度"估算。' },
+  'sls-deflection': { category: '📐 杆件与截面行为', level: 'L1', action: 'play', title: '梁挠度超限与 SLS 报警', desc: '12m 跨大梁 · 60kN/m。扫掠梁高 hb (400→900)，看受弯挠度如何从严重超限（红字报警）减小直至安全。' },
+
   'pin-vs-fixed-base-sway': { category: '🧱 特殊构件与边界', level: 'L2', action: 'compare', title: '柱脚固接 vs 铰接：侧移对比', desc: '两层两跨 · 水平力。固接（灰虚线）vs 铰接（实线），侧移差 3~4 倍。' },
   'moving-load-influence': { category: '🔥 综合演练与概念', level: 'L2', action: 'toast', title: '移动荷载与影响线', desc: '单层三跨 · 80kN 移动集中力。手动点 ▶ 播放，用截面探针观察 M 值随位置变化——影响线本质。' },
   'partial-vs-full-load': { category: '🔥 综合演练与概念', level: 'L2', action: 'compare', title: '隔跨加载 vs 满跨加载', desc: '三层三跨。边跨加载（实线）时中间支座负弯矩增大——这是支座配筋的控制工况；满跨基线（灰虚线）用于对比。' },
@@ -114,7 +116,7 @@ const SELF_TEST_UI_CONFIG = {
 
   'rho-vs-story-drift': { category: '🌪️ 抗侧力与二阶效应', level: 'L2', action: 'play', title: 'ρ 与层间位移角分布', desc: '三层三跨 · 刚性楼板。扫掠 r (0.25→4)，看层间位移角沿高度重新分布——软弱层形成的根源。' },
   'support-rotation-rigid': { category: '🧱 特殊构件与边界', level: 'L3', action: 'play', title: '强迫转角 × 刚性楼板', desc: '扫掠左柱强迫转角（显示 0°→30°，实际 0→0.01 rad，视觉放大），刚性楼板强制同层水平位移相等，把强迫转角引起的侧移耦合到整层，附加弯矩成倍增长。' },
-  'temp-grad-direction': { category: '🧱 特殊构件与边界', level: 'L3', action: 'compare', title: '温度梯度方向：室外热 vs 室外冷', desc: '南方（夏季外热）与北方（冬季外冷）的温度效应反号，边柱弯曲方向反转。' },
+  'temp-grad-direction': { category: '🧱 特殊构件与边界', level: 'L2', action: 'compare', title: '温度梯度方向：室外热 vs 室外冷', desc: '南方（夏季外热）与北方（冬季外冷）的温度效应反号，边柱弯曲方向反转。' },
   'rot-vs-settle': { category: '🧱 特殊构件与边界', level: 'L3', action: 'compare', title: '强迫转角 vs 强迫沉降', desc: '对比强迫转角与强迫沉降的柱底弯矩。谁更危险取决于 θ 与 Δ/h 的相对大小；本组输入下沉降弯矩反而更大，说明不能一概而论。' },
   'h-inverted-triangle': { category: '🌪️ 抗侧力与二阶效应', level: 'L3', action: 'compare', title: '倒三角 vs 均匀分布水平力', desc: '均匀分布 → 近似直线侧移；倒三角 → 曲线侧移。地震近倒三角、风荷载近均匀。' },
   'brace-tension-vs-buckling': { category: '🧱 特殊构件与边界', level: 'L3', action: 'compare', title: '仅受拉 vs 屈曲报警：两种失效', desc: '"仅受拉"是承载力设计（静默退出）；"屈曲校核"是稳定验算（杆件报警）。两个不同层面。' },
@@ -123,16 +125,17 @@ const SELF_TEST_UI_CONFIG = {
   'remove-beam-multi': { category: '🏢 整体受力与变形', level: 'L3', action: 'compare', title: '连续抽梁 vs 单跨抽梁', desc: '连续抽梁让中间柱顶部两侧同时失去约束，计算长度翻倍。"连续削弱"比"分散削弱"更危险。' },
   'pdelta-braced-vs-unbraced': { category: '🌪️ 抗侧力与二阶效应', level: 'L3', action: 'compare', title: '支撑对 P-Δ 的隐形贡献', desc: '无支撑 → B 值爆炸接近失稳；有 X 撑 → B≈1.05。支撑的"隐形价值"是提高 N_cr。' },
   'pdelta-cantilever': { category: '🌪️ 抗侧力与二阶效应', level: 'L3', action: 'play', title: '悬挑结构对 P-Δ 的放大', desc: '单层单跨 + 悬挑。扫掠 qc1 (0→100)，悬挑竖向力通过倾覆力矩产生侧移；已叠加 0.1 kN 微小水平力以便显示 B 值。大悬挑必须严格限制侧移。' },
-  'temp-lateral-superposition': { category: '🔥 综合演练与概念', level: 'L3', action: 'play', title: '温度 + 水平力的线性叠加', desc: '灰虚线 = 纯温度弯矩。扫掠 H1，看实线如何在灰线上加出侧移弯矩——线弹性叠加原理的实证。' },
+  'temp-lateral-superposition': { category: '🔥 综合演练与概念', level: 'L2', action: 'play', title: '温度 + 水平力的线性叠加', desc: '灰虚线 = 纯温度弯矩。扫掠 H1，看实线如何在灰线上加出侧移弯矩——线弹性叠加原理的实证。' },
   'trap-rigid-floor-and-brace': { category: '🌪️ 抗侧力与二阶效应', level: 'L3', action: 'compare', title: '刚性楼板 + 支撑的"叠加假象"', desc: '刚性楼板下各柱位移平均，但支撑的轴力不会因此变小。默认显示变形图；请切到 N 图观察支撑轴力。"侧移小了"≠"支撑受力小了"。' },
   'trap-PDelta-and-rigid-floor': { category: '🌪️ 抗侧力与二阶效应', level: 'L3', action: 'compare', title: 'P-Δ + 刚性楼板：B 值被低估', desc: '刚性楼板强制 u_top 均匀，N_cr 反推偏大，B 值被低估。柔性楼盖的高层更危险。' },
-  'mechanism-concept': { category: '🔥 综合演练与概念', level: 'L1', action: 'toast', title: '机构与几何可变体系', desc: '全铰接 + 无支撑 + 水平力 = 机构。刚度矩阵奇异，solve() 抛错。这不是 bug，是力学真理。' },
+  'mechanism-concept': { category: '🔥 综合演练与概念', level: 'L2', action: 'toast', title: '机构与几何可变体系', desc: '全铰接 + 无支撑 + 水平力 = 机构。刚度矩阵奇异，solve() 抛错。这不是 bug，是力学真理。' },
   'software-boundary': { category: '🔥 综合演练与概念', level: 'L3', action: 'toast', title: '工具的能力边界', desc: '能算：线弹性静力 / 二阶粗估 / 仅受拉非线性 / 强迫位移。不能算：动力、扭转、P-δ、节点域、屈曲后。' }
 };
 
 /* 自检卡片的 Tag 筛选字典（按工程痛点重构） */
 const SELF_TEST_TAGS_MAP = {
   'moment-redist': ['内力/反弯点'],
+  'mid-support-ql2-trap': ['内力/反弯点', '体系/概念'],
   'colbase-hinge': ['内力/反弯点', '变形/侧移'],
   'strong-beam': ['内力/反弯点'],
   'load-moment': ['内力/反弯点'],
@@ -179,10 +182,11 @@ const SELF_TEST_TAGS_MAP = {
   'mat-conc-vs-steel': ['变形/侧移', '体系/概念'],
   'hw-strong-vs-weak': ['变形/侧移'],
   'bc-linear-effect': ['变形/侧移'],
-  'bb-linear-effect': ['内力/反弯点'],
+  'bb-linear-effect': ['变形/侧移'],
+  'hb-linear-effect': ['变形/侧移', '内力/反弯点'],
   'support-type-mixed': ['边界/非荷载', '变形/侧移'],
   'sls-deflection': ['变形/侧移'],
-  'hn-vs-rect': ['内力/反弯点'],
+
   'pin-vs-fixed-base-sway': ['边界/非荷载', '变形/侧移'],
   'moving-load-influence': ['不利布置', '内力/反弯点'],
   'partial-vs-full-load': ['不利布置', '内力/反弯点'],
@@ -210,6 +214,24 @@ const SELF_TEST_TAGS_MAP = {
 
 const SELF_TEST_CASES = [
   {
+    id: 'mid-support-ql2-trap',
+    sweep: 'hc',
+    sweepRange: [300, 800],
+    state: {
+      nBay: 2, nLev: 1, hasCant: false,
+      L1: 10, L2: 10, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5,
+      bc: 400, hc: 300, bb: 250, hb: 500, r: 1,
+      q1: 100, q2: 0, q3: 0,
+      qc1: 0, qc2: 0, qc3: 0,
+      H1: 0, H2: 0, H3: 0, Hmode: 'none',
+      betaF: 1, betaJ: 1,
+      forceType: 'M', elFilter: 'all',
+      showVals: true, showAntiPts: false, showPDelta: false,
+      displayMode: 'force', mScale: 0.5, dScale: 30
+    },
+    toast: '⚠️ 你看到的 970 ≠ 833，因为中间支座<b>不是固结</b>。<br><br>ql²/12=833 只是「边柱无限刚」的特例。真实框架里，边柱会转动，中支座负弯矩被放大：<br><br><b>M_B = ql²/12 × (3ρ+2)/(2(ρ+1))</b><br><br>• 柱无限刚（ρ→0）→ 833（永远达不到）<br>• 柱铰接（ρ→∞）→ 1250（ql²/8）<br><br>扫掠柱截面 hc：柱越细，边柱转得越多，中支座负弯矩越大（hc=300 → 约 1057）；柱越粗，越接近 833（hc=800 → 约 857）。<br><br><b>盯住中间支座两侧梁端的数值</b>，同时看右面板 ρ 的同步变化。<br><br>注：β_F=1 管的是<b>柱脚</b>，不是中支座。中支座是梁-柱-梁三杆交汇节点，它的转动由柱的抗弯刚度决定。'
+  },
+  {
     id: 'moment-redist',
     sweep: 'betaJ',
     sweepRange: [1, 0],
@@ -226,13 +248,13 @@ const SELF_TEST_CASES = [
     sweep: 'betaF',
     sweepRange: [1, 0],
     state: { nBay: 2, nLev: 2, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 400, hc: 400, bb: 250, hb: 500, r: 1, q1: 0, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 30, H2: 0, H3: 0, Hmode: 'none', betaF: 1, betaJ: 1, forceType: 'M', elFilter: 'all', showVals: true, showIds: false, showPDelta: false, displayMode: 'all', mScale: 10, dScale: 50 },
-    toast: '两层两跨 · 一层水平力。扫掠柱脚 β_f (0→1)，看柱脚弯矩逐渐产生、底层侧移随之减小。**进阶**：对比「梁端 β_j」扫掠（moment-redist 卡）——柱脚刚度和梁端刚度在概念上等价，都是"转动约束"。'
+    toast: '两层两跨 · 一层水平力。扫掠柱脚 β_f (0→1)，看柱脚弯矩逐渐产生、底层侧移随之减小。**进阶**：对比「梁端弯矩释放」卡——柱脚刚度和梁端刚度在概念上等价，都是"转动约束"。'
   },
   {
     id: 'axial-hinge',
     sweep: null,
     state: { nBay: 1, nLev: 1, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 800, hc: 800, bb: 200, hb: 400, r: 1, q1: 100, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 0, H2: 0, H3: 0, Hmode: 'none', axialMode: 'real', betaF: 1, betaJ: 1, forceType: 'M', elFilter: 'all', showVals: true, showIds: false, showPDelta: false, displayMode: 'force', mScale: 1, dScale: 30 },
-    toast: '很多工程师认为竖向荷载下反弯点必然是 0.33h。但在本工况中，由于强柱弱梁（柱 800×800，梁 200×400），且考虑梁的轴向变形，竖向荷载引起了极微小的侧移，反弯点偏移到了约 0.30h。请点击左侧【模型】Tab，切换至【忽略（刚性）】轴向变形，看看反弯点是不是瞬间跳回了 0.33h？<br><br>**这就是为什么分层法要做"无侧移"假定**——形常数表的所有结论，都建立在"节点无相对侧移"这个前提上。'
+    toast: '很多工程师认为竖向荷载下反弯点必然是 0.33h。但在本工况中，由于强柱弱梁（柱 800×800，梁 200×400），且考虑梁的轴向变形，竖向荷载引起了极微小的侧移，反弯点偏移到了约 0.30h。请点击左侧【模型】Tab，切换至【忽略（刚性）】轴向变形，看看反弯点是不是瞬间跳回了 0.33h？<br><br>**这就是为什么分层法要做"无侧移"假定**——所有位移法手算表格的结论，都建立在"节点无相对侧移"这个前提上。'
   },
   {
     id: 'strong-beam',
@@ -334,7 +356,7 @@ const SELF_TEST_CASES = [
     id: 'system-stiffness-match',
     sweep: 'betaJ',
     state: { nBay: 2, nLev: 2, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 400, hc: 400, bb: 250, hb: 500, r: 1, q1: 0, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 50, H2: 0, H3: 0, Hmode: 'none', betaF: 1, betaJ: 1, forceType: 'M', elFilter: 'all', showVals: false, showIds: false, showPDelta: false, displayMode: 'all', mScale: 5, dScale: 50 },
-    toast: '扫掠梁端刚度 β_j（0→1）。注意看右侧读数面板的「体系判定」：从完全铰接的排架体系，逐渐增强为半刚接，最终变为典型刚接框架。同时观察结构侧移的减小。<br><br>**ρ 和 β_j 是两个独立的"刚度匹配旋钮"**：ρ 调"梁柱相对刚度"，β_j 调"节点转动约束"。林同炎的刚度匹配判断，要同时看这两个。'
+    toast: '扫掠梁端刚度 β_j（0→1）。注意看右侧读数面板的「体系判定」：从完全铰接的排架体系，逐渐增强为半刚接，最终变为典型刚接框架。同时观察结构侧移的减小。<br><br>**梁柱线刚度比和 β_j 是两个独立的"刚度匹配旋钮"**：刚度比调"梁柱相对刚度"，β_j 调"节点转动约束"。判断体系类型，要同时看这两个。'
   },
   /* ===== 新增卡（v0.1.6 功能扩充）===== */
 
@@ -345,11 +367,17 @@ const SELF_TEST_CASES = [
     state: { nBay: 1, nLev: 1, hasCant: true, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 0.5, bc: 400, hc: 400, bb: 250, hb: 500, r: 1, q1: 0, q2: 0, q3: 0, qc1: 30, qc2: 0, qc3: 0, H1: 0, H2: 0, H3: 0, Hmode: 'none', betaF: 1, betaJ: 1, forceType: 'M', elFilter: 'all', showVals: true, showIds: false, showPDelta: false, displayMode: 'all', mScale: 1.0, dScale: 50 }
   },
 
-  /* ⑱ 柱截面三次方效应：与 ③ 的"梁高"对照，看侧移 ∝ 1/h_c³ */
   {
     id: 'col-h3',
     sweep: 'hc',
-    state: { nBay: 1, nLev: 1, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 400, hc: 300, bb: 250, hb: 500, r: 1, q1: 0, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 50, H2: 0, H3: 0, Hmode: 'none', betaF: 1, betaJ: 1, forceType: 'M', elFilter: 'all', showVals: true, showIds: false, showPDelta: false, displayMode: 'all', mScale: 10, dScale: 50 }
+    state: { nBay: 1, nLev: 1, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 400, hc: 300, bb: 250, hb: 500, r: 1, q1: 0, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 50, H2: 0, H3: 0, Hmode: 'none', betaF: 1, betaJ: 1, forceType: 'M', elFilter: 'all', showVals: true, showIds: false, showPDelta: false, displayMode: 'deform', mScale: 7, dScale: 80 }
+  },
+  {
+    id: 'bc-linear-effect',
+    sweep: 'bc',
+    sweepRange: [300, 800],
+    state: { nBay: 1, nLev: 1, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 300, hc: 400, bb: 250, hb: 500, r: 1, q1: 0, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 50, H2: 0, H3: 0, Hmode: 'none', betaF: 1, betaJ: 1, forceType: 'M', elFilter: 'all', showVals: true, showIds: false, showPDelta: false, displayMode: 'deform', mScale: 5, dScale: 100 },
+    toast: 'bc 对侧移是线性的（I ∝ bc）。刚看过的上一张卡是柱高 hc（三次方）。**加高比加宽划算得多**——这就是柱截面设计的铁律，也是"为什么柱子总是窄而高"的量化回答。'
   },
 
   /* ⑳ 三层薄弱层转移：⑦ 的纵向延伸，填补三层拓扑零覆盖 */
@@ -542,30 +570,35 @@ const SELF_TEST_CASES = [
     sweep: null,
     prelude: { nBay: 1, nLev: 2, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 400, hc: 400, bb: 250, hb: 500, r: 1, q1: 0, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 50, H2: 30, H3: 0, Hmode: 'none', frameMat: 'conc', braceMat: 'steel', betaF: 1, betaJ: 1, forceType: 'M', elFilter: 'all', showVals: false, showIds: false, showPDelta: false, displayMode: 'deform', mScale: 1, dScale: 200 },
     preludeFreeze: true,
+    legendBase: '混凝土 C30 (虚)',
+    legendCurrent: '钢材 Q355 (实)',
     state: { nBay: 1, nLev: 2, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 400, hc: 400, bb: 250, hb: 500, r: 1, q1: 0, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 50, H2: 30, H3: 0, Hmode: 'none', frameMat: 'steel', braceMat: 'steel', betaF: 1, betaJ: 1, forceType: 'M', elFilter: 'all', showVals: false, showIds: false, showPDelta: false, displayMode: 'deform', mScale: 1, dScale: 200 },
-    toast: '截面尺寸一模一样，只把材料从 C30 换成 Q355，侧移直接缩小近 7 倍（E_steel / E_conc = 2.06e8 / 3.0e7 ≈ 6.87）。这就是为什么钢结构可以做得很纤细，而混凝土必须靠截面堆刚度。'
+    toast: '截面尺寸一模一样，只把材料从“混凝土 C30”换成“钢材 Q355”，侧移直接缩小近 7 倍（钢材的弹性模量是混凝土的 6.87 倍）。这就是为什么钢结构可以做得很纤细，而混凝土必须靠截面堆刚度。'
   },
   {
     id: 'hw-strong-vs-weak',
     sweep: null,
     prelude: { nBay: 1, nLev: 1, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, colSecType: 'HW', colHW: 'HW300x300', colAxis: 'strong', bc: 400, hc: 400, bb: 250, hb: 500, r: 1, q1: 0, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 30, H2: 0, H3: 0, Hmode: 'none', betaF: 1, betaJ: 1, forceType: 'M', elFilter: 'all', showVals: false, showIds: false, showPDelta: false, displayMode: 'deform', mScale: 1, dScale: 10 },
     preludeFreeze: true,
+    legendBase: '强轴 (虚)',
+    legendCurrent: '弱轴 (实)',
     state: { nBay: 1, nLev: 1, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, colSecType: 'HW', colHW: 'HW300x300', colAxis: 'weak', bc: 400, hc: 400, bb: 250, hb: 500, r: 1, q1: 0, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 30, H2: 0, H3: 0, Hmode: 'none', betaF: 1, betaJ: 1, forceType: 'M', elFilter: 'all', showVals: false, showIds: false, showPDelta: false, displayMode: 'deform', mScale: 1, dScale: 10 },
-    toast: 'HW300x300 的 Iy/Ix ≈ 6760/20500 ≈ 0.33。同一根工字柱摆错 90°，平面内刚度掉到 1/3，侧移翻三倍。这就是施工图必须标注"强轴方向"的原因。'
+    toast: 'HW300x300 的 Iy/Ix ≈ 6760/20500 ≈ 0.33。同一根型钢柱，截面尺寸没有任何改变，仅仅是将截面绕自身轴线旋转了 90°。当弱轴迎战水平力时，平面内抗弯刚度直接降至原来的 1/3，侧移随之放大 3 倍。在力学上，截面的“方向”本身就是一种“刚度”。'
   },
-  {
-    id: 'bc-linear-effect',
-    sweep: 'bc',
-    sweepRange: [300, 800],
-    state: { nBay: 1, nLev: 1, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 300, hc: 400, bb: 250, hb: 500, r: 1, q1: 0, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 50, H2: 0, H3: 0, Hmode: 'none', betaF: 1, betaJ: 1, forceType: 'M', elFilter: 'all', showVals: true, showIds: false, showPDelta: false, displayMode: 'all', mScale: 5, dScale: 50 },
-    toast: 'bc 对侧移是线性的（I ∝ bc）。对照 col-h3 卡：hc 是三次方。**加高比加宽划算得多**——这就是柱截面设计的铁律，也是"为什么柱子总是窄而高"的量化回答。'
-  },
+  /* 旧的 bc-linear-effect 已移至 col-h3 之后，此处删除 */
   {
     id: 'bb-linear-effect',
     sweep: 'bb',
     sweepRange: [200, 500],
-    state: { nBay: 1, nLev: 1, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 400, hc: 400, bb: 200, hb: 600, r: 1, q1: 30, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 0, H2: 0, H3: 0, Hmode: 'none', betaF: 1, betaJ: 1, forceType: 'M', elFilter: 'all', showVals: true, showIds: false, showPDelta: false, displayMode: 'force', mScale: 3, dScale: 50 },
+    state: { nBay: 1, nLev: 1, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 400, hc: 400, bb: 200, hb: 600, r: 1, q1: 30, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 0, H2: 0, H3: 0, Hmode: 'none', betaF: 1, betaJ: 1, forceType: 'M', elFilter: 'all', showVals: true, showIds: false, showPDelta: false, displayMode: 'deform', mScale: 3, dScale: 300 },
     toast: 'bb 对梁刚度是线性的，hb 是三次方。梁设计要"加高不加宽"——这就是为什么梁的截面总是窄而高，也是"为什么梁高不能随便砍"的量化依据。'
+  },
+  {
+    id: 'hb-linear-effect',
+    sweep: 'hb',
+    sweepRange: [400, 900],
+    state: { nBay: 1, nLev: 1, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 400, hc: 400, bb: 250, hb: 400, r: 1, q1: 30, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 0, H2: 0, H3: 0, Hmode: 'none', betaF: 1, betaJ: 1, forceType: 'M', elFilter: 'all', showVals: true, showIds: false, showPDelta: false, displayMode: 'deform', mScale: 3, dScale: 300 },
+    toast: '梁高 hb 从 400 扫掠到 900，你会发现变形急剧减小（I ∝ hb³）。这就是"为什么梁高不能随便砍"的量化依据——截面高度稍微降一点，刚度就会呈三次方暴跌。'
   },
   {
     id: 'support-type-mixed',
@@ -575,25 +608,21 @@ const SELF_TEST_CASES = [
   },
   {
     id: 'sls-deflection',
-    sweep: null,
-    state: { nBay: 1, nLev: 1, hasCant: false, L1: 12, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 400, hc: 400, bb: 250, hb: 400, r: 1, q1: 60, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 0, H2: 0, H3: 0, Hmode: 'none', betaF: 1, betaJ: 1, forceType: 'M', elFilter: 'all', showVals: false, showIds: false, showPDelta: false, displayMode: 'deform', mScale: 1, dScale: 15 },
-    toast: '12m 跨、400 高的小梁，受弯挠度已超 1/200。看底部状态栏 DEFORM·超限、右面板 r-maxDy 标红。去「模型」Tab 把梁高调到 900，看警告什么时候消失——v ∝ 1/h³，梁高翻倍挠度掉到 1/8。'
+    sweep: 'hb',
+    sweepRange: [400, 900],
+    state: { nBay: 1, nLev: 1, hasCant: false, L1: 12, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 400, hc: 400, bb: 250, hb: 400, r: 1, q1: 60, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 0, H2: 0, H3: 0, Hmode: 'none', betaF: 1, betaJ: 1, forceType: 'M', elFilter: 'all', showVals: false, showIds: false, showPDelta: false, displayMode: 'deform', mScale: 1, dScale: 20 },
+    toast: '12m 跨的大梁，荷载很大。初始 400 高时挠度严重超 1/200（状态栏 DEFORM·超限亮起，r-maxDy 标红）。随着梁高 hb 增加，看挠度如何呈三次方骤降，什么时候变回绿色的 OK。'
   },
 
   /* ========== L2 卡（11 张） ========== */
-  {
-    id: 'hn-vs-rect',
-    sweep: null,
-    prelude: { nBay: 1, nLev: 1, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, beamSecType: 'rect', bb: 250, hb: 600, bc: 400, hc: 400, r: 1, q1: 30, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 0, H2: 0, H3: 0, Hmode: 'none', betaF: 1, betaJ: 1, forceType: 'M', elFilter: 'all', showVals: true, showIds: false, showPDelta: false, displayMode: 'force', mScale: 3, dScale: 50 },
-    preludeFreeze: true,
-    state: { nBay: 1, nLev: 1, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, beamSecType: 'HN', beamHN: 'HN600x200', bb: 250, hb: 600, bc: 400, hc: 400, r: 1, q1: 30, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 0, H2: 0, H3: 0, Hmode: 'none', betaF: 1, betaJ: 1, forceType: 'M', elFilter: 'all', showVals: true, showIds: false, showPDelta: false, displayMode: 'force', mScale: 3, dScale: 50 },
-    toast: '同高度 600mm：HN600x200 与 250×600 矩形梁的 I 相差 2~3 倍。型钢梁自重轻，但刚度不能按"同高度"估算——腹板厚度、翼缘面积才是关键。这就是为什么型钢梁选型不能只看"高"，要查表。'
-  },
+
   {
     id: 'pin-vs-fixed-base-sway',
     sweep: null,
     prelude: { nBay: 2, nLev: 2, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 400, hc: 400, bb: 250, hb: 500, r: 1, q1: 0, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 60, H2: 0, H3: 0, Hmode: 'none', betaF: 1, betaJ: 1, forceType: 'M', elFilter: 'all', showVals: false, showIds: false, showPDelta: false, displayMode: 'deform', mScale: 1, dScale: 50 },
     preludeFreeze: true,
+    legendBase: '柱脚固接 (虚)',
+    legendCurrent: '柱脚铰接 (实)',
     state: { nBay: 2, nLev: 2, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 400, hc: 400, bb: 250, hb: 500, r: 1, q1: 0, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 60, H2: 0, H3: 0, Hmode: 'none', betaF: 0, betaJ: 1, forceType: 'M', elFilter: 'all', showVals: false, showIds: false, showPDelta: false, displayMode: 'deform', mScale: 1, dScale: 50 },
     toast: '柱脚从固接（灰虚线）变铰接（实线），侧移放大 3~4 倍，柱脚弯矩归零。柱脚刚度的选择在"弯矩小"和"侧移小"之间权衡——不是越刚越好。'
   },
@@ -656,7 +685,7 @@ const SELF_TEST_CASES = [
     sweep: 'r',
     sweepRange: [0.25, 4],
     state: { nBay: 3, nLev: 3, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 400, hc: 400, bb: 250, hb: 500, r: 0.25, q1: 0, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 60, H2: 0, H3: 0, Hmode: 'rigid', betaF: 1, betaJ: 1, forceType: 'V', elFilter: 'col', showVals: true, showIds: false, showPDelta: false, displayMode: 'deform', mScale: 1, dScale: 50 },
-    toast: 'r 增大时，内柱分走更多剪力，但层间位移角沿高度重新分布：某层可能变大、某层可能变小。**ρ 不只影响总侧移，更影响侧移沿高度的分布**——这就是软弱层形成的根源。盯住右面板的"层间位移角"逐层列表。'
+    toast: 'r 增大时，内柱分走更多剪力，但层间位移角沿高度重新分布：某层可能变大、某层可能变小。**梁柱刚度比不只影响总侧移，更影响侧移沿高度的分布**——这就是软弱层形成的根源。盯住右面板的"层间位移角"逐层列表。'
   },
 
   /* ========== L3 卡（13 张） ========== */
@@ -665,7 +694,7 @@ const SELF_TEST_CASES = [
     sweep: 'supportRot0',
     sweepRange: [0, 30],
     state: { nBay: 2, nLev: 2, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 400, hc: 400, bb: 250, hb: 500, r: 1, q1: 0, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 0, H2: 0, H3: 0, Hmode: 'rigid', supportMap: { '0': { rot: 0 } }, betaF: 1, betaJ: 1, forceType: 'M', elFilter: 'all', showVals: true, showIds: false, showPDelta: false, displayMode: 'all', mScale: 2, dScale: 30 },
-    toast: '一根柱基础强迫转动，刚性楼板强制同层水平位移相等，其余柱被"带着走"。对比 support-rotation 卡（无楼板）——**同样的强迫转角，刚性楼板让附加弯矩成倍增长**。这就是为什么基础不均匀沉降在现浇楼盖里是"系统灾害"。'
+    toast: '一根柱基础强迫转动，刚性楼板强制同层水平位移相等，其余柱被"带着走"。对比「基础强迫扭转」卡（无楼板）——**同样的强迫转角，刚性楼板让附加弯矩成倍增长**。这就是为什么基础不均匀沉降在现浇楼盖里是"系统灾害"。'
   },
   {
     id: 'temp-grad-direction',
@@ -853,9 +882,15 @@ function runSelfTest(caseId){
     return;
   }
 
+  /* 0. 先高亮当前卡片（含纯概念卡），保证点击有视觉反馈。
+     原先这段位于 pureConcept 拦截之后，导致纯概念卡点击无高亮。 */
+  document.querySelectorAll('.selfTestCard').forEach(c => {
+    c.classList.toggle('active', c.dataset.selftest === caseId);
+  });
+
   /* 1. 拦截纯概念卡（不重置工况、不进行任何计算） */
   if (tc.pureConcept) {
-    if (tc.toast) showToast(tc.toast, 15000);
+    if (tc.toast) showToast(tc.toast, 15000, true);
     return;
   }
 
@@ -921,8 +956,12 @@ function runSelfTest(caseId){
   if(typeof renderSupportMapPanel === 'function') renderSupportMapPanel();
 
   /* 2.6 prelude：先加载一个工况、可选冻结为基线，再加载主工况。
-     专供 ㉔b/㉔c 使用：先算满跨、冻结为灰色基线，再算不利布置、与基线对比。
      prelude 与主 state 的拓扑必须一致，否则 run() 会因 geoChanged 清空 BASE。 */
+  // 重置图例文字为默认值
+  S.uiLegend = {
+    base: tc.legendBase || '冻结基线',
+    current: tc.legendCurrent || '当前工况'
+  };
   if(tc.prelude){
     if(!applyStateFromObj(tc.prelude)) return;
     if(tc.preludeFreeze) _freezeCurrentModel();
@@ -935,7 +974,7 @@ function runSelfTest(caseId){
      说明：原先这里会 tabBtn.click() 强制切到「模型 / 荷载」Tab，用户反馈体验不好。
      现在只把 <details> 打开（open=true），切 Tab 时面板已经是展开的。 */
   const isModelParam = ['L1','L2','L3','h1','h2','h3','Lc','bc','hc','bb','hb','r','As','braceI'].includes(tc.sweep);
-  const isLoadParam  = ['q1','q2','q3','qc1','qc2','qc3','H1','H2','H3','P1','P2','P3','tempAll','tempGrad','settleDy','betaF','betaJ'].includes(tc.sweep);
+  const isLoadParam  = ['q1','q2','q3','qc1','qc2','qc3','H1','H2','H3','P1','P2','P3','tempAll','tempGrad','settleDy','supportRot0','betaF','betaJ'].includes(tc.sweep);
 
   const openDetails = (id) => { const el = document.getElementById(id); if(el) el.open = true; };
 
@@ -973,7 +1012,7 @@ function runSelfTest(caseId){
 
   /* 3.6 静态卡片：不打开扫掠条、不播放，只弹 toast 提示观察要点 */
   if(!tc.sweep){
-    if(tc.toast) showToast(tc.toast);
+    if(tc.toast) showToast(tc.toast, 15000, true);
     return;
   }
 
@@ -998,9 +1037,17 @@ function runSelfTest(caseId){
     requestAnimationFrame(()=>{
       /* 自检扫掠从卡片预设的初始值开始，而不是 slider 的 min。
          例如 tempAll 的 min=-30，但卡片描述是"0→50℃"，应从 0 开始。 */
-      const initEl = document.getElementById(S.sweep.param);
-      if(initEl && tc.state && tc.state[S.sweep.param] != null){
-        sweepSetValue(S.sweep.param, tc.state[S.sweep.param]);
+      const param = S.sweep.param;
+      const initEl = document.getElementById(param);
+      const isProxy = (param === 'settleDy' || param === 'supportRot0');
+      if(isProxy && tc.sweepRange && tc.sweepRange[0] != null){
+        /* settleDy / supportRot0 没有对应的 DOM input，
+           走 sweepSetValue 的代理分支，直接跳到 sweepRange 起点，
+           避免 sweepReset() 先设到极值（-100 / -30°）造成启动闪现。 */
+        sweepSetValue(param, tc.sweepRange[0]);
+        run();
+      } else if(initEl && tc.state && tc.state[param] != null){
+        sweepSetValue(param, tc.state[param]);
         run();
       } else {
         sweepReset();

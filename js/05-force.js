@@ -9,22 +9,22 @@ const THEME = {
     node:'#e2e8f0', nodeBlue:'#7dd3fc', support:'#94a3b8', supportFill:'#1e293b',
     udl:'#f87171', udlLabel:'#fca5a5', udlLabelBg:'rgba(17,24,39,0.8)',
     hArrow:'#38bdf8', hLabel:'#7dd3fc', deformCurve:'#38bdf8',
-    freezeLine:'rgba(148,163,184,0.55)', antiCurve:'#f8fafc'
+    freezeLine:'rgba(192,132,252,0.85)', antiCurve:'#f8fafc'
   },
   light: {
     bg:'#ffffff', frame:'#334155', frameThin:'#64748b', frameGhost:'#cbd5e1',
     node:'#475569', nodeBlue:'#0284c7', support:'#475569', supportFill:'#ffffff',
     udl:'#dc2626', udlLabel:'#dc2626', udlLabelBg:'rgba(255,255,255,0.90)',
     hArrow:'#0284c7', hLabel:'#0369a1', deformCurve:'#0284c7',
-    freezeLine:'rgba(71,85,105,0.55)', antiCurve:'#0f172a'
+    freezeLine:'rgba(139,92,246,0.8)', antiCurve:'#0f172a'
   }
 };
 function theme(){ return S.lightBg ? THEME.light : THEME.dark; }
 
 const FORCE_STYLE = {
   M: { ref: 200, unit: 'kN·m', tag: '弯矩图 M', lbl: '|M|max',
-       col:  { color:'#f97316', fill:'rgba(249,115,22,0.32)' },
-       beam: { color:'#fde68a', fill:'rgba(253,230,138,0.30)' } },
+       col:  { color:'#38bdf8', fill:'rgba(56,189,248,0.32)' },
+       beam: { color:'#f97316', fill:'rgba(249,115,22,0.30)' } },
   N: { ref: 500, unit: 'kN', tag: '轴力图 N', lbl: '|N|max',
        col:  { color:'#a855f7', fill:'rgba(168,85,247,0.30)' },
        beam: { color:'#fbcfe8', fill:'rgba(251,207,232,0.28)' } },
@@ -37,8 +37,8 @@ const FORCE_STYLE = {
 };
 const FORCE_STYLE_LIGHT = {
   M: { ref: 200, unit: 'kN·m', tag: '弯矩图 M', lbl: '|M|max',
-       col:  { color:'#ea580c', fill:'rgba(234,88,12,0.26)' },
-       beam: { color:'#ca8a04', fill:'rgba(202,138,4,0.24)' } },
+       col:  { color:'#0284c7', fill:'rgba(2,132,199,0.26)' },
+       beam: { color:'#ea580c', fill:'rgba(234,88,12,0.24)' } },
   N: { ref: 500, unit: 'kN', tag: '轴力图 N', lbl: '|N|max',
        col:  { color:'#7c3aed', fill:'rgba(124,58,237,0.24)' },
        beam: { color:'#be185d', fill:'rgba(190,24,93,0.22)' } },
@@ -54,19 +54,30 @@ function forceStyleOf(type, kind){
   return (kind === 'col') ? s.col : s.beam;
 }
 
-function drawSlsWarning(ctx, model) {
+function drawSlsWarning(ctx, model, W, H) {
   if (!model.isDeformFail) return;
   ctx.save();
-  ctx.font = 'bold 12px "JetBrains Mono", ui-monospace, monospace';
-  ctx.fillStyle = '#ef4444';
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'top';
-  const rStr = Math.round(1 / model.dyRatioValue);
-  ctx.fillText(`⚠️ 警告：梁受弯挠度超限 (挠跨比 1/${rStr})`, 26, 28);
   
-  ctx.font = '10px ui-sans-serif,system-ui,sans-serif';
-  ctx.fillStyle = 'rgba(239, 68, 68, 0.75)';
-  ctx.fillText('注：内力结果为线弹性理论值，但截面已不满足正常使用要求。', 26, 44);
+  const txt = '⚠️ 受弯挠度超出规范限值 (SLS)';
+  ctx.font = 'bold 14px "JetBrains Mono", ui-monospace, monospace';
+  const tw = ctx.measureText(txt).width;
+  const bh = 34;
+  const bw = tw + 40;
+  const bx = W/2 - bw/2;
+  const by = H - 65; // 位置与变形图一致，放在画布底部居中
+  
+  ctx.fillStyle = 'rgba(239, 68, 68, 0.15)';
+  ctx.strokeStyle = '#ef4444';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  if(ctx.roundRect) ctx.roundRect(bx, by, bw, bh, 8); else ctx.rect(bx, by, bw, bh);
+  ctx.fill();
+  ctx.stroke();
+  
+  ctx.fillStyle = '#f87171';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(txt, W/2, by + bh/2);
   ctx.restore();
 }
 
@@ -77,14 +88,15 @@ function drawInternal(canvas, model, dprOverride){
   const filter = model.p.elFilter;
   const {ctx,W,H} = setupCanvas(canvas, dprOverride);
   const padB = type === 'R' ? 80 : 36; // R 图底部留出更大空间画弯矩
-  const {toS} = makeTransform(model, W, H, { padL: 120, padT: 100, padR: 60, padB });
+  // 将 padT 从 100 提高到 130，为顶部悬浮按钮留出安全区，防止 mScale 过大时数值重叠
+  const {toS} = makeTransform(model, W, H, { padL: 100, padT: 130, padR: 100, padB });
 
   ctx.fillStyle=T.bg; ctx.fillRect(0,0,W,H);
   drawGrid(ctx, W, H);
   drawHUD(ctx, W, H, 'INTERNAL FORCE · ' + type);
 
   /* 在受力图上也添加超限警告 (SLS)，统一走 drawSlsWarning */
-  drawSlsWarning(ctx, model);
+  drawSlsWarning(ctx, model, W, H);
 
   const NP = 61;
   const targetPx = Math.min(W,H)*0.055;
@@ -244,8 +256,8 @@ function drawInternal(canvas, model, dprOverride){
   if(BASE){
     ctx.save();
     ctx.strokeStyle = T.freezeLine;
-    ctx.lineWidth = 1.2;
-    ctx.setLineDash([5,4]);
+    ctx.lineWidth = 2.0;
+    ctx.setLineDash([6,3]);
     for(const res of BASE.results){
       const el = res.el;
       if(filter === 'col'  && el.kind !== 'col')  continue;

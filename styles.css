@@ -895,3 +895,24 @@ body.recording #leftCol { border-right-color: #f43f5e; }
   from { opacity: 0; transform: translateY(-4px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* 当前正在运行的自检卡片高亮 */
+.selfTestCard.active {
+  /* 背景大幅提亮，边框用透明（因为内部用了加粗阴影替代） */
+  background: rgba(56, 189, 248, 0.18) !important;
+  border-color: transparent !important;
+  /* 内嵌 2px 粗边框 + 左侧 6px 粗指示条 + 外部强光晕，完全不会改变布局尺寸 */
+  box-shadow: inset 0 0 0 2px #38bdf8, inset 6px 0 0 #38bdf8, 0 0 20px rgba(56, 189, 248, 0.35) !important;
+}
+.selfTestCard.active .stcTitle {
+  color: #ffffff !important; /* 标题强制变纯白，产生视觉跳跃 */
+  font-weight: 800;
+}
+.selfTestCard.active .stcDesc {
+  color: #f8fafc !important; /* 描述文字大幅提亮 */
+}
+.selfTestCard.active .stcAction {
+  background: rgba(56, 189, 248, 0.3) !important; /* 底部按钮底色加深 */
+  border-color: #38bdf8 !important;
+  color: #ffffff !important;
+}
