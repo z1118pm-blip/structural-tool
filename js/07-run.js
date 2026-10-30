@@ -479,25 +479,55 @@ function updateReadout(model, skipAux){
       const ratio = Math.abs(sumRy) / Ncr;
       const B = 1 / (1 - ratio);
 
+      /* 动态更新总重力与临界力显示 */
+      const sumRy_kN = Math.abs(sumRy).toFixed(0);
+      const nCr_kN = Number.isFinite(Ncr) ? Ncr.toFixed(0) : '∞';
+      setTxt('r-totalN', `${sumRy_kN} kN`);
+      setTxt('r-Ncr', `${nCr_kN} kN`);
+
       /* B 和 ratio 均用原始值显示，不用 toFixed 后的 ratio 重算 B，
          避免接近失稳时 B 显示误差被放大到 100%+，
          也避免 ratio 四舍五入到 1.000 误报"已失稳"。 */
-      let sign = '', bTxt, ratioTxt;
+      let bTxt = '', bColor = '#38bdf8', descTxt = '';
+      const ratioTxt = ratio > 9.999 ? '>9.999' : ratio.toFixed(3);
+      
       if(ratio >= 1){
-        sign = '⚠ ';
-        bTxt = '>1000（已超限）';
-        ratioTxt = ratio > 9.999 ? '>9.999' : ratio.toFixed(3);
-      } else if(1 - ratio < 1e-4){
-        bTxt = B > 10000 ? '>10000' : B.toFixed(0);
-        ratioTxt = '≈1.000';
-      } else if(B < 10){
-        bTxt = B.toFixed(3);
-        ratioTxt = ratio.toFixed(3);
+         bTxt = '⚠ 已失稳'; bColor = '#ef4444';
+         descTxt = `轴力已超临界力 (ΣN/ΣN_cr=${ratioTxt})`;
+      } else if (1 - ratio < 1e-4) {
+         bTxt = '极度危险'; bColor = '#ef4444';
+         descTxt = `轴力逼近临界力 100% (ΣN/ΣN_cr=${ratioTxt})`;
+      } else if (B < 1.05) {
+         bTxt = '≈ 1.00 倍';
+         descTxt = '无二阶放大效应';
       } else {
-        bTxt = B.toFixed(2);
-        ratioTxt = ratio.toFixed(3);
+         const bNum = B > 10 ? B.toFixed(1) : B.toFixed(2);
+         const pct = (ratio * 100).toFixed(0);
+         let status = '';
+         if (ratio > 0.9) status = '，余量极小⚠️';
+         else if (ratio > 0.75) status = '，余量较小';
+         else status = '，较为安全';
+
+         bTxt = `${bNum} 倍`;
+         bColor = B < 5 ? '#fbbf24' : '#ef4444';
+         
+         // 上面已经计算了并显示了 nCr 和 sumRy，这里文字精简为解释原理
+         descTxt = `右图（一阶结果）的侧移、弯矩及剪力需放大 ${bNum} 倍。<br>
+         <span style="font-size:10px;color:#94a3b8;display:block;margin-top:4px;line-height:1.4;">
+         二阶效应会自我放大：侧移越大，附加弯矩越大，进而导致更大的侧移。当前重力已达临界力的 ${pct}%，结构正在逼近失稳。
+         </span>`;
       }
-      setTxt('r-pd', `${sign}${bTxt}  (ΣN/ΣN_cr = ${ratioTxt})`);
+      
+      const pdEl = document.getElementById('r-pd');
+      if (pdEl) {
+        if (pdEl.textContent !== bTxt) pdEl.textContent = bTxt;
+        pdEl.style.color = bColor;
+      }
+      const pdDescEl = document.getElementById('r-pd-desc');
+      if (pdDescEl) {
+        if (pdDescEl.innerHTML !== descTxt) pdDescEl.innerHTML = descTxt;
+        pdDescEl.style.display = descTxt ? 'block' : 'none';
+      }
     } else {
       setTxt('r-pd', '—（无水平力或无轴力）');
     }
@@ -622,10 +652,27 @@ function drawProbeCanvas(model){
   if(!S.probe || S.probe.elIndex === null || S.probe.elIndex < 0 || S.probe.elIndex >= model.els.length){
     if(infoEl) { infoEl.textContent = '在右侧内力图上点击任意杆件以分析截面应力。'; infoEl.style.color = '#64748b'; }
     if(btnClear) btnClear.style.display = 'none';
+    // 绘制极简的十字靶心图标
+    ctx.strokeStyle = 'rgba(100,116,139,0.25)';
+    ctx.lineWidth = 1.5;
+    const cx = W / 2, cy = H / 2 - 14;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 16, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx - 24, cy); ctx.lineTo(cx - 8, cy);
+    ctx.moveTo(cx + 8, cy); ctx.lineTo(cx + 24, cy);
+    ctx.moveTo(cx, cy - 24); ctx.lineTo(cx, cy - 8);
+    ctx.moveTo(cx, cy + 8); ctx.lineTo(cx, cy + 24);
+    ctx.stroke();
+    
     ctx.fillStyle = '#64748b';
-    ctx.font = '12px sans-serif';
+    ctx.font = '11px "JetBrains Mono", monospace';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('未选中截面', W/2, H/2);
+    ctx.fillText('点击右侧内力图选中杆件', W/2, H/2 + 20);
     return;
   }
 
@@ -1567,7 +1614,7 @@ function renderSupportMapPanel(){
         <input type="range" class="supportDyRange" data-col="${c}" min="-100" max="100" step="1" value="${dy}">
       </div>
       <div class="ctrl">
-        <div class="head"><span>${label} · 强迫转角</span><b id="v-support-rot-${c}">${(rot * 3000).toFixed(1)}°</b></div>
+        <div class="head"><span>${label} · 强迫转角</span><b id="v-support-rot-${c}">${(rot * 1000).toFixed(2)} mrad (${(rot * 180 / Math.PI).toFixed(2)}°)</b></div>
         <input type="range" class="supportRotRange" data-col="${c}" min="-10" max="10" step="0.1" value="${(rot * 1000).toFixed(1)}">
       </div>
     `;
@@ -1617,7 +1664,7 @@ function renderSupportMapPanel(){
       if(!S.supportMap[c]) S.supportMap[c] = {};
       S.supportMap[c].rot = vRad;
       const out = document.getElementById('v-support-rot-' + c);
-      if(out) out.textContent = (vMrad * 3).toFixed(1) + '°';
+      if(out) out.textContent = vMrad.toFixed(2) + ' mrad (' + (vRad * 180 / Math.PI).toFixed(2) + '°)';
       updateRangeProgress(inp);
       if(dragRaf) return;
       dragRaf = requestAnimationFrame(()=>{ dragRaf = null; run(); });
@@ -1667,7 +1714,8 @@ function movingLoadPlay() {
   const tick = (now) => {
     if (!S.movingLoad.playing) return;
     const elapsed = (now - S.movingLoad.t0) / 1000;
-    let t = S.movingLoad.startT + elapsed * 0.5 * (S.movingLoad.speed || 1);
+    // 将基础系数从 0.5 降到 0.15（默认 1x 速度下，走完一跨约需 6.6 秒）
+    let t = S.movingLoad.startT + elapsed * 0.15 * (S.movingLoad.speed || 1);
     t = t % 1;
     S.movingLoad.t = t;
     const input = document.getElementById('movingLoadT');
@@ -1716,6 +1764,16 @@ function renderMovingLoadUI() {
     document.getElementById('v-movingLoadT').textContent = (S.movingLoad.t * 100).toFixed(0) + '%';
     updateRangeProgress(tEl);
   }
+  
+  // 新增：初始化速度滑块
+  const speedEl = document.getElementById('movingLoadSpeed');
+  if (speedEl) {
+    const spd = S.movingLoad.speed || 1;
+    speedEl.value = spd;
+    const outSpd = document.getElementById('v-movingLoadSpeed');
+    if(outSpd) outSpd.textContent = spd.toFixed(1) + 'x';
+    updateRangeProgress(speedEl);
+  }
   updateMovingLoadBtn();
 
   const btnPlay = document.getElementById('btnMovingLoadPlay');
@@ -1749,6 +1807,13 @@ function renderMovingLoadUI() {
       updateRangeProgress(e.target);
       if (S.movingLoad.playing) return;
       run();
+    });
+    // 新增：速度滑块事件
+    document.getElementById('movingLoadSpeed').addEventListener('input', (e) => {
+      S.movingLoad.speed = parseFloat(e.target.value);
+      document.getElementById('v-movingLoadSpeed').textContent = S.movingLoad.speed.toFixed(1) + 'x';
+      updateRangeProgress(e.target);
+      // 注意：如果是播放状态，无需手动 run()，tick 动画会自动读取新速度
     });
   }
 }

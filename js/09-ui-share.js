@@ -318,7 +318,7 @@ function exportCanvasPNG(canvasId, baseName){
   const btnOpen = document.getElementById('btn-tip');
   const btnClose = document.getElementById('btnTipClose');
   if(!modal || !btnOpen) {
-    console.warn('[UI] 找不到打赏弹窗或按钮');
+    // 【修改】由于UI中已移除打赏按钮，找不到是正常的，静默退出，不再打印警告
     return;
   }
 
@@ -458,7 +458,12 @@ function encodeState(){
   /* obj.settleDy/settleCol 不在 SHARE_KEYS 中，永远不存在；
      此行原为死代码，已删除。 */
   try{
-    return btoa(JSON.stringify(obj))
+    const jsonStr = JSON.stringify(obj);
+    // 【修复】预编码非 ASCII 字符，防止 btoa 抛出 InvalidCharacterError
+    const safeStr = encodeURIComponent(jsonStr).replace(/%([0-9A-F]{2})/g, function(match, p1) {
+      return String.fromCharCode('0x' + p1);
+    });
+    return btoa(safeStr)
       .replace(/\+/g, '-')
       .replace(/\//g, '_')
       .replace(/=+$/, '');

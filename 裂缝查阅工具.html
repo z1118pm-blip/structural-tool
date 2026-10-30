@@ -1,0 +1,754 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>裂缝查阅工具 · 全量图文版</title>
+<style>
+  :root{
+    --red:#ef4444; --red-bg:rgba(239,68,68,0.15);
+    --orange:#f97316; --orange-bg:rgba(249,115,22,0.15);
+    --yellow:#fbbf24; --yellow-bg:rgba(251,191,36,0.15);
+    --blue:#38bdf8; --blue-bg:rgba(56,189,248,0.15);
+    --gray:#94a3b8; --gray-bg:rgba(148,163,184,0.15);
+    --text:#cbd5e1; --muted:#94a3b8; --line:#1e293b; --bg:#05080f;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,"Microsoft YaHei",sans-serif;color:var(--text);background:var(--bg);line-height:1.6;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+  header{position:sticky;top:0;z-index:20;background:#0a101c;border-bottom:1px solid var(--line);padding:12px 18px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;flex:0 0 auto}
+  header h1{font-size:16px;margin:0;white-space:nowrap;color:#f8fafc;display:flex;align-items:center;gap:8px;letter-spacing:0.5px;}
+  header h1::before { content: '◆'; color:var(--blue); font-size:12px; }
+  .search{flex:1;min-width:200px;max-width:360px;padding:8px 12px;border:1px solid #334155;background:#111a2c;color:#f8fafc;border-radius:8px;font-size:14px;outline:none;transition:all 0.2s;}
+  .search:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(56,189,248,.15)}
+  .search::placeholder{color:#64748b;}
+  .risk-filters{display:flex;gap:10px;flex-wrap:wrap;margin-left: auto;}
+  .risk-btn{
+    font-size:13px;padding:6px 16px;border-radius:999px;
+    border:1px solid rgba(148,163,184,0.2);background:rgba(30,41,59,0.6);
+    cursor:pointer;white-space:nowrap;color:#94a3b8;
+    transition:all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display:flex;align-items:center;gap:6px;
+  }
+  .risk-btn:hover{
+    background:rgba(30,41,59,1);transform:translateY(-1px);
+    border-color:rgba(148,163,184,0.5);color:#f8fafc;
+  }
+  
+  /* 鼠标悬浮时的颜色微调 */
+  .risk-btn[data-risk="red"]:hover { color: var(--red); border-color: var(--red); box-shadow: 0 0 10px rgba(239,68,68,0.2); }
+  .risk-btn[data-risk="orange"]:hover { color: var(--orange); border-color: var(--orange); box-shadow: 0 0 10px rgba(249,115,22,0.2); }
+  .risk-btn[data-risk="yellow"]:hover { color: var(--yellow); border-color: var(--yellow); box-shadow: 0 0 10px rgba(251,191,36,0.2); }
+  .risk-btn[data-risk="blue"]:hover { color: var(--blue); border-color: var(--blue); box-shadow: 0 0 10px rgba(56,189,248,0.2); }
+  .risk-btn[data-risk="gray"]:hover { color: var(--gray); border-color: var(--gray); box-shadow: 0 0 10px rgba(148,163,184,0.2); }
+
+  /* 选中状态的基础设置 */
+  .risk-btn.active { font-weight: 600; transform: none; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2); }
+
+  /* 不同按钮被选中时的专属颜色 */
+  .risk-btn[data-risk="all"].active { background: rgba(56,189,248,0.15); color: var(--blue); border-color: var(--blue); box-shadow: 0 0 12px rgba(56,189,248,0.3); }
+  .risk-btn[data-risk="red"].active { background: rgba(239,68,68,0.15); color: #f87171; border-color: var(--red); box-shadow: 0 0 12px rgba(239,68,68,0.3); }
+  .risk-btn[data-risk="orange"].active { background: rgba(249,115,22,0.15); color: #fb923c; border-color: var(--orange); box-shadow: 0 0 12px rgba(249,115,22,0.3); }
+  .risk-btn[data-risk="yellow"].active { background: rgba(251,191,36,0.15); color: #fcd34d; border-color: var(--yellow); box-shadow: 0 0 12px rgba(251,191,36,0.3); }
+  .risk-btn[data-risk="blue"].active { background: rgba(56,189,248,0.15); color: #7dd3fc; border-color: var(--blue); box-shadow: 0 0 12px rgba(56,189,248,0.3); }
+  .risk-btn[data-risk="gray"].active { background: rgba(148,163,184,0.15); color: #cbd5e1; border-color: var(--gray); box-shadow: 0 0 12px rgba(148,163,184,0.3); }
+
+  /* 风险筛选按钮前面的小圆点 */
+  .risk-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+    box-shadow: 0 0 6px currentColor;
+  }
+  
+  /* 根据按钮的 data-risk 自动给圆点上色 */
+  .risk-btn[data-risk="red"] .risk-dot { background-color: var(--red); color: var(--red); }
+  .risk-btn[data-risk="orange"] .risk-dot { background-color: var(--orange); color: var(--orange); }
+  .risk-btn[data-risk="yellow"] .risk-dot { background-color: var(--yellow); color: var(--yellow); }
+  .risk-btn[data-risk="blue"] .risk-dot { background-color: var(--blue); color: var(--blue); }
+  .risk-btn[data-risk="gray"] .risk-dot { background-color: var(--gray); color: var(--gray); }
+  .app{display:flex;flex:1;min-height:0}
+  aside{width:280px;flex:0 0 280px;overflow-y:auto;background:#0d121c;border-right:1px solid var(--line);padding:10px 8px 24px;scrollbar-width:thin;scrollbar-color:rgba(148,163,184,.15) transparent;}
+  .list-panel{width:380px;flex:0 0 380px;overflow-y:auto;background:#111827;border-right:1px solid var(--line);scrollbar-width:thin;scrollbar-color:rgba(148,163,184,.15) transparent;}
+  .detail-panel{flex:1;min-width:0;overflow-y:auto;background:#0d121c;scrollbar-width:thin;scrollbar-color:rgba(148,163,184,.15) transparent;}
+  
+  aside::-webkit-scrollbar, main::-webkit-scrollbar {width:6px;height:6px}
+  aside::-webkit-scrollbar-track, main::-webkit-scrollbar-track {background:transparent}
+  aside::-webkit-scrollbar-thumb, main::-webkit-scrollbar-thumb {background:rgba(148,163,184,.15);border-radius:3px;}
+  aside::-webkit-scrollbar-thumb:hover, main::-webkit-scrollbar-thumb:hover {background:rgba(148,163,184,.4);}
+  
+  .tree-group{margin:4px 0}
+  .tree-group summary{cursor:pointer;font-weight:600;padding:6px 8px;border-radius:6px;font-size:13px;outline:none;color:#cbd5e1;list-style:none;}
+  .tree-group summary::-webkit-details-marker{display:none;}
+  .tree-group summary::before{content:'▸';display:inline-block;transition:transform 0.2s;color:#64748b;margin-right:6px;font-size:12px;}
+  .tree-group[open] summary::before{transform:rotate(90deg);}
+  .tree-group summary:hover{background:#1e293b;color:#f8fafc;}
+  .tree-sub-group{margin-left:12px}
+.tree-sub-title{cursor:pointer;font-size:12px;color:#94a3b8;padding:6px 8px;border-radius:6px;list-style:none;user-select:none;display:flex;align-items:center;transition:all 0.15s;}
+.tree-sub-title::-webkit-details-marker{display:none}
+.tree-sub-title::before{content:'▸';display:inline-block;transition:transform 0.2s;color:#64748b;margin-right:6px;font-size:10px}
+.tree-sub-group[open] .tree-sub-title::before{transform:rotate(90deg)}
+.tree-sub-title:hover{background:#1e293b;color:#f8fafc}
+.tree-sub-content{margin-left:14px;border-left:1px solid #1e293b;padding-left:8px;padding-top:4px;padding-bottom:4px;}
+  .tree-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:12.5px;color:#94a3b8;margin:2px 0;transition:all 0.15s;}
+  .tree-item:hover{background:#1e293b;color:#cbd5e1;}
+  .tree-item.active{background:rgba(56,189,248,0.1);color:var(--blue);font-weight:600;border-left:2px solid var(--blue);border-radius:0 6px 6px 0;}
+  .dot-red{width:6px;height:6px;border-radius:50%;flex:0 0 auto;box-shadow:0 0 6px currentColor;}
+  
+  .badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:11px;border:1px solid;white-space:nowrap;font-weight:600;letter-spacing:0.5px;}
+  .badge-red{background:var(--red-bg);color:#f87171;border-color:rgba(239,68,68,0.3)}
+  .badge-orange{background:var(--orange-bg);color:#fb923c;border-color:rgba(249,115,22,0.3)}
+  .badge-yellow{background:var(--yellow-bg);color:#fcd34d;border-color:rgba(251,191,36,0.3)}
+  .badge-blue{background:var(--blue-bg);color:#7dd3fc;border-color:rgba(56,189,248,0.3)}
+  .badge-gray{background:var(--gray-bg);color:#cbd5e1;border-color:rgba(148,163,184,0.3)}
+
+  .cards{display:flex;flex-direction:column}
+  .card{display:flex;align-items:flex-start;gap:12px;padding:14px 18px;cursor:pointer;margin:8px 12px;border-radius:8px;background:#1e293b;border:1px solid #334155;transition:all 0.2s;position:relative;}
+  .card:hover{background:#26334d;border-color:#475569;transform:translateY(-1px);}
+  .card.active{background:#1e293b;border:1px solid var(--blue);box-shadow:0 0 10px rgba(56,189,248,0.1);}
+  .card.active::before{display:none;}
+  .card-content{flex:1;min-width:0;}
+  .card h3{font-size:15px;margin:0 0 6px;color:#f8fafc;font-weight:600;display:flex;align-items:center;gap:8px;}
+  .card .path{font-size:12px;color:#64748b;margin-bottom:4px;line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .card .morph{font-size:13px;color:#cbd5e1;line-height:1.5;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;}
+  
+  .detail{padding:24px;min-height:100%;display:flex;flex-direction:column;}
+  .breadcrumb{font-size:12px;color:#64748b;margin-bottom:8px;}
+  .detail h2{font-size:20px;margin:0 0 16px;color:#f8fafc;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+  .detail-header-btns{display:flex;gap:8px;}
+  .empty-detail{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#64748b;font-size:13px;}
+  .risk-bar{padding:12px 16px;border-radius:8px;margin:16px 0;border-left:4px solid;font-size:13.5px;color:#cbd5e1;background:#0f172a;}
+  .risk-bar.risk-red{border-color:var(--red);background:rgba(239,68,68,0.05)}
+  .risk-bar.risk-orange{border-color:var(--orange);background:rgba(249,115,22,0.05)}
+  .risk-bar.risk-yellow{border-color:var(--yellow);background:rgba(251,191,36,0.05)}
+  .risk-bar.risk-blue{border-color:var(--blue);background:rgba(56,189,248,0.05)}
+  .risk-bar.risk-gray{border-color:var(--gray);background:rgba(148,163,184,0.05)}
+  
+  .image-panel{border:1px dashed #334155;border-radius:10px;padding:16px;background:#0f172a;margin:20px auto; width: fit-content; max-width: 100%;}
+  .image-wrap{display:flex;align-items:center;justify-content:center;min-height:120px;position:relative;}
+  .image-wrap img{max-width:100%;max-height:75vh;display:block;object-fit:contain; transition: transform 0.2s, filter 0.3s; filter: invert(1) grayscale(1) brightness(0.85) contrast(1.2); mix-blend-mode: screen;}
+.image-wrap img:hover { transform: scale(1.02); }
+.image-panel.original .image-wrap img { filter: none; mix-blend-mode: normal; }
+  .placeholder{color:#64748b;font-size:13px;padding:20px;font-family:'JetBrains Mono', monospace;}
+
+  dl.fields{display:grid;grid-template-columns:64px 1fr;gap:12px 16px;margin:16px 0;padding:16px;background:#0f172a;border-radius:8px;border:1px solid #1e293b;}
+  dl.fields div{display:contents;}
+  dl.fields dt{font-weight:600;color:#94a3b8;font-size:13px;padding-top:2px;letter-spacing:0.5px;}
+  dl.fields dd{margin:0;font-size:13.5px;color:#e2e8f0;line-height:1.6;}
+  
+  .processing-mask { position:absolute; top:0; left:0; right:0; bottom:0; background:rgba(15,23,42,0.8); display:flex; align-items:center; justify-content:center; font-weight:bold; color:var(--blue); z-index:5; flex-direction:column;}
+  .spinner { width:30px; height:30px; border:3px solid rgba(56,189,248,0.2); border-top-color:var(--blue); border-radius:50%; animation:spin 1s linear infinite; margin-bottom:10px;}
+  @keyframes spin { to { transform: rotate(360deg); } }
+  /* Toast 轻提示样式 */
+.toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(20px);background:#1e293b;color:#f8fafc;padding:10px 24px;border-radius:8px;font-size:14px;border:1px solid #38bdf8;box-shadow:0 10px 15px -3px rgba(0,0,0,0.5);opacity:0;visibility:hidden;transition:all 0.3s cubic-bezier(0.68,-0.55,0.27,1.55);z-index:10000;display:flex;align-items:center;gap:8px;}
+.toast.show{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0);}
+
+@media (max-width: 1024px){
+    .app{flex-direction:column}
+    aside{width:100%;flex:0 0 auto;max-height:30vh;border-right:none;border-bottom:1px solid var(--line)}
+    .list-panel{flex:0 0 40vh;border-right:none;border-bottom:1px solid var(--line)}
+    .detail-panel{width:100%;flex:1}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <a href="index.html" style="display:flex; align-items:center; gap:6px; text-decoration:none; color:#cbd5e1; font-size:13px; font-weight:600; padding:6px 14px; border-radius:6px; border:1px solid #334155; background:#0b1220; margin-right:6px; transition:all 0.2s;" onmouseover="this.style.borderColor='#38bdf8'; this.style.color='#38bdf8'" onmouseout="this.style.borderColor='#334155'; this.style.color='#cbd5e1'">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+    主工具
+  </a>
+  <h1>裂缝查阅工具</h1>
+  <input id="searchInput" class="search" type="search" placeholder="搜索形态、成因、性质（支持全字段）…">
+  <div class="risk-filters" id="riskFilters">
+    <button class="risk-btn active" data-risk="all">全部</button>
+    <button class="risk-btn" data-risk="red"><span class="risk-dot"></span>红色 · 立即处理</button>
+    <button class="risk-btn" data-risk="orange"><span class="risk-dot"></span>橙色 · 及时加固</button>
+    <button class="risk-btn" data-risk="yellow"><span class="risk-dot"></span>黄色 · 观察</button>
+    <button class="risk-btn" data-risk="blue"><span class="risk-dot"></span>蓝色 · 封闭掩饰</button>
+    <button class="risk-btn" data-risk="gray"><span class="risk-dot"></span>灰色 · 表层</button>
+  </div>
+</header>
+
+<div class="app">
+  <aside id="sidebar"></aside>
+  <main id="listPanel" class="list-panel"></main>
+  <div id="detailPanel" class="detail-panel"></div>
+</div>
+
+<script>
+const CRACKS = [
+  // =============== 一、板的裂缝 ===============
+  { id: "C001", category: "一、板的裂缝", subcategory: "1、板侧裂缝", itemNo: "第1项", title: "跨中下部", path: "一、板的裂缝 / 1、板侧裂缝 / 第1项", morphology: "垂直裂缝，楔形，不贯通。", cause: "正弯矩受拉，拆模过早，混凝土强度不足，配筋不足，偶然超载。", nature: "受力裂缝，施工裂缝，残余裂缝。", impact: "影响观瞻，基本不影响承载，宽度大时不太安全，影响耐久性。", treatment: "掩盖裂缝，必要时加固处理。", risk: "yellow" },
+  { id: "C002", category: "一、板的裂缝", subcategory: "1、板侧裂缝", itemNo: "第2项", title: "跨边上部", path: "一、板的裂缝 / 1、板侧裂缝 / 第2项", morphology: "垂直裂缝，楔形，不贯通。", cause: "负弯矩受拉，拆模过早，混凝土强度不足，配筋不足，钢筋移位，偶然超载。", nature: "受力裂缝，施工裂缝，残余裂缝。", impact: "影响观瞻，基本不影响承载，宽度大时不太安全，影响耐久性。", treatment: "掩盖裂缝，必要时加固处理。", risk: "yellow" },
+  { id: "C003", category: "一、板的裂缝", subcategory: "1、板侧裂缝", itemNo: "第3项", title: "两侧跨边上、下部", path: "一、板的裂缝 / 1、板侧裂缝 / 第3项", morphology: "垂直裂缝，楔形，不贯通，发展渐趋停滞。", cause: "沉降差，相对位移引起的约束弯矩，受拉开裂。", nature: "强迫位移引起的受力裂缝。", impact: "影响观瞻，宽度大时不太安全，可能影响承载，影响耐久性。", treatment: "掩盖裂缝，必要时加固处理。", risk: "orange" },
+  { id: "C004", category: "一、板的裂缝", subcategory: "1、板侧裂缝", itemNo: "第4项", title: "跨中上部（重点注意项）", path: "一、板的裂缝 / 1、板侧裂缝 / 第4项", morphology: "平行水平短小裂缝，可能发展成混凝土破碎，钢筋屈曲，板被弯折。", cause: "正弯矩受压区，混凝土强度不足，钢筋移位，偶然超载。", nature: "受力裂缝，施工缺陷，残余裂缝。", impact: "承载力不足的标志，有可能发展为脆性弯折破坏。", treatment: "必须及时加固处理（此项为危险征兆，与其他项性质不同）。", risk: "red" },
+  { id: "C005", category: "一、板的裂缝", subcategory: "1、板侧裂缝", itemNo: "第5项", title: "大尺度长板中部薄弱部位", path: "一、板的裂缝 / 1、板侧裂缝 / 第5项", morphology: "沿楼板横向开裂，贯通板厚，发展渐趋停滞。", cause: "温度、收缩引起的约束受拉开裂。", nature: "温度-收缩裂缝，施工养护裂缝。", impact: "影响观瞻，不安全感，可能引起渗漏，基本不影响承载，影响耐久性。", treatment: "及时封闭裂缝，加以掩饰，必要时防水、防渗处理。", risk: "blue" },
+  { id: "C006", category: "一、板的裂缝", subcategory: "1、板侧裂缝", itemNo: "第6项", title: "瓶颈、凹角等板侧薄弱部位", path: "一、板的裂缝 / 1、板侧裂缝 / 第6项", morphology: "薄弱部位局部开裂，贯通、发展渐趋停滞。", cause: "温度-收缩应力集中，局部构造缺陷，构造配筋不足。", nature: "构造裂缝，温度-收缩裂缝。", impact: "影响观瞻，基本不影响承载，影响耐久性。", treatment: "掩盖裂缝，必要时局部处理。", risk: "gray" },
+  { id: "C007", category: "一、板的裂缝", subcategory: "1、板侧裂缝", itemNo: "第7项", title: "接槎及后浇带处", path: "一、板的裂缝 / 1、板侧裂缝 / 第7项", morphology: "沿施工接槎处开裂或缺陷，垂直或斜向接槎面。", cause: "施工缺陷，接槎处理、浇筑缺陷、养护不周、凝固后过振等引起。", nature: "施工接槎裂缝。", impact: "影响观瞻，不安全感，可能引起渗漏，基本不影响承载，影响耐久性。", treatment: "掩盖裂缝，必要时局部处理。", risk: "blue" },
+  { id: "C008", category: "一、板的裂缝", subcategory: "1、板侧裂缝", itemNo: "第8项", title: "预制板端面", path: "一、板的裂缝 / 1、板侧裂缝 / 第8项", morphology: "板端侧面竖向垂直裂缝。", cause: "施工缺陷：预制板翘曲或支垫不平整引起板角裂。", nature: "局部残余裂缝。", impact: "影响观瞻，不安全感，可能引起渗漏，影响局部承载。", treatment: "局部加固处理。", risk: "orange" },
+  { id: "C009", category: "一、板的裂缝", subcategory: "1、板侧裂缝", itemNo: "第9项", title: "预制板侧棱角部位", path: "一、板的裂缝 / 1、板侧裂缝 / 第9项", morphology: "沿构件边棱的纵向裂缝及剥落。", cause: "施工缺陷：吊装、运输、施工时碰撞，缺棱掉角。", nature: "局部残余裂缝。", impact: "影响观瞻，基本不影响承载。", treatment: "局部修补处理。", risk: "gray" },
+  { id: "C010", category: "一、板的裂缝", subcategory: "1、板侧裂缝", itemNo: "第10项", title: "预制楼梯跨中板侧", path: "一、板的裂缝 / 1、板侧裂缝 / 第10项", morphology: "横向垂直裂缝，楔形、不贯通。", cause: "构件反位生产，钢筋移位，承载力不足。", nature: "弯曲受拉裂缝。", impact: "影响观瞻，不安全感，影响承载力。", treatment: "加固处理，掩盖裂缝。", risk: "orange" },
+  
+  { id: "C011", category: "一、板的裂缝", subcategory: "2、板底裂缝", itemNo: "第1项", title: "单向板跨中", path: "一、板的裂缝 / 2、板底裂缝 / 第1项", morphology: "横贯板底的裂缝，厚度方向不贯通。", cause: "正弯矩受拉，拆模过早，混凝土强度不足，配筋不足，偶然超载。", nature: "受力裂缝，施工裂缝，残余裂缝。", impact: "影响观瞻，基本不影响承载，宽度大时不安全感，影响耐久性。", treatment: "掩盖裂缝，必要时加固处理。", risk: "yellow" },
+  { id: "C012", category: "一、板的裂缝", subcategory: "2、板底裂缝", itemNo: "第2项", title: "跨边一侧", path: "一、板的裂缝 / 2、板底裂缝 / 第2项", morphology: "横向裂缝，不贯通，发展渐趋停滞。", cause: "沉降差，相对位移引起的约束弯矩，受拉开裂。", nature: "强迫位移引起的受力裂缝。", impact: "影响观瞻，宽度大时不安全感，可能影响承载，影响耐久性。", treatment: "掩盖裂缝，必要时加固处理。", risk: "orange" },
+  { id: "C013", category: "一、板的裂缝", subcategory: "2、板底裂缝", itemNo: "第3项", title: "双向板跨中区域", path: "一、板的裂缝 / 2、板底裂缝 / 第3项", morphology: "纵横裂缝，不贯通。", cause: "双向正弯矩受拉，拆模过早，混凝土强度不足，配筋不足，偶然超载。", nature: "受力裂缝，施工裂缝，残余裂缝。", impact: "影响观瞻，基本不影响承载，宽度大时不安全感，影响耐久性。", treatment: "掩盖裂缝，必要时加固处理。", risk: "yellow" },
+  { id: "C014", category: "一、板的裂缝", subcategory: "2、板底裂缝", itemNo: "第4项", title: "双向板板角部位", path: "一、板的裂缝 / 2、板底裂缝 / 第4项", morphology: "角部斜向裂缝。", cause: "双向负弯矩受拉，拆模过早，混凝土强度不足，配筋不足，偶然超载。", nature: "受力裂缝，施工裂缝，残余裂缝。", impact: "影响观瞻，基本不影响承载，宽度大时不安全感，影响耐久性。", treatment: "掩盖裂缝，必要时加固处理。", risk: "yellow" },
+  { id: "C015", category: "一、板的裂缝", subcategory: "2、板底裂缝", itemNo: "第5项", title: "大尺度长板中部", path: "一、板的裂缝 / 2、板底裂缝 / 第5项", morphology: "沿楼板横向开裂，贯通板厚，发展渐趋停滞。", cause: "温度、收缩引起的约束受拉开裂。", nature: "温度-收缩裂缝，施工养护裂缝。", impact: "影响观瞻，不安全感，可能引起渗漏，基本不影响承载，影响耐久性。", treatment: "及时封闭裂缝，加以掩饰，必要时防水、防渗处理。", risk: "blue" },
+  { id: "C016", category: "一、板的裂缝", subcategory: "2、板底裂缝", itemNo: "第6项", title: "平面瓶颈凹角等", path: "一、板的裂缝 / 2、板底裂缝 / 第6项", morphology: "薄弱部位局部开裂。", cause: "温度-收缩应力集中，局部构造缺陷，构造配筋不足。", nature: "构造裂缝，温度-收缩裂缝。", impact: "影响观瞻，基本不影响承载，影响耐久性。", treatment: "掩盖裂缝，必要时局部处理。", risk: "gray" },
+  { id: "C017", category: "一、板的裂缝", subcategory: "2、板底裂缝", itemNo: "第7项", title: "楼盖板角部位", path: "一、板的裂缝 / 2、板底裂缝 / 第7项", morphology: "斜向裂缝，贯通板厚，发展渐趋停滞。", cause: "两向温度-收缩累积引起约束受拉开裂，局部构造配筋不足。", nature: "温度-收缩裂缝，构造裂缝。", impact: "影响观瞻，基本不影响承载，影响耐久性。", treatment: "掩盖裂缝，必要时局部处理。", risk: "gray" },
+  { id: "C018", category: "一、板的裂缝", subcategory: "2、板底裂缝", itemNo: "第8项", title: "接槎及后浇带处", path: "一、板的裂缝 / 2、板底裂缝 / 第8项", morphology: "沿施工接槎处开裂或缺陷。", cause: "施工缺陷：接槎处理、浇筑缺陷、养护不周、凝固后过振等引起。", nature: "施工接槎裂缝。", impact: "影响观瞻，不安全感，可能引起渗漏，基本不影响承载，影响耐久性。", treatment: "掩盖裂缝，必要时局部处理。", risk: "blue" },
+  { id: "C019", category: "一、板的裂缝", subcategory: "2、板底裂缝", itemNo: "第9项", title: "沿预埋管线处", path: "一、板的裂缝 / 2、板底裂缝 / 第9项", morphology: "直线形裂缝。", cause: "预埋管线布置在保护层内，混凝土过薄引起开裂。", nature: "施工裂缝。", impact: "影响观瞻，不安全感，不影响承载，影响耐久性。", treatment: "掩盖裂缝。", risk: "blue" },
+  { id: "C020", category: "一、板的裂缝", subcategory: "2、板底裂缝", itemNo: "第10项", title: "预制装配楼盖", path: "一、板的裂缝 / 2、板底裂缝 / 第10项", morphology: "等间距直线形全跨纵向裂缝，贯通板厚。", cause: "沿预制板拼缝，施工缺陷，温度、受力等因素引起开裂。", nature: "施工裂缝，温度裂缝，受力不均匀引起裂缝。", impact: "影响观瞻，基本不影响承载，可能引起渗漏。", treatment: "掩盖裂缝，必要时局部保温、加筋处理。", risk: "blue" },
+  { id: "C021", category: "一、板的裂缝", subcategory: "2、板底裂缝", itemNo: "第11项", title: "预制装配楼盖支座边局部", path: "一、板的裂缝 / 2、板底裂缝 / 第11项", morphology: "预制板角部斜向裂缝，贯通板厚。", cause: "施工缺陷：预制板翘曲或支垫不平整引起板斜向角裂。", nature: "局部受力残余裂缝。", impact: "影响观瞻，不安全感，可能引起渗漏，只影响局部承载力。", treatment: "局部加固处理。", risk: "orange" },
+  { id: "C022", category: "一、板的裂缝", subcategory: "2、板底裂缝", itemNo: "第12项", title: "预制装配楼盖支座边局部", path: "一、板的裂缝 / 2、板底裂缝 / 第12项", morphology: "支座边板内横向裂缝。", cause: "预应力传递长度内抗裂性不足。", nature: "非设计工况局部受力裂缝。", impact: "影响观瞻，不安全感，可能引起渗漏，只影响局部承载，影响耐久性。", treatment: "局部加固处理。", risk: "orange" },
+  { id: "C023", category: "一、板的裂缝", subcategory: "2、板底裂缝", itemNo: "第13项", title: "预制板边棱角部位", path: "一、板的裂缝 / 2、板底裂缝 / 第13项", morphology: "沿预制板边棱的纵向裂缝及剥落。", cause: "施工缺陷：吊装、运输、施工时碰撞，缺棱掉角。", nature: "局部残余裂缝。", impact: "影响观瞻，基本不影响承载。", treatment: "局部修补处理。", risk: "gray" },
+  { id: "C024", category: "一、板的裂缝", subcategory: "2、板底裂缝", itemNo: "第14项", title: "楼盖板底抹面层", path: "一、板的裂缝 / 2、板底裂缝 / 第14项", morphology: "不规则龟裂剥落。", cause: "施工缺陷：板底装修抹灰层在受力、温差作用下开裂。", nature: "非结构的表层装饰性裂缝。", impact: "影响观瞻，不影响承载，剥落下坠易伤人，不安全。", treatment: "刷凿、修补或改作其他装饰形式。", risk: "gray" },
+  
+  { id: "C025", category: "一、板的裂缝", subcategory: "3、板面裂缝", itemNo: "第1项", title: "沿支座跨边区域", path: "一、板的裂缝 / 3、板面裂缝 / 第1项", morphology: "横向裂缝，不贯通。", cause: "负弯矩受拉，拆模过早，混凝土强度不足，配筋不足，钢筋移位，偶然超载。", nature: "受力裂缝，施工裂缝，残余裂缝。", impact: "影响观瞻，基本不影响承载，宽度大时不安全感，影响耐久性。", treatment: "掩盖裂缝，必要时加固处理。", risk: "yellow" },
+  { id: "C026", category: "一、板的裂缝", subcategory: "3、板面裂缝", itemNo: "第2项", title: "双向板角部区域", path: "一、板的裂缝 / 3、板面裂缝 / 第2项", morphology: "斜向裂缝，不贯通。", cause: "双向负弯矩受拉，拆模过早，混凝土强度不足，配筋不足，负弯矩筋移位，偶然超载。", nature: "受力裂缝，施工裂缝，残余裂缝。", impact: "影响观瞻，基本不影响承载，宽度大时不安全感，影响耐久性。", treatment: "掩盖裂缝，必要时加固处理。", risk: "yellow" },
+  { id: "C027", category: "一、板的裂缝", subcategory: "3、板面裂缝", itemNo: "第3项", title: "跨中板芯区域", path: "一、板的裂缝 / 3、板面裂缝 / 第3项", morphology: "混凝土破碎、鼓起，发展成钢筋扭曲。", cause: "正弯矩受压，混凝土强度不足，偶然超载。", nature: "受力裂缝，施工缺陷，残余裂缝。", impact: "承载力不足的标志，有可能发展为脆性破坏。", treatment: "及时加固处理。", risk: "red" },
+  { id: "C028", category: "一、板的裂缝", subcategory: "3、板面裂缝", itemNo: "第4项", title: "柱周边区域", path: "一、板的裂缝 / 3、板面裂缝 / 第4项", morphology: "沿柱周续环形裂缝。", cause: "板厚太薄，抗剪配筋不足，混凝土强度太低，超载过多。", nature: "冲切受剪引起的受力裂缝。", impact: "承载力不足的标志，有可能发展为脆性破坏。", treatment: "及时加固处理。", risk: "red" },
+  { id: "C029", category: "一、板的裂缝", subcategory: "3、板面裂缝", itemNo: "第5项", title: "大尺度长板中部", path: "一、板的裂缝 / 3、板面裂缝 / 第5项", morphology: "沿楼板横向开裂，贯通板厚，发展渐趋停滞。", cause: "温度、收缩引起的约束受拉开裂。", nature: "温度-收缩裂缝，施工养护不当引起裂缝。", impact: "影响观瞻，不安全感，可能引起渗漏，基本不影响承载，影响耐久性。", treatment: "及时封闭裂缝，加以掩饰，必要时防水、防渗处理。", risk: "blue" },
+  { id: "C030", category: "一、板的裂缝", subcategory: "3、板面裂缝", itemNo: "第6项", title: "平面瓶颈、凹角等", path: "一、板的裂缝 / 3、板面裂缝 / 第6项", morphology: "薄弱部位局部开裂。", cause: "温度收缩应力集中，局部构造缺陷，构造配筋不足。", nature: "构造裂缝，温度-收缩裂缝。", impact: "影响观瞻，基本不影响承载，影响耐久性。", treatment: "掩盖裂缝，必要时局部处理。", risk: "gray" },
+  { id: "C031", category: "一、板的裂缝", subcategory: "3、板面裂缝", itemNo: "第7项", title: "接槎及后浇带处", path: "一、板的裂缝 / 3、板面裂缝 / 第7项", morphology: "沿施工接槎处开裂或缺陷。", cause: "施工缺陷：接槎处理、浇筑缺陷、养护不周、凝固后过振等引起。", nature: "施工接槎裂缝。", impact: "影响观瞻，不安全感，可能引起渗漏，基本不影响承载，影响耐久性。", treatment: "掩盖裂缝，必要时局部处理。", risk: "blue" },
+  { id: "C032", category: "一、板的裂缝", subcategory: "3、板面裂缝", itemNo: "第8项", title: "板面配筋区域", path: "一、板的裂缝 / 3、板面裂缝 / 第8项", morphology: "沿钢筋配置方向开裂。", cause: "稀软混凝土离析、沉降，未作二次压抹，受阻于钢筋而顺筋开裂。", nature: "施工裂缝。", impact: "影响观瞻，基本不影响承载，影响耐久性。", treatment: "掩盖裂缝。", risk: "blue" },
+  { id: "C033", category: "一、板的裂缝", subcategory: "3、板面裂缝", itemNo: "第9项", title: "无配筋板面区域", path: "一、板的裂缝 / 3、板面裂缝 / 第9项", morphology: "不规则龟裂。", cause: "稀软混凝土离析、沉降、干燥、收缩，未作二次压抹而开裂。", nature: "施工裂缝，收缩裂缝。", impact: "影响观瞻，基本不影响承载，影响耐久性。", treatment: "掩盖裂缝。", risk: "gray" },
+  { id: "C034", category: "一、板的裂缝", subcategory: "3、板面裂缝", itemNo: "第10项", title: "预制装配楼盖支座边局部", path: "一、板的裂缝 / 3、板面裂缝 / 第10项", morphology: "预制板角部斜向裂缝，贯通板厚。", cause: "施工缺陷：预制板翘曲或支垫不平整引起板斜向角裂。", nature: "局部受力残余裂缝。", impact: "影响观瞻，不安全感，可能引起渗漏，只影响局部承载，影响耐久性。", treatment: "局部加固处理。", risk: "orange" },
+  { id: "C035", category: "一、板的裂缝", subcategory: "3、板面裂缝", itemNo: "第11项", title: "预制装配式楼盖", path: "一、板的裂缝 / 3、板面裂缝 / 第11项", morphology: "等间距直线形全跨纵向裂缝，贯通板厚。", cause: "沿预制板拼缝，施工缺陷，温度、受力等因素引起。", nature: "施工裂缝，温度裂缝，受力不均匀引起裂缝。", impact: "影响观瞻，基本不影响承载，可能引起渗漏。", treatment: "掩盖裂缝，必要时局部保温、加筋处理。", risk: "blue" },
+  { id: "C036", category: "一、板的裂缝", subcategory: "3、板面裂缝", itemNo: "第12项", title: "预制装配楼盖支座边局部", path: "一、板的裂缝 / 3、板面裂缝 / 第12项", morphology: "支座边板内横向裂缝，贯通板厚。", cause: "按简支设计预制板端固定，约束受弯拉裂，预应力传递长度内抗裂性不足。", nature: "非设计工况局部受力裂缝。", impact: "影响观瞻，不安全感，可能引起渗漏，只影响局部承载，影响耐久性。", treatment: "局部加固处理。", risk: "orange" },
+  { id: "C037", category: "一、板的裂缝", subcategory: "3、板面裂缝", itemNo: "第13项", title: "预制空心板楼盖", path: "一、板的裂缝 / 3、板面裂缝 / 第13项", morphology: "沿跨长方向纵向裂缝。", cause: "稀软混凝土局部塌陷引起孔顶开裂（塌孔裂缝）。", nature: "施工裂缝。", impact: "影响观瞻，不影响承载。", treatment: "掩盖裂缝。", risk: "gray" },
+  { id: "C038", category: "一、板的裂缝", subcategory: "3、板面裂缝", itemNo: "第14项", title: "预制肋形板的肋边", path: "一、板的裂缝 / 3、板面裂缝 / 第14项", morphology: "沿板肋方向纵向裂缝，贯通板厚。", cause: "蒸养出池骤然冷却，温度收缩引起开裂。", nature: "施工养护裂缝。", impact: "影响观瞻，可能引起渗漏，不影响承载，影响耐久性。", treatment: "封闭裂缝。", risk: "blue" },
+  { id: "C039", category: "一、板的裂缝", subcategory: "3、板面裂缝", itemNo: "第15项", title: "预制板边棱角部位", path: "一、板的裂缝 / 3、板面裂缝 / 第15项", morphology: "沿预制板边棱的纵向裂缝及剥落。", cause: "施工缺陷：吊装、运输、施工时碰撞，缺棱掉角。", nature: "局部残余裂缝。", impact: "影响观瞻，基本不影响承载。", treatment: "局部修补处理。", risk: "gray" },
+
+  // =============== 二、梁的裂缝 ===============
+  { id: "C040", category: "二、梁的裂缝", subcategory: "1、梁侧垂直裂缝", itemNo: "第1项", title: "跨中下部", path: "二、梁的裂缝 / 1、梁侧垂直裂缝 / 第1项", morphology: "由下向上垂直裂缝，楔形、不贯通。", cause: "正弯矩受拉，拆模过早，混凝土强度不足，配筋不足，偶然超载。", nature: "受力裂缝，施工裂缝，残余裂缝。", impact: "影响观瞻，基本不影响承载，宽度大时不安全感，影响耐久性。", treatment: "掩盖裂缝，必要时加固处理。", risk: "yellow" },
+  { id: "C041", category: "二、梁的裂缝", subcategory: "1、梁侧垂直裂缝", itemNo: "第2项", title: "跨边上部", path: "二、梁的裂缝 / 1、梁侧垂直裂缝 / 第2项", morphology: "由上向下垂直裂缝，楔形、不贯通。", cause: "负弯矩受拉，拆模过早，混凝土强度不足，配筋不足，钢筋移位，偶然超载。", nature: "受力裂缝，施工裂缝，残余裂缝。", impact: "影响观瞻，基本不影响承载，宽度大时不安全感，影响耐久性。", treatment: "掩盖裂缝，必要时加固处理。", risk: "yellow" },
+  { id: "C042", category: "二、梁的裂缝", subcategory: "1、梁侧垂直裂缝", itemNo: "第3项", title: "两侧跨边上、下部", path: "二、梁的裂缝 / 1、梁侧垂直裂缝 / 第3项", morphology: "垂直裂缝，楔形、不贯通，发展渐趋停滞。", cause: "沉降差，相对位移引起的约束弯矩，受拉开裂。", nature: "强迫位移引起的受力裂缝。", impact: "影响观瞻，宽度大时不安全感，可能影响承载，影响耐久性。", treatment: "掩盖裂缝，必要时加固处理。", risk: "orange" },
+  { id: "C043", category: "二、梁的裂缝", subcategory: "1、梁侧垂直裂缝", itemNo: "第4项", title: "跨中上部破碎裂缝", path: "二、梁的裂缝 / 1、梁侧垂直裂缝 / 第4项", morphology: "平行水平短小裂缝，可能发展成混凝土破碎，钢筋屈曲，箍筋崩开，梁被弯折。", cause: "正弯矩受压，混凝土强度不足，混凝土局部缺陷，偶然超载。", nature: "受力裂缝，施工缺陷，残余裂缝。", impact: "混凝土承载力不足的标志，有可能发展为脆性破坏。", treatment: "及时加固处理。", risk: "red" },
+  { id: "C044", category: "二、梁的裂缝", subcategory: "1、梁侧垂直裂缝", itemNo: "第5项", title: "梁侧腹部", path: "二、梁的裂缝 / 1、梁侧垂直裂缝 / 第5项", morphology: "等间距垂直裂缝，楔形，中间宽两端窄，发展渐趋停滞。", cause: "构造配筋不足，养护不周，干燥收缩裂缝。", nature: "施工养护缺陷，残余裂缝。", impact: "影响观瞻，宽度大时不安全感，不影响承载，影响耐久性。", treatment: "发展稳定后掩盖裂缝。", risk: "yellow" },
+  { id: "C045", category: "二、梁的裂缝", subcategory: "1、梁侧垂直裂缝", itemNo: "第6项", title: "变截面凹角、开孔等薄弱区域", path: "二、梁的裂缝 / 1、梁侧垂直裂缝 / 第6项", morphology: "沿凹角开裂，贯通截面，发展渐趋停滞。", cause: "温度、收缩引起的约束受拉开裂，构造配筋不足。", nature: "温度-收缩裂缝，施工养护裂缝。", impact: "影响观瞻，不安全感，可能引起渗漏，基本不影响承载，影响耐久性。", treatment: "及时封闭裂缝，加以掩饰，必要时防水、防渗处理。", risk: "blue" },
+  { id: "C046", category: "二、梁的裂缝", subcategory: "1、梁侧垂直裂缝", itemNo: "第7项", title: "大尺度长向结构中部", path: "二、梁的裂缝 / 1、梁侧垂直裂缝 / 第7项", morphology: "薄弱部位局部裂缝。", cause: "温度-收缩应力集中，局部构造缺陷，构造配筋不足。", nature: "构造裂缝，温度-收缩裂缝。", impact: "影响观瞻，基本不影响承载，影响耐久性。", treatment: "掩盖裂缝，必要时局部处理。", risk: "gray" },
+  { id: "C047", category: "二、梁的裂缝", subcategory: "1、梁侧垂直裂缝", itemNo: "第8项", title: "接槎及后浇带处", path: "二、梁的裂缝 / 1、梁侧垂直裂缝 / 第8项", morphology: "沿施工接槎面（直槎、斜槎、叠合水平槎）开裂，横向贯通截面，偶有夹渣、杂物。", cause: "施工养护缺陷，温度、收缩引起的约束受拉开裂。", nature: "温度-收缩裂缝，施工养护裂缝。", impact: "影响观瞻，不安全感，可能引起渗漏，基本不影响承载，影响耐久性。", treatment: "及时封闭裂缝，加以掩饰，必要时防水、防渗处理。", risk: "blue" },
+  { id: "C048", category: "二、梁的裂缝", subcategory: "1、梁侧垂直裂缝", itemNo: "第9项", title: "预装配式结构连接部位", path: "二、梁的裂缝 / 1、梁侧垂直裂缝 / 第9项", morphology: "预制构件梁与支承构件之间沿拼接开裂。", cause: "构件安装、连接施工缺陷，拼接处开裂。", nature: "拼接裂缝。", impact: "影响观瞻，不安全感，基本不影响承载，影响耐久性。", treatment: "封闭裂缝，加以掩饰。", risk: "blue" },
+  
+  { id: "C049", category: "二、梁的裂缝", subcategory: "2、梁侧斜裂缝", itemNo: "第1项", title: "跨边梁腰部位", path: "二、梁的裂缝 / 2、梁侧斜裂缝 / 第1项", morphology: "斜向梭形裂缝，中间宽两端窄。", cause: "混凝土强度不足，局部缺陷，截面过薄，配箍不足，集中荷载作用。", nature: "受力裂缝，腹剪斜裂缝。", impact: "抗剪承载力不足的标志，不安全感，容易导致脆性破坏，影响耐久性。", treatment: "掩盖裂缝，必要时加固处理。", risk: "orange" },
+  { id: "C050", category: "二、梁的裂缝", subcategory: "2、梁侧斜裂缝", itemNo: "第2项", title: "集中载处至跨边梁腰部位", path: "二、梁的裂缝 / 2、梁侧斜裂缝 / 第2项", morphology: "斜向贯通裂缝，将梁斜向劈为两部。", cause: "剪跨大处集中荷载作用，混凝土强度不足，局部缺陷，截面过薄，配箍不足。", nature: "受力裂缝，斜拉开裂。", impact: "抗剪承载力不足的标志，不安全感，容易导致脆性破坏，影响耐久性。", treatment: "加固处理。", risk: "orange" },
+  { id: "C051", category: "二、梁的裂缝", subcategory: "2、梁侧斜裂缝", itemNo: "第3项", title: "深梁或跨边集中载作用处", path: "二、梁的裂缝 / 2、梁侧斜裂缝 / 第3项", morphology: "跨边斜向平行裂缝。", cause: "剪跨小集中荷载作用，混凝土强度不足，局部缺陷，截面过薄，跨边横向配筋不足。", nature: "受力裂缝，斜压开裂。", impact: "抗剪承载力不足的标志，不安全感，容易导致斜压脆性破坏，影响耐久性。", treatment: "加固处理。", risk: "orange" },
+  { id: "C052", category: "二、梁的裂缝", subcategory: "2、梁侧斜裂缝", itemNo: "第4项", title: "深梁边或跨边作用大集中载", path: "二、梁的裂缝 / 2、梁侧斜裂缝 / 第4项", morphology: "跨边斜向锯齿状裂缝。", cause: "跨边很大集中载作用，混凝土强度不足，局部缺陷，截面过薄，跨边水平弯筋配置不足冲切破坏。", nature: "受力裂缝，冲切裂缝。", impact: "抗剪承载力不足的标志，不安全感，容易导致脆性冲切破坏，影响耐久性。", treatment: "加固处理。", risk: "red" },
+  { id: "C053", category: "二、梁的裂缝", subcategory: "2、梁侧斜裂缝", itemNo: "第5项", title: "跨高比大的梁跨中部位", path: "二、梁的裂缝 / 2、梁侧斜裂缝 / 第5项", morphology: "跨中多条平行斜向梭形裂缝，中间宽两端窄。", cause: "刚性梁两端沉降差，强迫位移引起约束内力，形成腹剪斜向开裂。", nature: "强迫位移引起的受力裂缝（腹剪裂缝）。", impact: "影响观瞻，不安全感，影响抗剪承载力，影响耐久性。", treatment: "掩盖裂缝，必要时加固处理。", risk: "orange" },
+  { id: "C054", category: "二、梁的裂缝", subcategory: "2、梁侧斜裂缝", itemNo: "第6项", title: "梁边下侧部位", path: "二、梁的裂缝 / 2、梁侧斜裂缝 / 第6项", morphology: "跨边下部斜向弯弧状裂缝，楔形，中止于梁上部。", cause: "跨边集中力，正弯矩弯曲裂缝在剪力作用下斜向发展而形成。", nature: "弯矩剪力共同作用下的受力裂缝，弯剪斜裂缝。", impact: "影响观瞻，不安全感，宽度大时影响承载力，影响耐久性。", treatment: "掩盖裂缝，必要时加固处理。", risk: "orange" },
+  { id: "C055", category: "二、梁的裂缝", subcategory: "2、梁侧斜裂缝", itemNo: "第7项", title: "梁边上侧部位", path: "二、梁的裂缝 / 2、梁侧斜裂缝 / 第7项", morphology: "跨边上部斜向弯弧状裂缝，楔形，中止于梁下部。", cause: "跨边集中力，负弯矩弯曲裂缝在剪力作用下斜向发展而形成。", nature: "弯矩剪力共同作用下的受力裂缝，弯剪斜裂缝。", impact: "影响观瞻，不安全感，裂缝宽度大时影响承载力，影响耐久性。", treatment: "掩盖裂缝，必要时加固处理。", risk: "orange" },
+  { id: "C056", category: "二、梁的裂缝", subcategory: "2、梁侧斜裂缝", itemNo: "第8项", title: "集中荷载作用处梁边", path: "二、梁的裂缝 / 2、梁侧斜裂缝 / 第8项", morphology: "裂缝两侧纵筋顺筋短小平行裂缝，有时保护层剥落。", cause: "裂缝两侧纵筋栓销剪切，且配箍不足，引起一侧混凝土斜向撕裂。", nature: "局部受力裂缝，栓销剪切开裂。", impact: "影响观瞻，不安全感，宽度大时影响承载力，影响耐久性。", treatment: "掩盖裂缝，必要时加固处理。", risk: "orange" },
+  { id: "C057", category: "二、梁的裂缝", subcategory: "2、梁侧斜裂缝", itemNo: "第9项", title: "边梁各侧面部位", path: "二、梁的裂缝 / 2、梁侧斜裂缝 / 第9项", morphology: "各侧面上均有多条平行斜向螺旋状裂缝，中间宽两端窄棱形。", cause: "边梁在板端弯矩和拱作用下受扭，抗扭配筋不足，混凝土强度不足，开裂。", nature: "弯矩-扭矩作用下的受力裂缝。", impact: "影响观瞻，不安全感，宽度大时影响承载力，影响耐久性。", treatment: "掩盖裂缝，必要时加固处理。", risk: "orange" },
+  { id: "C058", category: "二、梁的裂缝", subcategory: "2、梁侧斜裂缝", itemNo: "第10项", title: "曲梁根部各侧面部位", path: "二、梁的裂缝 / 2、梁侧斜裂缝 / 第10项", morphology: "各侧面上均有多条平行斜向螺旋状裂缝，中间宽两端窄棱形。", cause: "曲梁根部在弯矩和扭矩共同作用下，抗扭配筋不足，混凝土强度不足，开裂。", nature: "弯矩-扭矩作用下的受力裂缝。", impact: "影响观瞻，不安全感，宽度大时影响承载力，影响耐久性。", treatment: "掩盖裂缝，必要时加固处理。", risk: "orange" },
+  
+  { id: "C059", category: "二、梁的裂缝", subcategory: "3、梁的局部裂缝", itemNo: "第1项", title: "沿接槎及后浇带处裂缝", path: "二、梁的裂缝 / 3、梁的局部裂缝 / 第1项", morphology: "沿施工缝处开裂，两侧混凝土质感差异，偶有夹杂物。", cause: "接槎未清理、湿润，振捣不足或过振，养护不良，模板软弱，拆模过早，施工荷载过大。", nature: "施工浇筑裂缝。", impact: "影响观瞻，不安全感，一般不影响承载力，宽度大时影响耐久性。", treatment: "掩盖裂缝。", risk: "blue" },
+  { id: "C060", category: "二、梁的裂缝", subcategory: "3、梁的局部裂缝", itemNo: "第2项", title: "钢筋搭接连接处", path: "二、梁的裂缝 / 3、梁的局部裂缝 / 第2项", morphology: "沿搭接钢筋两端头局部横向开裂，类似受弯裂缝。", cause: "接头设在弯矩较大处，接头面积百分率大，搭接长度不够，配箍不足，保护层太薄。", nature: "施工构造裂缝。", impact: "影响观瞻，不安全感，一般不影响承载力，宽度大时影响局部承载力及耐久性。", treatment: "掩盖裂缝，必要时加固处理。", risk: "blue" },
+  { id: "C061", category: "二、梁的裂缝", subcategory: "3、梁的局部裂缝", itemNo: "第3项", title: "钢筋机械连接接头处", path: "二、梁的裂缝 / 3、梁的局部裂缝 / 第3项", morphology: "沿连接套筒两端局部横向开裂，类似受弯裂缝。", cause: "接头设在弯矩较大处，接头面积百分率大，接头变形模量减小，保护层薄。", nature: "施工构造裂缝。", impact: "影响观瞻，不安全感，一般不影响承载力，宽度大时影响局部承载力及耐久性。", treatment: "掩盖裂缝，必要时加固处理。", risk: "blue" },
+  { id: "C062", category: "二、梁的裂缝", subcategory: "3、梁的局部裂缝", itemNo: "第4项", title: "折梁下凹角处", path: "二、梁的裂缝 / 3、梁的局部裂缝 / 第4项", morphology: "由凹角角点局部区域开裂，类似受弯裂缝。", cause: "两侧钢筋锚固不足，局部应力集中，混凝土强度不足而开裂。", nature: "施工构造裂缝。", impact: "影响观瞻，不安全感，一般不影响承载力，宽度大时影响局部承载力及耐久性。", treatment: "掩盖裂缝，必要时加固处理。", risk: "blue" },
+  { id: "C063", category: "二、梁的裂缝", subcategory: "3、梁的局部裂缝", itemNo: "第5项", title: "沿叠合梁叠合界面", path: "二、梁的裂缝 / 3、梁的局部裂缝 / 第5项", morphology: "沿叠合面接槎处断续裂缝，两侧混凝土质感差异，偶有夹杂物。", cause: "叠合楼槎面凹凸差小，构造配筋不足，施工浇筑前未清理、湿润，振捣不足，养护不良，在混凝土收缩或剪力作用下开裂。", nature: "设计-施工缺陷引起的受力-构造裂缝。", impact: "影响观瞻，不安全感，对承载力及耐久性有影响。", treatment: "掩盖裂缝，加固处理。", risk: "orange" },
+  { id: "C064", category: "二、梁的裂缝", subcategory: "3、梁的局部裂缝", itemNo: "第6项", title: "主、次梁交界处", path: "二、梁的裂缝 / 3、梁的局部裂缝 / 第6项", morphology: "次梁或集中载下局部区域八字形裂缝。", cause: "主梁截面较小，混凝土强度不足，局部配筋不足，混凝土受拉开裂。", nature: "设计-施工缺陷引起的受力拉脱裂缝。", impact: "影响观瞻，不安全感，对局部承载力及耐久性有影响。", treatment: "掩盖裂缝，加固处理。", risk: "orange" },
+  { id: "C065", category: "二、梁的裂缝", subcategory: "3、梁的局部裂缝", itemNo: "第7项", title: "牛腿、埋件、集中荷载作用处", path: "二、梁的裂缝 / 3、梁的局部裂缝 / 第7项", morphology: "集中载下局部区域八字形裂缝。", cause: "截面较小，混凝土强度不足，局部配筋不足，混凝土受拉开裂。", nature: "设计-施工缺陷引起的受力拉脱裂缝。", impact: "影响观瞻，不安全感，对局部承载力及耐久性有影响。", treatment: "掩盖裂缝，加固处理。", risk: "orange" },
+
+  // =============== 三、柱的裂缝 ===============
+  { id: "C066", category: "三、柱的裂缝", subcategory: "1、柱中水平裂缝", itemNo: "第1项", title: "柱中一侧或两侧", path: "三、柱的裂缝 / 1、柱中水平裂缝 / 第1项", morphology: "水平裂缝，楔形，不贯通截面，类似弯曲裂缝。", cause: "偏心受压构件在轴力、弯矩作用下，弯曲受拉开裂。", nature: "弯曲受拉裂缝。", impact: "影响观瞻，基本不影响承载，宽度大时不安全感，影响耐久性。", treatment: "掩盖裂缝，必要时加固处理。", risk: "yellow" },
+  { id: "C067", category: "三、柱的裂缝", subcategory: "1、柱中水平裂缝", itemNo: "第2项", title: "角柱、双肢柱沿周边侧面", path: "三、柱的裂缝 / 1、柱中水平裂缝 / 第2项", morphology: "沿柱周边水平裂缝。", cause: "角柱、双肢柱在水平荷载作用下，轴拉力小的一侧受拉开裂。", nature: "受力裂缝。", impact: "影响观瞻，基本不影响承载，宽度大时不安全感，影响耐久性。", treatment: "掩盖裂缝，必要时加固处理。", risk: "yellow" },
+  { id: "C068", category: "三、柱的裂缝", subcategory: "1、柱中水平裂缝", itemNo: "第3项", title: "柱侧面接槎处", path: "三、柱的裂缝 / 1、柱中水平裂缝 / 第3项", morphology: "沿接槎面裂缝，两侧混凝土质感差异，偶有夹渣。", cause: "接槎面清理、凿毛、湿润欠妥，施工浇筑、振捣、养护不良。", nature: "施工接槎裂缝。", impact: "影响观瞻，基本不影响承载，宽度大时不安全感，影响耐久性。", treatment: "掩盖裂缝，必要时局部加固处理。", risk: "blue" },
+  { id: "C069", category: "三、柱的裂缝", subcategory: "1、柱中水平裂缝", itemNo: "第4项", title: "柱上部各侧面", path: "三、柱的裂缝 / 1、柱中水平裂缝 / 第4项", morphology: "沿箍筋处水平开裂，裂缝沿周围发生。", cause: "混凝土过稀，浇筑后振捣过度，向下沉降离析，被水平筋所阻，沿箍筋拉裂。", nature: "施工-沉降离析裂缝。", impact: "裂缝仅存在保护层内，虽影响观瞻，基本不影响承载，不安全感，影响耐久性。", treatment: "掩盖裂缝。", risk: "blue" },
+  { id: "C070", category: "三、柱的裂缝", subcategory: "1、柱中水平裂缝", itemNo: "第5项", title: "装配式柱接头处裂缝", path: "三、柱的裂缝 / 1、柱中水平裂缝 / 第5项", morphology: "沿装配式柱接头拼缝处开裂，两侧混凝土质感差异。", cause: "灌缝混凝土过稀，装配-施工接槎、浇筑、捣实、养护不良。", nature: "施工-接槎裂缝。", impact: "影响观瞻，基本不影响承载，宽度大时不安全感，影响耐久性。", treatment: "掩盖裂缝，必要时局部加固处理。", risk: "blue" },
+  
+  { id: "C071", category: "三、柱的裂缝", subcategory: "2、柱中竖向裂缝", itemNo: "第1项", title: "柱的侧面", path: "三、柱的裂缝 / 2、柱中竖向裂缝 / 第1项", morphology: "断续成组短小裂缝，发展成保护层混凝土鼓出、剥落。", cause: "混凝土受压达到强度，开裂、破碎。", nature: "混凝土受压破坏裂缝。", impact: "受压构件柱压溃破坏的预兆，表明柱的承载力不足。", treatment: "立即停止使用、卸载，并及时进行检测和计算复核。", risk: "red" },
+  { id: "C072", category: "三、柱的裂缝", subcategory: "2、柱中竖向裂缝", itemNo: "第2项", title: "柱的侧面", path: "三、柱的裂缝 / 2、柱中竖向裂缝 / 第2项", morphology: "开裂混凝土鼓出、剥落，钢筋压屈鼓出。", cause: "前述受压裂缝的继续发展。", nature: "混凝土受压裂缝，压溃破坏的预兆。", impact: "表明柱的承载力即将耗尽，可能导致倒塌，是严重的安全隐患。", treatment: "立即停止使用、卸载，并及时进行加固处理。", risk: "red" },
+  { id: "C073", category: "三、柱的裂缝", subcategory: "2、柱中竖向裂缝", itemNo: "第3项", title: "变截面柱的侧面", path: "三、柱的裂缝 / 2、柱中竖向裂缝 / 第3项", morphology: "变截面处竖向裂缝。", cause: "变截面斜度太大，柱中配箍不足，斜向柱钢筋压屈、鼓出而开裂。", nature: "构造不良而引起的局部裂缝。", impact: "影响观瞻，影响局部承载力，宽度大时不安全感，影响耐久性。", treatment: "掩盖裂缝，局部加固处理。", risk: "orange" },
+  
+  { id: "C074", category: "三、柱的裂缝", subcategory: "3、柱中斜向裂缝", itemNo: "第1项", title: "柱上、下端（柱头、柱脚）", path: "三、柱的裂缝 / 3、柱中斜向裂缝 / 第1项", morphology: "斜向裂缝，楔形，不贯穿截面。", cause: "非设计工况，配箍不足，水平荷载或强迫位移引起的剪切开裂。", nature: "剪力作用下的斜向受力裂缝。", impact: "抗剪承载力不足，影响观瞻，影响局部承载力，宽度大时产生不安全感，影响耐久性。", treatment: "掩盖裂缝，局部加固处理。", risk: "orange" },
+  { id: "C075", category: "三、柱的裂缝", subcategory: "3、柱中斜向裂缝", itemNo: "第2项", title: "斜裂缝一侧沿纵向钢筋方向发展", path: "三、柱的裂缝 / 3、柱中斜向裂缝 / 第2项", morphology: "斜裂缝处顺筋短小平行的斜裂缝。", cause: "配箍不足，纵筋在栓剪切力作用下沿钢筋发生的剪切裂缝。", nature: "剪力作用下的斜向受力裂缝。", impact: "局部抗剪承载力不足，影响观瞻，影响耐久性。", treatment: "掩盖裂缝，局部加固处理。", risk: "orange" },
+
+  // =============== 四、墙的裂缝 ===============
+  { id: "C076", category: "四、墙的裂缝", subcategory: "1、墙的水平裂缝", itemNo: "第1项", title: "墙体、池壁、仓壁竖向弯矩最大处", path: "四、墙的裂缝 / 1、墙的水平裂缝 / 第1项", morphology: "水平裂缝。", cause: "在荷载作用下的弯曲受拉开裂。", nature: "弯曲受拉裂缝。", impact: "影响观瞻，基本不影响承载，有可能影响使用功能（渗漏），影响耐久性。", treatment: "封闭裂缝，局部处理，必要时加固。", risk: "yellow" },
+  { id: "C077", category: "四、墙的裂缝", subcategory: "1、墙的水平裂缝", itemNo: "第2项", title: "墙的水平接槎处", path: "四、墙的裂缝 / 1、墙的水平裂缝 / 第2项", morphology: "沿墙的水平接槎处开裂，两侧混凝土质感差异，偶有夹渣。", cause: "接槎面清理、凿毛、湿润欠妥，施工浇筑、振捣、养护不良。", nature: "施工接槎裂缝。", impact: "影响观瞻，基本不影响承载，宽度大时不安全感，影响耐久性。", treatment: "掩盖裂缝，必要时局部加固处理。", risk: "blue" },
+  { id: "C078", category: "四、墙的裂缝", subcategory: "1、墙的水平裂缝", itemNo: "第3项", title: "墙上部侧面", path: "四、墙的裂缝 / 1、墙的水平裂缝 / 第3项", morphology: "沿水平筋处开裂。", cause: "混凝土过稀，浇筑后振捣过度，下沉离析被水平筋所阻，沿钢筋拉裂。", nature: "施工-沉降离析裂缝。", impact: "裂缝仅在保护层内，虽影响观瞻，基本不影响承载，不安全感，影响耐久性。", treatment: "掩盖裂缝。", risk: "blue" },
+  
+  { id: "C079", category: "四、墙的裂缝", subcategory: "2、墙的垂直裂缝", itemNo: "第1项", title: "墙体、池壁、仓壁横向弯矩最大处", path: "四、墙的裂缝 / 2、墙的垂直裂缝 / 第1项", morphology: "竖向裂缝，楔形，不贯通截面。", cause: "在荷载作用下的弯曲受拉开裂。", nature: "弯曲受拉裂缝。", impact: "影响观瞻，基本不影响承载，宽度大时不安全感，影响耐久性。", treatment: "封闭裂缝，局部处理，必要时加固。", risk: "yellow" },
+  { id: "C080", category: "四、墙的裂缝", subcategory: "2、墙的垂直裂缝", itemNo: "第2项", title: "长度很大的墙体侧面", path: "四、墙的裂缝 / 2、墙的垂直裂缝 / 第2项", morphology: "竖向裂缝，基本等间距，贯通截面。", cause: "混凝土收缩，温度变化，约束拉力引起开裂。", nature: "温度收缩裂缝。", impact: "影响观瞻，基本不影响承载，有可能影响使用功能（渗漏），影响耐久性。", treatment: "局部处理，封闭裂缝。", risk: "blue" },
+  { id: "C081", category: "四、墙的裂缝", subcategory: "2、墙的垂直裂缝", itemNo: "第3项", title: "瓶颈、凹角等薄弱部位", path: "四、墙的裂缝 / 2、墙的垂直裂缝 / 第3项", morphology: "从凹角产生、延伸的局部裂缝。", cause: "体形缺陷，温度收缩，应力集中引起开裂，局部构造配筋不足。", nature: "局部构造裂缝。", impact: "影响观瞻，基本不影响承载，影响耐久性。", treatment: "掩盖裂缝，局部处理。", risk: "gray" },
+  { id: "C082", category: "四、墙的裂缝", subcategory: "2、墙的垂直裂缝", itemNo: "第4项", title: "墙施工缝、竖向接槎处", path: "四、墙的裂缝 / 2、墙的垂直裂缝 / 第4项", morphology: "沿施工接槎处开裂，两侧混凝土质感差异，偶有夹渣。", cause: "施工浇筑接槎处理不良。", nature: "施工接槎裂缝。", impact: "影响观瞻，不影响承载，有可能影响使用功能（渗漏），影响耐久性。", treatment: "局部处理，封闭裂缝。", risk: "blue" },
+  { id: "C083", category: "四、墙的裂缝", subcategory: "2、墙的垂直裂缝", itemNo: "第5项", title: "墙体表面", path: "四、墙的裂缝 / 2、墙的垂直裂缝 / 第5项", morphology: "由开关到用电器位置，直线形裂缝。", cause: "预埋管线布置在混凝土保护层中，厚度太薄。", nature: "表面构造裂缝。", impact: "影响观瞻，不影响承载，影响耐久性。", treatment: "掩盖裂缝。", risk: "gray" },
+  { id: "C084", category: "四、墙的裂缝", subcategory: "2、墙的垂直裂缝", itemNo: "第6项", title: "装配式墙板连接处", path: "四、墙的裂缝 / 2、墙的垂直裂缝 / 第6项", morphology: "沿拼接处产生的裂缝。", cause: "拼接施工缺陷，温差胀缩变形，造成拼缝开裂。", nature: "施工-构造裂缝。", impact: "影响观瞻，不影响承载，有可能影响使用功能（渗漏），影响耐久性。", treatment: "局部处理，封闭裂缝。", risk: "blue" },
+  
+  { id: "C085", category: "四、墙的裂缝", subcategory: "3、墙的斜裂缝", itemNo: "第1项", title: "结构长向墙体一端", path: "四、墙的裂缝 / 3、墙的斜裂缝 / 第1项", morphology: "斜向梭形裂缝，贯通截面，发展渐趋停滞。", cause: "水平荷载作用，不均匀沉降（一端沉降大），强迫位移引起的约束受力。", nature: "剪力作用下的受力裂缝。", impact: "影响观瞻，剪切承载力不足，不安全感，有可能影响使用功能（渗漏），影响耐久性。", treatment: "裂缝发展稳定后，封闭裂缝，局部处理，必要时加固、地基处理。", risk: "orange" },
+  { id: "C086", category: "四、墙的裂缝", subcategory: "3、墙的斜裂缝", itemNo: "第2项", title: "结构长向墙体两端", path: "四、墙的裂缝 / 3、墙的斜裂缝 / 第2项", morphology: "斜向梭形裂缝，两侧形成八字形裂缝，贯通截面，发展渐趋停滞。", cause: "不均匀沉降（中间大），强迫位移引起的约束受力。", nature: "剪力作用下的受力裂缝。", impact: "影响观瞻，剪切承载力不足，不安全感，有可能影响使用功能（渗漏），影响耐久性。", treatment: "裂缝发展稳定后，封闭裂缝，局部处理，必要时加固、地基处理。", risk: "orange" },
+  { id: "C087", category: "四、墙的裂缝", subcategory: "3、墙的斜裂缝", itemNo: "第3项", title: "结构长向墙体两端", path: "四、墙的裂缝 / 3、墙的斜裂缝 / 第3项", morphology: "斜向梭形裂缝，两侧形成倒八字形裂缝，贯通截面，发展渐趋停滞。", cause: "不均匀沉降（两端大），强迫位移引起的约束受力。", nature: "剪力作用下的受力裂缝。", impact: "影响观瞻，剪切承载力不足，不安全感，有可能影响使用功能（渗漏），影响耐久性。", treatment: "裂缝发展稳定后，封闭裂缝，局部处理，必要时加固、地基处理。", risk: "orange" },
+  { id: "C088", category: "四、墙的裂缝", subcategory: "3、墙的斜裂缝", itemNo: "第4项", title: "梁下墙体两侧", path: "四、墙的裂缝 / 3、墙的斜裂缝 / 第4项", morphology: "局压裂缝，梭形，贯通截面。", cause: "集中荷载作用下墙的局部承压开裂。", nature: "局部承压裂缝。", impact: "影响观瞻，局部承压抗力不足，不安全感，有可能影响使用功能（渗漏），影响耐久性。", treatment: "封闭裂缝，局部处理，必要时加固。", risk: "orange" },
+  { id: "C089", category: "四、墙的裂缝", subcategory: "3、墙的斜裂缝", itemNo: "第5项", title: "柱下墙体两侧", path: "四、墙的裂缝 / 3、墙的斜裂缝 / 第5项", morphology: "局压裂缝，梭形，贯通截面。", cause: "集中荷载作用下墙的局部承压开裂。", nature: "局部承压裂缝。", impact: "影响观瞻，局部承压抗力不足，不安全感，有可能影响使用功能（渗漏），影响耐久性。", treatment: "封闭裂缝，局部处理，必要时加固。", risk: "orange" },
+  { id: "C090", category: "四、墙的裂缝", subcategory: "3、墙的斜裂缝", itemNo: "第6项", title: "设备埋件下墙体两侧", path: "四、墙的裂缝 / 3、墙的斜裂缝 / 第6项", morphology: "局压裂缝，梭形，贯通截面。", cause: "集中荷载作用下墙的局部承压开裂。", nature: "局部承压裂缝。", impact: "影响观瞻，局部承压抗力不足，不安全感，有可能影响使用功能（渗漏），影响耐久性。", treatment: "封闭裂缝，局部处理，必要时加固。", risk: "orange" },
+  { id: "C091", category: "四、墙的裂缝", subcategory: "3、墙的斜裂缝", itemNo: "第7项", title: "屋盖下尽端纵墙或山墙角部", path: "四、墙的裂缝 / 3、墙的斜裂缝 / 第7项", morphology: "斜向裂缝，梭形，贯通截面，宽度随季节变化。", cause: "屋盖保温隔热不良，季节温差，胀缩变形造成墙体上部约束受力开裂。", nature: "季节温差裂缝。", impact: "影响观瞻，基本不影响承载，不安全感，有可能影响使用功能（渗漏），影响耐久性。", treatment: "重做或加强屋面保温隔热层后，封闭裂缝，局部处理。", risk: "yellow" },
+  
+  { id: "C092", category: "四、墙的裂缝", subcategory: "4、墙的局部裂缝", itemNo: "第1项", title: "墙面孔洞周边", path: "四、墙的裂缝 / 4、墙的局部裂缝 / 第1项", morphology: "角部斜向裂缝，楔形，贯通截面。", cause: "局部构造缺陷，应力集中引起混凝土开裂，也可能因不均匀沉降引起。", nature: "局部构造裂缝或沉降裂缝。", impact: "影响观瞻，不安全感，不影响承载力，影响耐久性。", treatment: "封闭裂缝，局部处理。", risk: "gray" },
+  { id: "C093", category: "四、墙的裂缝", subcategory: "4、墙的局部裂缝", itemNo: "第2项", title: "墙体凹角处", path: "四、墙的裂缝 / 4、墙的局部裂缝 / 第2项", morphology: "从凹角产生、延伸的局部裂缝。", cause: "锚固构造缺陷，应力集中引起混凝土开裂。", nature: "局部构造裂缝。", impact: "影响观瞻，不安全感，不影响承载力，影响耐久性。", treatment: "封闭裂缝，局部处理。", risk: "gray" },
+  { id: "C094", category: "四、墙的裂缝", subcategory: "4、墙的局部裂缝", itemNo: "第3项", title: "与梁柱交界处", path: "四、墙的裂缝 / 4、墙的局部裂缝 / 第3项", morphology: "沿界面延伸的裂缝。", cause: "两侧截面尺寸差异大，刚度突变，构造缺陷引起应力集中开裂。", nature: "局部构造裂缝。", impact: "影响观瞻，不影响承载力，影响耐久性。", treatment: "封闭裂缝，局部处理。", risk: "gray" },
+
+  { id: "C095", category: "四、墙的裂缝", subcategory: "5、墙的装修裂缝", itemNo: "第1项", title: "填充墙与主体结构之间", path: "四、墙的裂缝 / 5、墙的装修裂缝 / 第1项", morphology: "沿界面延伸的裂缝。", cause: "界面两侧材质差异，接缝构造、施工处理不良而开裂。", nature: "构造裂缝。", impact: "影响观瞻，不影响承载力。", treatment: "掩饰裂缝，局部处理。", risk: "gray" },
+  { id: "C096", category: "四、墙的裂缝", subcategory: "5、墙的装修裂缝", itemNo: "第2项", title: "墙体与围护构件之间", path: "四、墙的裂缝 / 5、墙的装修裂缝 / 第2项", morphology: "沿界面延伸的裂缝。", cause: "界面两侧材质差异，接缝构造、施工处理不良而开裂。", nature: "构造裂缝。", impact: "影响观瞻，不影响承载力。", treatment: "掩饰裂缝，局部处理。", risk: "gray" },
+  { id: "C097", category: "四、墙的裂缝", subcategory: "5、墙的装修裂缝", itemNo: "第3项", title: "有抹面层的墙体", path: "四、墙的裂缝 / 5、墙的装修裂缝 / 第3项", morphology: "墙面不规则龟裂、剥落。", cause: "基底处理不良，抹面施工缺陷，墙体受力或温度、收缩时抹面层开裂。", nature: "施工裂缝。", impact: "影响观瞻。", treatment: "掩饰裂缝或重做抹面。", risk: "gray" },
+
+  // =============== 五、基础的裂缝 ===============
+  { id: "C098", category: "五、基础的裂缝", subcategory: "1、基础底板裂缝", itemNo: "第1项", title: "跨中部位板面", path: "五、基础的裂缝 / 1、基础底板裂缝 / 第1项", morphology: "垂直于跨度的横向裂缝，不贯通。", cause: "底板太薄，配筋不足，地基反力造成基础板向上弯曲开裂。", nature: "弯曲受拉裂缝。", impact: "影响观瞻，不安全感，表示承载力不足，影响耐久性。", treatment: "加固处理，封闭裂缝。", risk: "orange" },
+  { id: "C099", category: "五、基础的裂缝", subcategory: "1、基础底板裂缝", itemNo: "第2项", title: "跨边部位板面", path: "五、基础的裂缝 / 1、基础底板裂缝 / 第2项", morphology: "沿跨边延伸的裂缝，不贯通。", cause: "地基不均匀沉降，强迫位移引起的约束受力开裂。", nature: "不均匀沉降裂缝。", impact: "影响观瞻，不安全感，影响承载力，影响耐久性。", treatment: "封闭裂缝，局部处理，必要时加固。", risk: "orange" },
+  { id: "C100", category: "五、基础的裂缝", subcategory: "1、基础底板裂缝", itemNo: "第3项", title: "板面柱周边部位", path: "五、基础的裂缝 / 1、基础底板裂缝 / 第3项", morphology: "环向裂缝，贯通。", cause: "底板太薄，抗剪配筋不足，柱压力造成基础板在剪力作用下开裂。", nature: "受剪冲切裂缝。", impact: "不安全感，表明抗剪承载力不足，冲切破坏的前兆。", treatment: "加固处理，封闭裂缝。", risk: "red" },
+  { id: "C101", category: "五、基础的裂缝", subcategory: "1、基础底板裂缝", itemNo: "第4项", title: "大尺度长形底板中部", path: "五、基础的裂缝 / 1、基础底板裂缝 / 第4项", morphology: "垂直于长度方向的横裂，有可能贯通。", cause: "板长过大时，收缩或温度变化的约束作用引起中部受拉开裂，混凝土强度不足或构造配筋不足。", nature: "温度收缩裂缝。", impact: "影响观瞻，不安全感，有可能影响承载力，影响使用功能（渗漏）及耐久性。", treatment: "封闭裂缝，局部处理，必要时加固。", risk: "yellow" },
+  { id: "C102", category: "五、基础的裂缝", subcategory: "1、基础底板裂缝", itemNo: "第5项", title: "平面瓶颈、凹角等薄弱部位", path: "五、基础的裂缝 / 1、基础底板裂缝 / 第5项", morphology: "从凹角产生、延伸的局部裂缝。", cause: "在截面薄弱或应力集中处，收缩或温度变化的约束作用引起受拉开裂，混凝土强度不足或构造配筋太少。", nature: "构造缺陷裂缝，温度收缩裂缝。", impact: "影响观瞻，不安全感，影响使用功能（渗漏）及耐久性。", treatment: "封闭裂缝，局部处理，必要时加固。", risk: "blue" },
+  { id: "C103", category: "五、基础的裂缝", subcategory: "1、基础底板裂缝", itemNo: "第6项", title: "接槎及后浇带处", path: "五、基础的裂缝 / 1、基础底板裂缝 / 第6项", morphology: "沿施工接槎处开裂，两侧混凝土质感差异，偶有夹渣。", cause: "施工接槎处理不良，浇筑、养护缺陷引起沿界面混凝土的开裂。", nature: "施工接槎裂缝。", impact: "影响观瞻，基本不影响承载，有可能影响使用功能（渗漏），影响耐久性。", treatment: "局部处理，封闭裂缝。", risk: "blue" },
+  { id: "C104", category: "五、基础的裂缝", subcategory: "1、基础底板裂缝", itemNo: "第7项", title: "基础板表面", path: "五、基础的裂缝 / 1、基础底板裂缝 / 第7项", morphology: "表面不规则龟裂。", cause: "混凝土表面干燥收缩引起的局部开裂。", nature: "表面收缩裂缝。", impact: "影响观瞻，不影响承载，影响耐久性。", treatment: "掩饰裂缝或重做抹面。", risk: "gray" },
+  
+  { id: "C105", category: "五、基础的裂缝", subcategory: "2、基础梁柱裂缝", itemNo: "第1项", title: "地基梁中部", path: "五、基础的裂缝 / 2、基础梁柱裂缝 / 第1项", morphology: "垂直裂缝，楔形，不贯通。", cause: "截面太小，配筋不足，地基反力造成弯曲开裂。", nature: "弯曲受拉裂缝。", impact: "影响观瞻，不安全感，表示承载力不足，影响耐久性。", treatment: "加固处理，封闭裂缝。", risk: "orange" },
+  { id: "C106", category: "五、基础的裂缝", subcategory: "2、基础梁柱裂缝", itemNo: "第2项", title: "长向梁的中部", path: "五、基础的裂缝 / 2、基础梁柱裂缝 / 第2项", morphology: "垂直于长度方向的横裂，有可能贯通。", cause: "混凝土强度不足或构造配筋不足，梁长过大时，收缩或温度变化的约束作用引起中部受拉开裂。", nature: "温度收缩裂缝。", impact: "影响观瞻，不安全感，影响耐久性。", treatment: "封闭裂缝，局部处理。", risk: "blue" },
+  { id: "C107", category: "五、基础的裂缝", subcategory: "2、基础梁柱裂缝", itemNo: "第3项", title: "地梁梁腰中部侧面", path: "五、基础的裂缝 / 2、基础梁柱裂缝 / 第3项", morphology: "垂直裂缝，梭形。", cause: "梁腰配筋不足，干燥收缩的约束作用引起开裂。", nature: "干燥收缩裂缝。", impact: "影响观瞻，不安全感，影响耐久性。", treatment: "封闭裂缝，局部处理。", risk: "gray" },
+  { id: "C108", category: "五、基础的裂缝", subcategory: "2、基础梁柱裂缝", itemNo: "第4项", title: "地基梁中部侧面", path: "五、基础的裂缝 / 2、基础梁柱裂缝 / 第4项", morphology: "斜向裂缝，梭形。", cause: "两侧不均匀沉降，约束作用引起中部受剪开裂。", nature: "不均匀沉降剪切裂缝。", impact: "影响观瞻，不安全感，影响承载力，影响耐久性。", treatment: "加固处理，封闭裂缝。", risk: "orange" },
+  { id: "C109", category: "五、基础的裂缝", subcategory: "2、基础梁柱裂缝", itemNo: "第5项", title: "施工浇筑接槎处及后浇带侧", path: "五、基础的裂缝 / 2、基础梁柱裂缝 / 第5项", morphology: "沿施工接槎处开裂，两侧混凝土质感差异。", cause: "施工接槎处理不良，浇筑、养护缺陷引起沿界面混凝土的开裂。", nature: "施工接槎裂缝。", impact: "影响观瞻，基本不影响承载，有可能影响使用功能（渗漏），影响耐久性。", treatment: "局部处理，封闭裂缝。", risk: "blue" },
+  { id: "C110", category: "五、基础的裂缝", subcategory: "2、基础梁柱裂缝", itemNo: "第6项", title: "地基柱头、柱脚两侧", path: "五、基础的裂缝 / 2、基础梁柱裂缝 / 第6项", morphology: "水平裂缝，楔形，不贯通。", cause: "不均匀沉降，柱倾斜引起约束弯矩，弯曲受拉开裂。", nature: "不均匀沉降受弯裂缝。", impact: "影响观瞻，不安全感，影响承载力，影响耐久性。", treatment: "加固处理，封闭裂缝。", risk: "orange" },
+
+  { id: "C111", category: "五、基础的裂缝", subcategory: "3、地下室墙体裂缝", itemNo: "第1项", title: "墙中部侧面", path: "五、基础的裂缝 / 3、地下室墙体裂缝 / 第1项", morphology: "竖向裂缝，楔形，不贯通。", cause: "墙板太薄，配筋不足，侧面土压作用下，横向弯矩的弯曲受拉开裂。", nature: "弯曲受拉裂缝。", impact: "影响观瞻，不安全感，承载力不足，有可能影响使用功能（渗漏）及耐久性。", treatment: "封闭裂缝，必要时加固处理。", risk: "orange" },
+  { id: "C112", category: "五、基础的裂缝", subcategory: "3、地下室墙体裂缝", itemNo: "第2项", title: "墙中部侧面", path: "五、基础的裂缝 / 3、地下室墙体裂缝 / 第2项", morphology: "水平裂缝，不贯通。", cause: "墙板太薄，配筋不足，侧面土压作用下，竖向弯矩的弯曲受拉开裂。", nature: "弯曲受拉裂缝。", impact: "影响观瞻，不安全感，承载力不足，有可能影响使用功能（渗漏）及耐久性。", treatment: "封闭裂缝，必要时加固处理。", risk: "orange" },
+  { id: "C113", category: "五、基础的裂缝", subcategory: "3、地下室墙体裂缝", itemNo: "第3项", title: "长墙侧面", path: "五、基础的裂缝 / 3、地下室墙体裂缝 / 第3项", morphology: "等间距竖向裂缝，楔形，有可能贯通。", cause: "墙板太长，构造配筋不足，混凝土干燥收缩及温度变化的约束作用引起受拉开裂。", nature: "干燥收缩、温度裂缝。", impact: "影响观瞻，不安全感，基本不影响承载力，有可能影响使用功能（渗漏）及耐久性。", treatment: "封闭裂缝，局部处理。", risk: "blue" },
+  { id: "C114", category: "五、基础的裂缝", subcategory: "3、地下室墙体裂缝", itemNo: "第4项", title: "施工接槎处及后浇带侧", path: "五、基础的裂缝 / 3、地下室墙体裂缝 / 第4项", morphology: "沿施工接槎处开裂，两侧混凝土质感差异。", cause: "施工接槎处理不良，浇筑、养护缺陷引起沿界面混凝土的开裂。", nature: "施工接槎裂缝。", impact: "影响观瞻，基本不影响承载，有可能影响使用功能（渗漏），影响耐久性。", treatment: "局部处理，封闭裂缝。", risk: "blue" },
+
+  { id: "C115", category: "五、基础的裂缝", subcategory: "4、大体积基础裂缝", itemNo: "第1项", title: "混凝土表面", path: "五、基础的裂缝 / 4、大体积基础裂缝 / 第1项", morphology: "表面不规则龟裂。", cause: "混凝土内部水化热膨胀，表面干燥收缩引起的表层开裂。", nature: "表面温度收缩裂缝。", impact: "影响观瞻，不影响承载，影响耐久性。", treatment: "掩饰裂缝。", risk: "gray" },
+  { id: "C116", category: "五、基础的裂缝", subcategory: "4、大体积基础裂缝", itemNo: "第2项", title: "长向边棱的中部", path: "五、基础的裂缝 / 4、大体积基础裂缝 / 第2项", morphology: "垂直于边棱的裂缝。", cause: "混凝土内部水化热膨胀，温差变形引起的局部开裂。", nature: "局部温度-收缩裂缝。", impact: "影响观瞻，不影响承载，影响耐久性。", treatment: "掩饰裂缝。", risk: "gray" },
+  { id: "C117", category: "五、基础的裂缝", subcategory: "4、大体积基础裂缝", itemNo: "第3项", title: "接槎及后浇带侧", path: "五、基础的裂缝 / 4、大体积基础裂缝 / 第3项", morphology: "沿施工接槎处开裂，两侧混凝土质感差异。", cause: "施工接槎处理不良，浇筑、养护缺陷引起沿界面混凝土的开裂。", nature: "施工接槎裂缝。", impact: "影响观瞻，基本不影响承载，影响耐久性。", treatment: "局部处理，封闭裂缝。", risk: "blue" },
+
+  // =============== 六、预应力构件裂缝 ===============
+  { id: "C118", category: "六、预应力构件裂缝", subcategory: "1、预应力锚固区裂缝", itemNo: "第1项", title: "端面端部局部区域", path: "六、预应力构件裂缝 / 1、预应力锚固区裂缝 / 第1项", morphology: "锚筋周边放射状裂缝，梭形。", cause: "保护层厚度小，混凝土强度不足，构造配筋不足，骤然放张冲击作用，造成锚固劈裂。", nature: "局部挤压引起的裂缝。", impact: "影响观瞻，不安全感，锚固力不足，有可能影响承载及耐久性。", treatment: "局部处理，封闭裂缝。", risk: "orange" },
+  { id: "C119", category: "六、预应力构件裂缝", subcategory: "1、预应力锚固区裂缝", itemNo: "第2项", title: "端面留孔区域", path: "六、预应力构件裂缝 / 1、预应力锚固区裂缝 / 第2项", morphology: "孔壁周边放射状裂缝，楔形。", cause: "孔壁厚度小，混凝土强度不足，构造配筋不足，骤然放张冲击作用，造成挤压劈裂。", nature: "挤压劈裂裂缝。", impact: "影响观瞻，不安全感，锚固力不足，有可能影响承载及耐久性。", treatment: "局部处理，封闭裂缝。", risk: "orange" },
+  { id: "C120", category: "六、预应力构件裂缝", subcategory: "1、预应力锚固区裂缝", itemNo: "第3项", title: "端面锚筋区域", path: "六、预应力构件裂缝 / 1、预应力锚固区裂缝 / 第3项", morphology: "锚筋间连通裂缝。", cause: "锚筋间距小，混凝土强度不足，构造配筋不足，骤然放张冲击作用，造成锚固劈裂。", nature: "锚固劈裂裂缝。", impact: "影响观瞻，不安全感，锚固力不足，有可能影响承载及耐久性。", treatment: "局部处理，封闭裂缝。", risk: "orange" },
+  { id: "C121", category: "六、预应力构件裂缝", subcategory: "1、预应力锚固区裂缝", itemNo: "第4项", title: "端面留孔区域", path: "六、预应力构件裂缝 / 1、预应力锚固区裂缝 / 第4项", morphology: "孔壁间连通裂缝。", cause: "孔间距小，混凝土强度不足，构造配筋不足，骤然放张冲击作用，造成挤压劈裂。", nature: "挤压劈裂裂缝。", impact: "影响观瞻，不安全感，锚固力不足，有可能影响承载及耐久性。", treatment: "局部处理，封闭裂缝。", risk: "orange" },
+  { id: "C122", category: "六、预应力构件裂缝", subcategory: "1、预应力锚固区裂缝", itemNo: "第5项", title: "端部锚筋侧面局部区域", path: "六、预应力构件裂缝 / 1、预应力锚固区裂缝 / 第5项", morphology: "顺筋纵向裂缝，楔形。", cause: "保护层厚度小，混凝土强度不足，构造配筋不足，骤然放张冲击作用，造成锚固劈裂。", nature: "锚固劈裂裂缝。", impact: "影响观瞻，不安全感，锚固力不足，有可能影响承载及耐久性。", treatment: "局部处理，封闭裂缝。", risk: "orange" },
+  { id: "C123", category: "六、预应力构件裂缝", subcategory: "1、预应力锚固区裂缝", itemNo: "第6项", title: "端部留孔侧面区域", path: "六、预应力构件裂缝 / 1、预应力锚固区裂缝 / 第6项", morphology: "顺孔纵向裂缝，楔形。", cause: "孔壁厚度小，混凝土强度不足，构造配筋不足，骤然放张冲击作用，造成挤压劈裂。", nature: "挤压劈裂裂缝。", impact: "影响观瞻，不安全感，锚固力不足，有可能影响承载及耐久性。", treatment: "局部处理，封闭裂缝。", risk: "orange" },
+  { id: "C124", category: "六、预应力构件裂缝", subcategory: "1、预应力锚固区裂缝", itemNo: "第7项", title: "端部棱角区域", path: "六、预应力构件裂缝 / 1、预应力锚固区裂缝 / 第7项", morphology: "棱角混凝土破碎剥落裂缝。", cause: "保护层厚度小，混凝土强度不足，构造配筋不足，骤然放张冲击作用，造成劈裂。", nature: "锚固挤压劈裂裂缝，施工裂缝。", impact: "影响观瞻，不安全感，锚固力不足，有可能影响承载及耐久性。", treatment: "局部处理，封闭裂缝。", risk: "orange" },
+
+  { id: "C125", category: "六、预应力构件裂缝", subcategory: "2、预应力构件的次生裂缝", itemNo: "第1项", title: "反拱板上面中部", path: "六、预应力构件裂缝 / 2、预应力构件的次生裂缝 / 第1项", morphology: "横向裂缝，楔形。", cause: "预应力张拉过度，混凝土强度不足，反拱过大，引起的负弯矩受拉开裂。", nature: "弯曲受拉裂缝。", impact: "影响观瞻，影响使用，基本不影响承载及耐久性。", treatment: "封闭裂缝，局部处理。", risk: "yellow" },
+  { id: "C126", category: "六、预应力构件裂缝", subcategory: "2、预应力构件的次生裂缝", itemNo: "第2项", title: "反拱梁跨中上部", path: "六、预应力构件裂缝 / 2、预应力构件的次生裂缝 / 第2项", morphology: "横向裂缝，楔形。", cause: "预应力张拉过度，混凝土强度不足，反拱过大，引起的负弯矩受拉开裂。", nature: "弯曲受拉裂缝。", impact: "影响观瞻，影响使用，基本不影响承载及耐久性。", treatment: "封闭裂缝，局部处理。", risk: "yellow" },
+  { id: "C127", category: "六、预应力构件裂缝", subcategory: "2、预应力构件的次生裂缝", itemNo: "第3项", title: "端面凹角处", path: "六、预应力构件裂缝 / 2、预应力构件的次生裂缝 / 第3项", morphology: "局部区域裂缝，楔形。", cause: "混凝土强度不足，构造配筋不足，预应力引起的局部弯矩受拉，应力集中而开裂。", nature: "应力集中裂缝。", impact: "影响观瞻，影响使用，基本不影响承载及耐久性。", treatment: "封闭裂缝，局部处理。", risk: "blue" },
+  { id: "C128", category: "六、预应力构件裂缝", subcategory: "2、预应力构件的次生裂缝", itemNo: "第4项", title: "上下预应力梁的中部区域", path: "六、预应力构件裂缝 / 2、预应力构件的次生裂缝 / 第4项", morphology: "横向裂缝，楔形。", cause: "两侧预应力挤压，造成端面局部弯矩，受拉开裂。", nature: "弯曲受拉裂缝。", impact: "影响观瞻，影响使用，基本不影响承载及耐久性。", treatment: "封闭裂缝，局部处理。", risk: "yellow" },
+  { id: "C129", category: "六、预应力构件裂缝", subcategory: "2、预应力构件的次生裂缝", itemNo: "第5项", title: "长形截面端面一侧", path: "六、预应力构件裂缝 / 2、预应力构件的次生裂缝 / 第5项", morphology: "局部竖向裂缝。", cause: "不对称放张，骤然放张预应力，冲击作用造成的局部弯曲受拉开裂。", nature: "弯曲受拉裂缝。", impact: "影响观瞻，影响使用，基本不影响承载及耐久性。", treatment: "封闭裂缝，局部处理。", risk: "yellow" },
+  { id: "C130", category: "六、预应力构件裂缝", subcategory: "2、预应力构件的次生裂缝", itemNo: "第6项", title: "薄腹构件一侧", path: "六、预应力构件裂缝 / 2、预应力构件的次生裂缝 / 第6项", morphology: "构件凸面，局部竖向裂缝。", cause: "混凝土强度不足，构造配筋不足，两侧预应力不平衡，造成的弯曲受拉开裂。", nature: "弯曲受拉裂缝。", impact: "影响观瞻，影响安装使用，影响承载力及耐久性。", treatment: "加固处理，封闭裂缝。", risk: "orange" },
+
+  // =============== 七、其它构件的裂缝 ===============
+  { id: "C131", category: "七、其它构件的裂缝", subcategory: "1、悬臂构件裂缝", itemNo: "第1项", title: "悬臂根部顶面、侧面", path: "七、其它构件的裂缝 / 1、悬臂构件裂缝 / 第1项", morphology: "开口向上垂直裂缝，楔形。", cause: "混凝土强度不足，受力配筋不足，钢筋移位，负弯矩作用下受拉开裂。", nature: "弯曲受拉裂缝。", impact: "影响观瞻，不安全感，承载力不足，有可能折断，影响耐久性，存在安全隐患。", treatment: "加固处理，封闭裂缝。", risk: "red" },
+  { id: "C132", category: "七、其它构件的裂缝", subcategory: "1、悬臂构件裂缝", itemNo: "第2项", title: "伸臂梁中部顶面、侧面", path: "七、其它构件的裂缝 / 1、悬臂构件裂缝 / 第2项", morphology: "垂直裂缝，斜向发展，楔形。", cause: "混凝土强度不足，抗剪配筋不足，纵筋切断过早，负弯矩、剪力作用下混凝土开裂。", nature: "弯剪斜裂缝。", impact: "影响观瞻，不安全感，影响承载力，影响耐久性。", treatment: "加固处理，封闭裂缝。", risk: "orange" },
+  { id: "C133", category: "七、其它构件的裂缝", subcategory: "1、悬臂构件裂缝", itemNo: "第3项", title: "外挑曲梁根部区域", path: "七、其它构件的裂缝 / 1、悬臂构件裂缝 / 第3项", morphology: "沿周边螺旋斜裂缝，梭形。", cause: "混凝土强度不足，抗扭配筋不足，扭矩作用下受拉开裂。", nature: "受扭裂缝。", impact: "影响观瞻，不安全感，抗扭承载力不足，影响耐久性。", treatment: "加固处理，封闭裂缝。", risk: "orange" },
+  { id: "C134", category: "七、其它构件的裂缝", subcategory: "1、悬臂构件裂缝", itemNo: "第4项", title: "弧形梁根部区域", path: "七、其它构件的裂缝 / 1、悬臂构件裂缝 / 第4项", morphology: "沿周边螺旋斜裂缝，梭形。", cause: "混凝土强度不足，抗扭配筋不足，扭矩作用下受拉开裂。", nature: "受扭裂缝。", impact: "影响观瞻，不安全感，抗扭承载力不足，影响耐久性。", treatment: "加固处理，封闭裂缝。", risk: "orange" },
+
+  { id: "C135", category: "七、其它构件的裂缝", subcategory: "2、牛腿裂缝", itemNo: "第1项", title: "根部顶面、侧面", path: "七、其它构件的裂缝 / 2、牛腿裂缝 / 第1项", morphology: "垂直裂缝，向下发展，楔形。", cause: "混凝土强度不足，抗弯配筋不足，负弯矩作用下受拉开裂。", nature: "弯曲受拉裂缝。", impact: "影响观瞻，不安全感，宽度大时抗弯承载力不足，影响耐久性。", treatment: "封闭裂缝，必要时加固处理。", risk: "orange" },
+  { id: "C136", category: "七、其它构件的裂缝", subcategory: "2、牛腿裂缝", itemNo: "第2项", title: "腹部侧面", path: "七、其它构件的裂缝 / 2、牛腿裂缝 / 第2项", morphology: "梭形裂缝，斜向发展。", cause: "混凝土强度不足，抗剪配筋不足，剪切力作用下开裂。", nature: "剪切裂缝。", impact: "影响观瞻，不安全感，抗剪承载力不足，影响耐久性。", treatment: "封闭裂缝，加固处理。", risk: "orange" },
+  { id: "C137", category: "七、其它构件的裂缝", subcategory: "2、牛腿裂缝", itemNo: "第3项", title: "腹部侧面", path: "七、其它构件的裂缝 / 2、牛腿裂缝 / 第3项", morphology: "集中力到根部的斜向平行裂缝。", cause: "混凝土强度不足，抗剪配筋不足，集中力作用下剪压开裂。", nature: "斜压裂缝。", impact: "影响观瞻，不安全感，抗剪承载力不足，影响耐久性。", treatment: "封闭裂缝，加固处理。", risk: "orange" },
+  { id: "C138", category: "七、其它构件的裂缝", subcategory: "2、牛腿裂缝", itemNo: "第4项", title: "根部区域侧面", path: "七、其它构件的裂缝 / 2、牛腿裂缝 / 第4项", morphology: "沿根部垂直发展的锯齿状裂缝。", cause: "混凝土强度不足，抗冲切配筋不足，集中力作用下混凝土开裂。", nature: "冲切裂缝。", impact: "影响观瞻，不安全感，抗剪承载力不足，影响耐久性。", treatment: "封闭裂缝，加固处理。", risk: "orange" },
+
+  { id: "C139", category: "七、其它构件的裂缝", subcategory: "3、结构的局部裂缝", itemNo: "第1项", title: "坡顶屋脊下侧内凹角处", path: "七、其它构件的裂缝 / 3、结构的局部裂缝 / 第1项", morphology: "由凹角发展的垂直裂缝，楔形。", cause: "两侧钢筋锚固不足，应力集中引起混凝土开裂。", nature: "应力集中构造裂缝。", impact: "影响观瞻，不安全感，基本不影响承载力，影响耐久性。", treatment: "封闭裂缝，必要时加固处理。", risk: "gray" },
+  { id: "C140", category: "七、其它构件的裂缝", subcategory: "3、结构的局部裂缝", itemNo: "第2项", title: "楼梯段下内凹角处", path: "七、其它构件的裂缝 / 3、结构的局部裂缝 / 第2项", morphology: "由凹角发展的垂直裂缝，楔形。", cause: "两侧钢筋锚固不足，应力集中引起混凝土开裂。", nature: "应力集中构造裂缝。", impact: "影响观瞻，不安全感，基本不影响承载力，影响耐久性。", treatment: "封闭裂缝，必要时加固处理。", risk: "gray" },
+  { id: "C141", category: "七、其它构件的裂缝", subcategory: "3、结构的局部裂缝", itemNo: "第3项", title: "锚固钢筋端部区域", path: "七、其它构件的裂缝 / 3、结构的局部裂缝 / 第3项", morphology: "局部区域顺筋劈裂，楔形。", cause: "混凝土强度不足，保护层厚度小，钢筋锚固长度不足，构造措施不足。", nature: "锚固构造裂缝。", impact: "影响观瞻，不安全感，影响承载力，影响耐久性。", treatment: "封闭裂缝，加固处理。", risk: "orange" },
+  { id: "C142", category: "七、其它构件的裂缝", subcategory: "3、结构的局部裂缝", itemNo: "第4项", title: "搭接钢筋端头处", path: "七、其它构件的裂缝 / 3、结构的局部裂缝 / 第4项", morphology: "搭接区域顺筋劈裂，搭接端头横向裂缝，楔形。", cause: "混凝土强度不足，保护层厚度小，钢筋搭接长度不足，接头面积百分率大，构造措施不足。", nature: "搭接构造裂缝。", impact: "影响观瞻，不安全感，影响承载力，影响耐久性。", treatment: "封闭裂缝，加固处理。", risk: "orange" },
+  { id: "C143", category: "七、其它构件的裂缝", subcategory: "3、结构的局部裂缝", itemNo: "第5项", title: "机械连接接头区域", path: "七、其它构件的裂缝 / 3、结构的局部裂缝 / 第5项", morphology: "接头区域横向裂缝，楔形。", cause: "间接传力，割线模量减小，伸长量大，保护层厚度小，混凝土开裂。", nature: "接头构造裂缝。", impact: "影响观瞻，不安全感，影响承载力，影响耐久性。", treatment: "封闭裂缝，加固处理。", risk: "orange" },
+
+  // =============== 八、暴露结构裂缝 ===============
+  { id: "C144", category: "八、暴露结构裂缝", subcategory: "1、露天悬臂结构裂缝", itemNo: "第1项", title: "通长阳台、雨罩、檐口板板面", path: "八、暴露结构裂缝 / 1、露天悬臂结构裂缝 / 第1项", morphology: "等间距横向裂缝，贯通截面。", cause: "伸缩缝间距过大，季节温度变化和跨季节施工，干燥温差造成混凝土开裂。", nature: "干燥温差裂缝。", impact: "影响观瞻，不影响承载，影响使用功能（渗漏）及耐久性。", treatment: "封闭裂缝，必要时加固处理，做防水。", risk: "blue" },
+  { id: "C145", category: "八、暴露结构裂缝", subcategory: "1、露天悬臂结构裂缝", itemNo: "第2项", title: "长向纵墙、山墙上部角域", path: "八、暴露结构裂缝 / 1、露天悬臂结构裂缝 / 第2项", morphology: "墙面角部斜向发展的裂缝，贯通截面。", cause: "屋盖结构过长，保温层过薄，季节温差，伸缩变形造成混凝土开裂。", nature: "季节温差裂缝。", impact: "影响观瞻，基本不影响承载，影响使用功能（渗漏）及耐久性。", treatment: "封闭裂缝，必要时加固处理，做防水。", risk: "blue" },
+  { id: "C146", category: "八、暴露结构裂缝", subcategory: "1、露天悬臂结构裂缝", itemNo: "第3项", title: "长向屋盖四角区域", path: "八、暴露结构裂缝 / 1、露天悬臂结构裂缝 / 第3项", morphology: "屋盖角部斜向发展的裂缝，贯通截面。", cause: "屋盖尺度大，保温层过薄，季节温差，双向伸缩变形，造成混凝土开裂。", nature: "季节温差裂缝。", impact: "影响观瞻，基本不影响承载，影响使用功能（渗漏）及耐久性。", treatment: "封闭裂缝，加固处理，做防水。", risk: "blue" },
+  { id: "C147", category: "八、暴露结构裂缝", subcategory: "1、露天悬臂结构裂缝", itemNo: "第4项", title: "长向屋盖中部", path: "八、暴露结构裂缝 / 1、露天悬臂结构裂缝 / 第4项", morphology: "横向裂缝，贯通截面。", cause: "屋盖长度过大，保温层过薄，季节温差，伸缩变形，造成混凝土开裂。", nature: "季节温差裂缝。", impact: "影响观瞻，基本不影响承载，影响使用功能（渗漏）及耐久性。", treatment: "封闭裂缝，做防水。", risk: "blue" },
+  { id: "C148", category: "八、暴露结构裂缝", subcategory: "1、露天悬臂结构裂缝", itemNo: "第5项", title: "屋盖瓶颈、凹角部位", path: "八、暴露结构裂缝 / 1、露天悬臂结构裂缝 / 第5项", morphology: "凹角部位向内发展的裂缝，贯通截面。", cause: "屋盖保温层过薄，构造配筋不足，温度差、伸缩变形、应力集中引起混凝土开裂。", nature: "温差构造裂缝。", impact: "影响观瞻，基本不影响承载，影响使用功能（渗漏）及耐久性。", treatment: "封闭裂缝，做防水。", risk: "blue" },
+
+  { id: "C149", category: "八、暴露结构裂缝", subcategory: "2、开敞式结构裂缝", itemNo: "第1项", title: "外露墙柱", path: "八、暴露结构裂缝 / 2、开敞式结构裂缝 / 第1项", morphology: "横向裂缝，贯通截面，宽度随季节变化。", cause: "季节温差，收缩变形引起混凝土开裂。", nature: "季节温差裂缝。", impact: "影响观瞻，不影响承载，影响使用功能及耐久性。", treatment: "封闭裂缝。", risk: "blue" },
+  { id: "C150", category: "八、暴露结构裂缝", subcategory: "2、开敞式结构裂缝", itemNo: "第2项", title: "长向排架端柱根部", path: "八、暴露结构裂缝 / 2、开敞式结构裂缝 / 第2项", morphology: "横向裂缝，楔形，宽度随季节变化。", cause: "季节温差，伸缩变形引起端柱根部弯矩，混凝土受拉开裂。", nature: "季节温差裂缝。", impact: "影响观瞻，基本不影响承载，影响使用功能及耐久性。", treatment: "加做屋盖保温，封闭裂缝，必要时加固处理。", risk: "blue" },
+  { id: "C151", category: "八、暴露结构裂缝", subcategory: "2、开敞式结构裂缝", itemNo: "第3项", title: "长向露天结构端部柱头、柱根", path: "八、暴露结构裂缝 / 2、开敞式结构裂缝 / 第3项", morphology: "横向裂缝，楔形，宽度随季节变化。", cause: "季节温差，伸缩变形引起端柱柱头、柱根约束弯矩，混凝土受拉开裂。", nature: "季节温差裂缝。", impact: "影响观瞻，基本不影响承载，影响使用功能及耐久性。", treatment: "封闭裂缝，必要时加固处理。", risk: "blue" },
+
+  { id: "C152", category: "八、暴露结构裂缝", subcategory: "3、表面温差裂缝", itemNo: "第1项", title: "屋盖表面", path: "八、暴露结构裂缝 / 3、表面温差裂缝 / 第1项", morphology: "不规则龟裂。", cause: "屋盖保温层过薄，构造配筋不足，季节温差，日晒暴雨、骤冷收缩引起混凝土约束受拉开裂。", nature: "温差裂缝。", impact: "影响观瞻，不影响承载，影响使用功能（渗漏）及耐久性。", treatment: "封闭裂缝，做防水。", risk: "gray" },
+  { id: "C153", category: "八、暴露结构裂缝", subcategory: "3、表面温差裂缝", itemNo: "第2项", title: "墙体表面", path: "八、暴露结构裂缝 / 3、表面温差裂缝 / 第2项", morphology: "不规则龟裂。", cause: "保温不足，构造配筋不足，日晒暴雨、骤冷收缩引起混凝土约束受拉开裂。", nature: "温差裂缝。", impact: "影响观瞻，不影响承载，影响使用功能（渗漏）及耐久性。", treatment: "封闭裂缝，做防水。", risk: "gray" },
+  { id: "C154", category: "八、暴露结构裂缝", subcategory: "3、表面温差裂缝", itemNo: "第3项", title: "抹灰装修层", path: "八、暴露结构裂缝 / 3、表面温差裂缝 / 第3项", morphology: "不规则龟裂。", cause: "抹灰装修层施工不良，日晒暴雨，冷热温差，引起抹灰装修层开裂。", nature: "表层温差裂缝。", impact: "影响观瞻，不影响承载，影响使用功能及耐久性。", treatment: "封闭裂缝，重做装修。", risk: "gray" },
+
+  { id: "C155", category: "八、暴露结构裂缝", subcategory: "4、混凝土耐久性裂缝", itemNo: "第1项", title: "混凝土构件表面", path: "八、暴露结构裂缝 / 4、混凝土耐久性裂缝 / 第1项", morphology: "表层不规则裂缝，龟裂。", cause: "胀缩变形，干湿交替，冻融循环引起混凝土约束受拉开裂。", nature: "耐久性裂缝。", impact: "影响观瞻，不影响承载，影响使用功能及耐久性。", treatment: "修补表层，封闭裂缝。", risk: "gray" },
+  { id: "C156", category: "八、暴露结构裂缝", subcategory: "4、混凝土耐久性裂缝", itemNo: "第2项", title: "混凝土构件表面", path: "八、暴露结构裂缝 / 4、混凝土耐久性裂缝 / 第2项", morphology: "表层破碎裂缝。", cause: "胀缩变形，干湿交替，冻融循环引起混凝土裂缝的进一步发展。", nature: "耐久性裂缝。", impact: "影响观瞻，有可能影响承载力，影响使用功能及耐久性。", treatment: "修补表层，封闭裂缝，必要时加固处理。", risk: "orange" },
+  { id: "C157", category: "八、暴露结构裂缝", subcategory: "4、混凝土耐久性裂缝", itemNo: "第3项", title: "寒冷地区混凝土构件表面", path: "八、暴露结构裂缝 / 4、混凝土耐久性裂缝 / 第3项", morphology: "表层混凝土酥裂粉化。", cause: "胀缩变形，干湿交替，冻融循环引起混凝土裂缝的进一步发展。", nature: "冻融耐久性裂缝。", impact: "影响观瞻，影响承载力，影响使用功能及耐久性。", treatment: "封闭裂缝，加固处理。", risk: "orange" },
+  { id: "C158", category: "八、暴露结构裂缝", subcategory: "4、混凝土耐久性裂缝", itemNo: "第4项", title: "混凝土构件表面", path: "八、暴露结构裂缝 / 4、混凝土耐久性裂缝 / 第4项", morphology: "表层混凝土分散不规则龟裂、剥落。", cause: "碱骨料反应，局部膨胀引起混凝土开裂。", nature: "碱骨料反应裂缝。", impact: "影响观瞻，有可能影响承载力，影响使用功能及耐久性。", treatment: "修补表层，封闭裂缝，必要时加固处理。", risk: "orange" },
+
+  { id: "C159", category: "八、暴露结构裂缝", subcategory: "5、钢筋锈胀裂缝", itemNo: "第1项", title: "混凝土构件表面配筋区域", path: "八、暴露结构裂缝 / 5、钢筋锈胀裂缝 / 第1项", morphology: "细微顺筋裂缝，锈斑。", cause: "混凝土碳化，钢筋脱钝锈蚀膨胀裂缝，锈水外流。", nature: "钢筋锈蚀裂缝。", impact: "影响观瞻，基本不影响承载，影响使用功能及耐久性。", treatment: "封闭裂缝，表面处理。", risk: "blue" },
+  { id: "C160", category: "八、暴露结构裂缝", subcategory: "5、钢筋锈胀裂缝", itemNo: "第2项", title: "混凝土构件表面配筋区域", path: "八、暴露结构裂缝 / 5、钢筋锈胀裂缝 / 第2项", morphology: "顺筋胀裂裂缝，有可能盐害，加剧开裂。", cause: "钢筋锈蚀膨胀裂缝。", nature: "钢筋锈蚀裂缝。", impact: "影响观瞻，有可能影响承载，影响使用功能及耐久性。", treatment: "封闭裂缝，必要时加固处理。", risk: "orange" },
+  { id: "C161", category: "八、暴露结构裂缝", subcategory: "5、钢筋锈胀裂缝", itemNo: "第3项", title: "混凝土构件表面配筋区域", path: "八、暴露结构裂缝 / 5、钢筋锈胀裂缝 / 第3项", morphology: "顺筋混凝土胀裂剥落，钢筋锈蚀掉渣。", cause: "盐害长期作用下钢筋严重锈蚀。", nature: "钢筋锈蚀裂缝。", impact: "影响观瞻，影响承载力，影响使用功能及耐久性。", treatment: "封闭裂缝，加固处理。", risk: "orange" },
+
+  // =============== 九、灾后结构的残余裂缝 ===============
+  { id: "C162", category: "九、灾后结构的残余裂缝", subcategory: "1、地震裂缝", itemNo: "第1项", title: "柱头、柱脚区域", path: "九、灾后结构的残余裂缝 / 1、地震裂缝 / 第1项", morphology: "X状交叉裂缝。", cause: "地震作用，弯剪斜裂缝的残余。", nature: "地震残余裂缝。", impact: "影响观瞻，不安全感，影响耐久性，影响承载力，安全隐患。", treatment: "加固处理。", risk: "red" },
+  { id: "C163", category: "九、灾后结构的残余裂缝", subcategory: "1、地震裂缝", itemNo: "第2项", title: "柱头、柱脚区域", path: "九、灾后结构的残余裂缝 / 1、地震裂缝 / 第2项", morphology: "X状交叉裂缝，混凝土鼓出、剥落，箍筋张开，纵筋屈曲。", cause: "地震作用，X状交叉裂缝的进一步发展，严重弯剪斜裂缝的残余。", nature: "地震残余裂缝。", impact: "影响观瞻，不安全感，影响耐久性，承载力不足，压溃的预兆，安全隐患。", treatment: "立即加固处理。", risk: "red" },
+  { id: "C164", category: "九、灾后结构的残余裂缝", subcategory: "1、地震裂缝", itemNo: "第3项", title: "梁端区域", path: "九、灾后结构的残余裂缝 / 1、地震裂缝 / 第3项", morphology: "X状交叉裂缝。", cause: "地震作用，弯剪斜裂缝，钢筋屈服，塑性铰形成，裂缝的残余。", nature: "地震残余裂缝。", impact: "影响观瞻，不安全感，影响耐久性，影响承载力，安全隐患。", treatment: "加固处理。", risk: "red" },
+  { id: "C165", category: "九、灾后结构的残余裂缝", subcategory: "1、地震裂缝", itemNo: "第4项", title: "墙面中部区域", path: "九、灾后结构的残余裂缝 / 1、地震裂缝 / 第4项", morphology: "X状交叉裂缝。", cause: "地震作用，剪切斜裂缝的残余。", nature: "地震残余裂缝。", impact: "影响观瞻，不安全感，影响耐久性，影响承载力，安全隐患。", treatment: "加固处理。", risk: "red" },
+  { id: "C166", category: "九、灾后结构的残余裂缝", subcategory: "1、地震裂缝", itemNo: "第5项", title: "墙面中部区域", path: "九、灾后结构的残余裂缝 / 1、地震裂缝 / 第5项", morphology: "X状交叉裂缝，混凝土鼓出、剥落。", cause: "地震作用，X状交叉裂缝的进一步发展，严重弯剪斜裂缝的残余。", nature: "地震残余裂缝。", impact: "影响观瞻，不安全感，影响耐久性，承载力不足，压溃的预兆，安全隐患。", treatment: "加固处理。", risk: "red" },
+
+  { id: "C167", category: "九、灾后结构的残余裂缝", subcategory: "2、火灾裂缝", itemNo: "第1项", title: "楼板底面", path: "九、灾后结构的残余裂缝 / 2、火灾裂缝 / 第1项", morphology: "顺筋混凝土网状裂缝及剥落。", cause: "火灾高温下消防水骤冷，冷热温差引起混凝土开裂。", nature: "火灾残余裂缝。", impact: "影响观瞻，不安全感，影响耐久性，影响承载力。", treatment: "加固处理。", risk: "red" },
+  { id: "C168", category: "九、灾后结构的残余裂缝", subcategory: "2、火灾裂缝", itemNo: "第2项", title: "梁底", path: "九、灾后结构的残余裂缝 / 2、火灾裂缝 / 第2项", morphology: "顺筋混凝土网状裂缝及剥落。", cause: "火灾高温下消防水骤冷，冷热温差引起混凝土开裂。", nature: "火灾残余裂缝。", impact: "影响观瞻，不安全感，影响耐久性，影响承载力。", treatment: "加固处理。", risk: "red" },
+  { id: "C169", category: "九、灾后结构的残余裂缝", subcategory: "2、火灾裂缝", itemNo: "第3项", title: "柱上部侧面", path: "九、灾后结构的残余裂缝 / 2、火灾裂缝 / 第3项", morphology: "顺筋混凝土网状裂缝及剥落。", cause: "火灾高温下消防水骤冷，冷热温差引起混凝土开裂。", nature: "火灾残余裂缝。", impact: "影响观瞻，不安全感，影响耐久性，影响承载力。", treatment: "加固处理。", risk: "red" },
+
+  // =============== 十、砌体结构的裂缝 ===============
+  { id: "C170", category: "十、砌体结构的裂缝", subcategory: "1、砌体墙的裂缝", itemNo: "第1项", title: "墙体中部的一侧", path: "十、砌体结构的裂缝 / 1、砌体墙的裂缝 / 第1项", morphology: "墙一侧竖向裂缝。", cause: "墙体平面外弯曲引起的受压裂缝。", nature: "危险的受力裂缝。", impact: "影响承载力和稳定性，容易引起墙体的突然倾覆或倒塌。", treatment: "必须立即加固处理。", risk: "red" },
+  { id: "C171", category: "十、砌体结构的裂缝", subcategory: "1、砌体墙的裂缝", itemNo: "第2项", title: "墙底面", path: "十、砌体结构的裂缝 / 1、砌体墙的裂缝 / 第2项", morphology: "水平横向贯通裂缝。", cause: "地震作用下，地脚螺栓处，不安全的受拉裂缝。", nature: "不安全的受力裂缝。", impact: "影响承载力和稳定性，不安全。", treatment: "加固处理。", risk: "red" },
+  { id: "C172", category: "十、砌体结构的裂缝", subcategory: "1、砌体墙的裂缝", itemNo: "第3项", title: "墙体中上部", path: "十、砌体结构的裂缝 / 1、砌体墙的裂缝 / 第3项", morphology: "多条竖向裂缝。", cause: "受压引起的破碎裂缝。", nature: "不安全的受力裂缝。", impact: "影响观瞻，影响承载力和稳定性，不安全。", treatment: "加固处理。", risk: "orange" },
+  { id: "C173", category: "十、砌体结构的裂缝", subcategory: "1、砌体墙的裂缝", itemNo: "第4项", title: "集中荷载下部", path: "十、砌体结构的裂缝 / 1、砌体墙的裂缝 / 第4项", morphology: "局部竖向裂缝。", cause: "局部受压引起的破碎裂缝。", nature: "不安全的受力裂缝。", impact: "影响观瞻，影响承载力和稳定性，不安全。", treatment: "加固处理。", risk: "orange" },
+  { id: "C174", category: "十、砌体结构的裂缝", subcategory: "1、砌体墙的裂缝", itemNo: "第5项", title: "墙体中部", path: "十、砌体结构的裂缝 / 1、砌体墙的裂缝 / 第5项", morphology: "斜向阶梯状贯通裂缝。", cause: "水平荷载作用（如地震）引起的剪切裂缝。", nature: "不安全的受力裂缝。", impact: "影响观瞻，影响承载力和稳定性，不安全。", treatment: "加固处理。", risk: "red" },
+  { id: "C175", category: "十、砌体结构的裂缝", subcategory: "1、砌体墙的裂缝", itemNo: "第6项", title: "房屋顶层端部纵墙或山墙，门窗角部", path: "十、砌体结构的裂缝 / 1、砌体墙的裂缝 / 第6项", morphology: "斜向贯通裂缝。", cause: "季节温差变化，屋盖与墙体温度变形，凹角引起的应力集中。", nature: "间接裂缝。", impact: "影响观瞻，不安全感，影响使用功能（渗漏），不影响承载力。", treatment: "加强屋盖保温后，封闭处理裂缝。", risk: "blue" },
+  { id: "C176", category: "十、砌体结构的裂缝", subcategory: "1、砌体墙的裂缝", itemNo: "第7项", title: "房屋下部纵墙、门窗角部", path: "十、砌体结构的裂缝 / 1、砌体墙的裂缝 / 第7项", morphology: "斜向“八字”形裂缝贯通。", cause: "地基不均匀沉降，中间沉降大。", nature: "沉降裂缝。", impact: "影响观瞻，不安全感，影响耐久性，可影响承载力。", treatment: "待沉降稳定以后封闭处理，必要时加固处理。", risk: "orange" },
+  { id: "C177", category: "十、砌体结构的裂缝", subcategory: "1、砌体墙的裂缝", itemNo: "第8项", title: "房屋下部纵墙、门窗角部", path: "十、砌体结构的裂缝 / 1、砌体墙的裂缝 / 第8项", morphology: "斜向“倒八字”形裂缝贯通。", cause: "地基不均匀沉降，两端沉降大。", nature: "沉降裂缝。", impact: "影响观瞻，不安全感，影响耐久性，可影响承载力。", treatment: "待沉降稳定以后封闭处理，必要时加固处理。", risk: "orange" },
+  { id: "C178", category: "十、砌体结构的裂缝", subcategory: "1、砌体墙的裂缝", itemNo: "第9项", title: "墙的两侧", path: "十、砌体结构的裂缝 / 1、砌体墙的裂缝 / 第9项", morphology: "X状斜向裂缝。", cause: "地震作用的残余裂缝。", nature: "不安全的受力裂缝。", impact: "影响观瞻，影响承载力和稳定性，不安全。", treatment: "必须立即加固处理。", risk: "red" },
+  { id: "C179", category: "十、砌体结构的裂缝", subcategory: "2、砌体柱的裂缝", itemNo: "第1项", title: "柱中部的一侧", path: "十、砌体结构的裂缝 / 2、砌体柱的裂缝 / 第1项", morphology: "柱一侧水平裂缝，另一侧无裂缝或竖向裂缝。", cause: "柱体弯曲引起的受拉裂缝。", nature: "危险的受力裂缝。", impact: "影响观瞻，不安全感，影响承载力，稳定性，容易引起柱的突然倾覆或倒塌。", treatment: "必须立即加固处理。", risk: "red" },
+  { id: "C180", category: "十、砌体结构的裂缝", subcategory: "2、砌体柱的裂缝", itemNo: "第2项", title: "柱体中部", path: "十、砌体结构的裂缝 / 2、砌体柱的裂缝 / 第2项", morphology: "多条竖向裂缝。", cause: "受压引起的破碎裂缝。", nature: "不安全的受力裂缝。", impact: "影响观瞻，不安全感，影响承载力，稳定性，容易引起柱的压溃倒塌。", treatment: "必须加固处理。", risk: "red" },
+  { id: "C181", category: "十、砌体结构的裂缝", subcategory: "2、砌体柱的裂缝", itemNo: "第3项", title: "柱体端部", path: "十、砌体结构的裂缝 / 2、砌体柱的裂缝 / 第3项", morphology: "斜向阶梯状裂缝。", cause: "水平荷载作用下（如地震）引起的剪切裂缝。", nature: "不安全的受力裂缝。", impact: "影响观瞻，不安全感，影响承载力，稳定性，容易引起柱的破坏倒塌。", treatment: "必须加固处理。", risk: "red" },
+  { id: "C182", category: "十、砌体结构的裂缝", subcategory: "2、砌体柱的裂缝", itemNo: "第4项", title: "柱体端部", path: "十、砌体结构的裂缝 / 2、砌体柱的裂缝 / 第4项", morphology: "X状交叉斜裂缝。", cause: "地震作用的残余裂缝。", nature: "不安全的受力裂缝。", impact: "影响观瞻，不安全感，影响承载力，稳定性，容易引起柱的突然倾覆或倒塌。", treatment: "必须立即加固处理。", risk: "red" },
+  { id: "C183", category: "十、砌体结构的裂缝", subcategory: "3、砌体的界面裂缝及抹灰层裂缝", itemNo: "第1项", title: "填充墙与周边结构的界面", path: "十、砌体结构的裂缝 / 3、砌体的界面裂缝及抹灰层裂缝 / 第1项", morphology: "沿界面的裂缝。", cause: "构造措施或施工操作缺陷。", nature: "间接裂缝。", impact: "影响观瞻和使用功能，不影响承载力。", treatment: "装修处理或重做。", risk: "gray" },
+  { id: "C184", category: "十、砌体结构的裂缝", subcategory: "3、砌体的界面裂缝及抹灰层裂缝", itemNo: "第2项", title: "隔断墙与相邻结构的界面", path: "十、砌体结构的裂缝 / 3、砌体的界面裂缝及抹灰层裂缝 / 第2项", morphology: "沿界面的裂缝。", cause: "构造措施或施工操作缺陷。", nature: "间接裂缝。", impact: "影响观瞻和使用功能，不影响承载力。", treatment: "装修处理或重做。", risk: "gray" },
+  { id: "C185", category: "十、砌体结构的裂缝", subcategory: "3、砌体的界面裂缝及抹灰层裂缝", itemNo: "第3项", title: "女儿墙与屋盖结构的界面", path: "十、砌体结构的裂缝 / 3、砌体的界面裂缝及抹灰层裂缝 / 第3项", morphology: "沿界面的裂缝。", cause: "构造措施或施工操作缺陷，温差裂缝。", nature: "间接裂缝。", impact: "影响观瞻和使用功能（渗漏），不影响承载力。", treatment: "装修处理或重做。", risk: "gray" },
+  { id: "C186", category: "十、砌体结构的裂缝", subcategory: "3、砌体的界面裂缝及抹灰层裂缝", itemNo: "第4项", title: "砌体表面抹灰层或饰面", path: "十、砌体结构的裂缝 / 3、砌体的界面裂缝及抹灰层裂缝 / 第4项", morphology: "网状龟裂或空鼓、剥落。", cause: "构造措施或施工操作缺陷。", nature: "间接裂缝。", impact: "影响观瞻和使用功能（渗漏），不影响承载力，可能坠落造成安全问题。", treatment: "装修处理或重做。", risk: "gray" }
+];
+
+const RISK = {
+  red:    { label: "红色 · 立即处理", badge: "badge-red",    bar: "risk-red",    color: "#ef4444" },
+  orange: { label: "橙色 · 及时加固", badge: "badge-orange", bar: "risk-orange", color: "#f97316" },
+  yellow: { label: "黄色 · 观察",     badge: "badge-yellow", bar: "risk-yellow", color: "#fbbf24" },
+  blue:   { label: "蓝色 · 封闭掩饰", badge: "badge-blue",   bar: "risk-blue",   color: "#38bdf8" },
+  gray:   { label: "灰色 · 表层",     badge: "badge-gray",   bar: "risk-gray",   color: "#94a3b8" }
+};
+
+const state = { risk: "all", q: "", selectedId: null, openCategory: null, openSubcategories: new Set(), listScrollTop: 0 };
+const sidebarEl = document.getElementById("sidebar");
+
+const mainEl = document.getElementById("listPanel");
+const detailEl = document.getElementById("detailPanel");
+const searchInput = document.getElementById("searchInput");
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, ch => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  }[ch]));
+}
+
+function riskInfo(risk) {
+  return RISK[risk] || RISK.gray;
+}
+
+function matches(crack) {
+  if (state.risk !== "all" && crack.risk !== state.risk) return false;
+  const q = state.q.trim().toLowerCase();
+  if (!q) return true;
+  return [
+    crack.id, crack.category, crack.subcategory, crack.itemNo, crack.title,
+    crack.path, crack.morphology, crack.cause, crack.nature, crack.impact,
+    crack.treatment, crack.risk, riskInfo(crack.risk).label
+  ].join(" ").toLowerCase().includes(q);
+}
+
+function filtered() {
+  return CRACKS.filter(matches);
+}
+
+function cardHtml(crack) {
+  const ri = riskInfo(crack.risk);
+  const isActive = crack.id === state.selectedId;
+  return `
+    <div class="card ${isActive ? 'active' : ''}" data-id="${crack.id}" role="button" tabindex="0">
+      <div class="card-content">
+        <h3>
+          <span style="color:${ri.color}">■</span>
+          ${escapeHtml(crack.itemNo)} ${escapeHtml(crack.title)}
+        </h3>
+        <div class="morph">形态：${escapeHtml(crack.morphology)}</div>
+      </div>
+    </div>
+  `;
+}
+
+// ========== 渲染左侧侧边栏 ==========
+function renderSidebar() {
+  const prevScroll = sidebarEl.scrollTop;
+  const list = filtered();
+  const groups = new Map();
+
+  list.forEach(crack => {
+    if (!groups.has(crack.category)) groups.set(crack.category, new Map());
+    const subs = groups.get(crack.category);
+    if (!subs.has(crack.subcategory)) subs.set(crack.subcategory, []);
+    subs.get(crack.subcategory).push(crack);
+  });
+
+  let html = "";
+  if (!list.length) {
+    html = '<div class="placeholder">没有匹配的裂缝条目</div>';
+  }
+
+  const isSearching = !!state.q.trim();
+
+  for (const [category, subs] of groups) {
+    const count = [...subs.values()].reduce((n, arr) => n + arr.length, 0);
+    const isCatOpen = (state.openCategory === category || isSearching) ? ' open' : '';
+    
+    html += `
+      <details class="tree-group" data-cat="${escapeHtml(category)}"${isCatOpen}>
+        <summary>${escapeHtml(category)}
+          <span style="color:#5f6b7a;font-weight:400;font-size:12px">(${count})</span>
+        </summary>
+    `;
+
+    for (const [subcategory, items] of subs) {
+      const isSubOpen = ((state.openSubcategories.has(subcategory) && state.openCategory === category) || isSearching) ? ' open' : '';
+      
+      html += `
+        <details class="tree-sub-group" data-sub="${escapeHtml(subcategory)}"${isSubOpen}>
+          <summary class="tree-sub-title">${escapeHtml(subcategory)}</summary>
+          <div class="tree-sub-content">
+      `;
+      items.forEach(crack => {
+        const ri = riskInfo(crack.risk);
+        html += `
+          <div class="tree-item ${crack.id === state.selectedId ? "active" : ""}" data-id="${crack.id}" role="button" tabindex="0">
+            <span class="dot-red" style="background:${ri.color};color:${ri.color}"></span>
+            <span>${escapeHtml(crack.itemNo)} ${escapeHtml(crack.title)}</span>
+          </div>
+        `;
+      });
+      html += `</div></details>`;
+    }
+    html += `</details>`;
+  }
+
+  sidebarEl.innerHTML = html;
+  sidebarEl.scrollTop = prevScroll;
+
+  const catEls = sidebarEl.querySelectorAll(".tree-group");
+  catEls.forEach(details => {
+    details.addEventListener('toggle', (e) => {
+      if (isSearching) return;
+      if (details.open) {
+        state.openCategory = details.dataset.cat;
+        catEls.forEach(other => { if (other !== details) other.removeAttribute('open'); });
+      } else if (state.openCategory === details.dataset.cat) {
+        state.openCategory = null;
+      }
+    });
+  });
+
+  const subEls = sidebarEl.querySelectorAll(".tree-sub-group");
+  subEls.forEach(details => {
+    details.addEventListener('toggle', (e) => {
+      if (isSearching) return;
+      if (details.open) state.openSubcategories.add(details.dataset.sub);
+      else state.openSubcategories.delete(details.dataset.sub);
+    });
+  });
+
+  sidebarEl.querySelectorAll(".tree-item").forEach(el => {
+    el.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); el.click(); }
+    });
+    el.addEventListener("click", () => {
+      selectCrack(el.dataset.id);
+    });
+  });
+}
+
+// ========== 渲染中间列表 ==========
+function renderList() {
+  const list = filtered();
+  mainEl.innerHTML = list.length 
+    ? `<div class="cards">${list.map(cardHtml).join("")}</div>`
+    : '<div class="placeholder" style="padding:20px">没有匹配结果。</div>';
+
+  mainEl.querySelectorAll(".card").forEach(el => {
+    el.addEventListener("click", () => selectCrack(el.dataset.id));
+  });
+}
+
+// ========== 渲染右侧详情 ==========
+function renderDetail() {
+  if (!state.selectedId) {
+    detailEl.innerHTML = '<div class="empty-detail">请在左侧列表中选择一条裂缝查看详情</div>';
+    return;
+  }
+  const crack = CRACKS.find(c => c.id === state.selectedId);
+  if (!crack) return;
+
+  const ri = riskInfo(crack.risk);
+  const img = `./images/${crack.id}.jpg`;
+
+  detailEl.innerHTML = `
+    <div class="detail">
+      <div class="breadcrumb">${escapeHtml(crack.path)}</div>
+      <h2>
+        ${escapeHtml(crack.title)}
+        <div class="detail-header-btns">
+          <button class="risk-btn" id="btnCopy" title="复制到剪贴板" style="display:flex;align-items:center;gap:6px;padding:6px 14px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>复制详情</button>
+        </div>
+      </h2>
+      
+      <div class="risk-bar ${ri.bar}">
+        <strong>${ri.label}</strong>
+      </div>
+
+      <div class="image-panel" id="imagePanel">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <span style="color:#64748b; font-size:12px; font-weight:600;">点击图片可查看大图</span>
+          <button class="risk-btn" id="btnLineart" style="font-size:12px; border-radius:6px;">切换深/浅色底图</button>
+        </div>
+        <div class="image-wrap">
+          <img src="${img}" alt="附图" style="cursor: zoom-in;" onclick="openLightbox('${img}')" onerror="this.style.display='none'; document.getElementById('noImgPlaceholder').style.display='block';">
+          <div class="placeholder" id="noImgPlaceholder" style="display:none;">暂无对应附图</div>
+        </div>
+      </div>
+
+      <dl class="fields">
+        <div><dt>裂缝形态</dt><dd>${escapeHtml(crack.morphology)}</dd></div>
+        <div><dt>裂缝成因</dt><dd>${escapeHtml(crack.cause)}</dd></div>
+        <div><dt>裂缝性质</dt><dd>${escapeHtml(crack.nature)}</dd></div>
+        <div><dt>裂缝影响</dt><dd>${escapeHtml(crack.impact)}</dd></div>
+        <div><dt>处理方法</dt><dd>${escapeHtml(crack.treatment)}</dd></div>
+      </dl>
+    </div>
+  `;
+
+  // 绑定复制功能
+  document.getElementById("btnCopy").addEventListener("click", () => {
+    const text = `【${crack.title}】\n分类：${crack.path}\n风险：${ri.label}\n\n【形态】\n${crack.morphology}\n\n【成因】\n${crack.cause}\n\n【性质】\n${crack.nature}\n\n【影响】\n${crack.impact}\n\n【处理】\n${crack.treatment}`;
+    navigator.clipboard.writeText(text).then(() => {
+      showToast("已成功复制到剪贴板");
+    }).catch(() => {
+      showToast("复制失败，请检查浏览器权限");
+    });
+  });
+
+  // 绑定背景切换
+  document.getElementById("btnLineart").addEventListener("click", (e) => {
+    const panel = document.getElementById("imagePanel");
+    panel.classList.toggle("original");
+    // 动态改变按钮提示文字
+    if(panel.classList.contains("original")){
+        e.target.textContent = "切换白底/原图";
+    }else{
+        e.target.textContent = "切换深/浅色底图";
+    }
+  });
+
+  detailEl.scrollTop = 0;
+}
+
+// ========== 联动核心逻辑 ==========
+function selectCrack(id) {
+  state.selectedId = id;
+  const crack = CRACKS.find(c => c.id === id);
+  if (crack) {
+    state.openCategory = crack.category;
+    state.openSubcategories.add(crack.subcategory);
+  }
+  
+  // 局部刷新，不重绘全部
+  renderSidebar(); // 刷新侧栏的选中高亮
+  renderList();    // 刷新列表的选中高亮
+  
+  // 将选中的列表项滚动到可视区域（居中滚动）
+  const activeCard = mainEl.querySelector('.card.active');
+  if (activeCard) activeCard.scrollIntoView({ block: 'center', behavior: 'smooth' });
+
+  renderDetail();  // 刷新右侧详情
+}
+
+function render() {
+  renderSidebar();
+  renderList();
+  renderDetail();
+}
+
+// 绑定风险筛选
+document.querySelectorAll("#riskFilters .risk-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    state.risk = btn.dataset.risk;
+    // 切换筛选时，如果当前选中的不符合筛选条件，则清空选中
+    const sel = CRACKS.find(c => c.id === state.selectedId);
+    if (sel && !matches(sel)) state.selectedId = null;
+    
+    document.querySelectorAll("#riskFilters .risk-btn").forEach(b => {
+      b.classList.toggle("active", b === btn);
+    });
+    render();
+  });
+});
+
+// 绑定搜索
+searchInput.addEventListener("input", e => {
+  state.q = e.target.value;
+  const sel = CRACKS.find(c => c.id === state.selectedId);
+  if (sel && !matches(sel)) state.selectedId = null;
+  render();
+});
+
+// 绑定键盘上下键切换
+document.addEventListener("keydown", (e) => {
+  if (e.key === '/' && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+    e.preventDefault();
+    searchInput.focus();
+    return;
+  }
+  if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    const list = filtered();
+    if (!list.length) return;
+    
+    let currentIndex = list.findIndex(c => c.id === state.selectedId);
+    if (e.key === 'ArrowDown') currentIndex = currentIndex < list.length - 1 ? currentIndex + 1 : 0;
+    if (e.key === 'ArrowUp') currentIndex = currentIndex > 0 ? currentIndex - 1 : list.length - 1;
+    
+    if (currentIndex === -1) currentIndex = 0; // 如果没有选中，则默认选第一个
+    selectCrack(list[currentIndex].id);
+  }
+});
+
+// 初始启动
+state.selectedId = null;
+render();
+</script>
+
+<!-- 图片灯箱结构 -->
+<div id="lightbox" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:9999; justify-content:center; align-items:center; cursor:zoom-out;" onclick="this.style.display='none'">
+  <img id="lightbox-img" src="" style="max-width:95%; max-height:95%; object-fit:contain; background:#fff; border-radius:8px; padding:10px;">
+</div>
+
+<!-- Toast 容器 -->
+<div id="globalToast" class="toast">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+  <span id="toastText">复制成功</span>
+</div>
+
+<script>
+function openLightbox(src) {
+  const lb = document.getElementById('lightbox');
+  const lbImg = document.getElementById('lightbox-img');
+  lbImg.src = src;
+  lb.style.display = 'flex';
+}
+
+// 全局 Toast 提示函数
+function showToast(msg) {
+  const toast = document.getElementById('globalToast');
+  const toastText = document.getElementById('toastText');
+  toastText.textContent = msg;
+  toast.classList.add('show');
+  
+  if(window.toastTimer) clearTimeout(window.toastTimer);
+  
+  window.toastTimer = setTimeout(() => {
+    toast.classList.remove('show');
+  }, 2000);
+}
+</script>
+</body>
+</html>

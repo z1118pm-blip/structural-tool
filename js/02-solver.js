@@ -209,9 +209,8 @@ function localEqLoad(el, p){
           const baseT = (el.EI * alpha * tempGrad * gradFactor / h);
           const alI = (el.alphaI != null) ? el.alphaI : (el.alpha || 0);
           const alJ = (el.alphaJ != null) ? el.alphaJ : (el.alpha || 0);
-          const alI_t = (el.origAlpha != null) ? el.origAlpha : alI;
-          const alJ_t = (el.origAlpha != null) ? el.origAlpha : alJ;
-          if(alI_t === 0 && alJ_t === 0){
+          // 【修复】直接使用真实的端部柔度 alI / alJ，禁止用 origAlpha 覆盖打断点（内部刚接节点）
+          if(alI === 0 && alJ === 0){
             pFeTI = baseT;
             pFeTJ = baseT;
           } else {
@@ -222,9 +221,9 @@ function localEqLoad(el, p){
                  αI=αJ→∞（两端铰接）→ 系数→0
                严格解需按 Monforton-Wu 修正形函数积分，此式在已知极限下正确，
                有限 αI≠αJ 情形需数值回归。 */
-            const DT = (1 + 2*alI_t) * (1 + 2*alJ_t);
-            pFeTI = baseT * (1 + 3*alJ_t) / DT;
-            pFeTJ = baseT * (1 + 3*alI_t) / DT;
+            const DT = (1 + 2*alI) * (1 + 2*alJ);
+            pFeTI = baseT * (1 + 3*alJ) / DT;
+            pFeTJ = baseT * (1 + 3*alI) / DT;
           }
         }
       } else {

@@ -11,10 +11,17 @@ function setupCanvas(canvas, overrideDPR){
   if(S.rec && S.rec.active){
     dpr = Math.min(dpr, 1920 / W, 1080 / H);
   }
-  canvas.width  = Math.round(W*dpr);
-  canvas.height = Math.round(H*dpr);
+  const newW = Math.round(W*dpr);
+  const newH = Math.round(H*dpr);
   const ctx = canvas.getContext('2d');
-  ctx.setTransform(dpr,0,0,dpr,0,0);
+  // 【修复】仅在尺寸真变化时重置画布，否则仅清空，避免高频闪烁
+  if (canvas.width !== newW || canvas.height !== newH) {
+    canvas.width = newW;
+    canvas.height = newH;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  } else {
+    ctx.clearRect(0, 0, W, H);
+  }
   
   // 统一重置文本和线条状态，防止上一个绘图函数的状态泄漏
   ctx.textAlign = 'start';
@@ -27,7 +34,7 @@ function setupCanvas(canvas, overrideDPR){
 function drawGrid(ctx, W, H){
   ctx.save();
   const step = 24;
-  ctx.strokeStyle = 'rgba(56,189,248,0.045)';
+  ctx.strokeStyle = 'rgba(148,163,184,0.05)';
   ctx.lineWidth = 0.5;
   for(let x=0; x<=W; x+=step){
     ctx.beginPath(); ctx.moveTo(x+0.5, 0); ctx.lineTo(x+0.5, H); ctx.stroke();
@@ -35,7 +42,7 @@ function drawGrid(ctx, W, H){
   for(let y=0; y<=H; y+=step){
     ctx.beginPath(); ctx.moveTo(0, y+0.5); ctx.lineTo(W, y+0.5); ctx.stroke();
   }
-  ctx.strokeStyle = 'rgba(56,189,248,0.09)';
+  ctx.strokeStyle = 'rgba(148,163,184,0.10)';
   for(let x=0; x<=W; x+=step*5){
     ctx.beginPath(); ctx.moveTo(x+0.5, 0); ctx.lineTo(x+0.5, H); ctx.stroke();
   }
@@ -47,7 +54,7 @@ function drawGrid(ctx, W, H){
 
 function drawHUD(ctx, W, H, label, topOffset){
   ctx.save();
-  ctx.strokeStyle = 'rgba(56,189,248,0.55)';
+  ctx.strokeStyle = 'rgba(148,163,184,0.4)';
   ctx.lineWidth = 1.2;
   const L = 14, M = 10;
   const corners = [
@@ -61,7 +68,7 @@ function drawHUD(ctx, W, H, label, topOffset){
   }
   const ty = M + 4 + (topOffset || 0);
   ctx.font = '9.5px "JetBrains Mono", ui-monospace, monospace';
-  ctx.fillStyle = 'rgba(125,211,252,0.7)';
+  ctx.fillStyle = 'rgba(148,163,184,0.6)';
   ctx.textAlign = 'left'; ctx.textBaseline = 'top';
   ctx.fillText('◆ ' + (label||'STATIC / LINEAR-ELASTIC'), M+4, ty);
   /* 已删除：SOLVER 文字与右上角 DOM 按钮冲突，且底部状态栏已包含求解耗时，此处不再冗余绘制 */
@@ -149,10 +156,9 @@ function makeTransform(model, W, H, pad){
   if (!isFinite(sc) || sc <= 0) sc = 1; // 增加 NaN 兜底
   const dw = (x1-x0)*sc, dh = (y1-y0)*sc;
   const left   = padL + (availW - dw)/2;
-  /* 优化：当画布极宽时，多余空间 45% 给底部，55% 给顶部。
-     既不让底部出现大块黑洞，也不让结构彻底贴底导致重心下坠。 */
+  /* 优化：多余空间上下各 50%，保证结构在画布中垂直居中，消除顶部大面积空白 */
   const extraH = Math.max(0, availH - dh);
-  const bottom = H - padB - extraH * 0.45;
+  const bottom = H - padB - extraH * 0.5;
   const toS = (x,y) => [ left + (x-x0)*sc , bottom - (y-y0)*sc ];
   return {toS, sc, x0, y0};
 }
@@ -189,20 +195,21 @@ function drawSingleSupport(ctx, sx, sy, type, T, colW, rotDraw, rotText) {
   // 画角度标注（纯文字，彻底删除圆弧和虚线）
   if (rotText && Math.abs(rotText) > 1e-6) {
     ctx.save();
-    const deg = Math.abs(rotText * 180 / Math.PI).toFixed(1);
-    const txt = `∠ ${deg}°`;
-    ctx.font = 'bold 11px ui-sans-serif,system-ui,sans-serif';
+    const realDeg = Math.abs(rotText * 180 / Math.PI);
+    const degStr = realDeg < 1 ? realDeg.toFixed(2) : realDeg.toFixed(1);
+    const txt = `∠ ${degStr}° (视觉放大)`;
+    ctx.font = 'bold 10px ui-sans-serif,system-ui,sans-serif';
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
     
-    // 把文字放在支座左侧稍下的位置
-    const tx = sx - 16;
-    const ty = sy + 16;
+    // 放在支座左侧稍靠下的位置，向右对齐，避开左上方柱底内力数值
+    const tx = sx - 12;
+    const ty = sy + 24;
     
     // 加个半透明背景防止被线挡住
     const tw = ctx.measureText(txt).width;
     ctx.fillStyle = 'rgba(30,41,59,0.85)';
-    ctx.fillRect(tx - tw - 2, ty - 7, tw + 4, 14);
+    ctx.fillRect(tx - tw - 4, ty - 7, tw + 6, 14);
     
     ctx.fillStyle = T.hArrow;
     ctx.fillText(txt, tx, ty);
@@ -397,16 +404,17 @@ function drawSupports(ctx, model, toS, base, isDeform, deformF, W, H){
       
       /* 4. 新位置实心支座（带旋转） */
       const staticRot = rotRad * VISUAL_ROT_SCALE;
-      drawSingleSupport(ctx, sx, syDrop, supType, T, colW, staticRot, staticRot);
+      drawSingleSupport(ctx, sx, syDrop, supType, T, colW, staticRot, rotRad);
     } else {
-      // 只要有强迫转角，无论是静态图还是变形图，视觉上都统一倾斜 30°
+      // 只要有强迫转角，无论是静态图还是变形图，视觉上都统一倾斜一个夸张角度
       let finalRotDraw = rotRad * VISUAL_ROT_SCALE;
-      let finalRotText = rotRad * VISUAL_ROT_SCALE;
+      let finalRotText = rotRad; // 传递真实弧度用于文字标注
       
-      // 如果是变形图，且用户没有输入强迫转角，则按照真实的节点变形来绘制（随缩放系数变化）
+      // 【修复】变形图中，支座代表地基，不应随受力变形而旋转（除非主动设置了强迫转角）。
+      // 柱子的真实微小转角被放大 300 倍后，会导致支座看起来像翻倒了，极易引起误解。
       if (isDeform && !hasRot) {
-        finalRotDraw = (model.U[c * (nLev + 1) * 3 + 2] || 0) * (deformF || 1);
-        finalRotText = finalRotDraw;
+        finalRotDraw = 0; // 强制支座保持水平
+        finalRotText = 0; // 隐藏误导性的巨大角度标注
       }
       
       drawSingleSupport(ctx, sx, sy, supType, T, colW, finalRotDraw, finalRotText);
@@ -476,10 +484,10 @@ function drawLoadDiagram(canvas, model, dprOverride){
   const hasH = (pH.H1 + pH.H2 + pH.H3) > 0;
   const showDim = W >= 300;
   const {toS} = makeTransform(model, W, H, {
-    padL: showDim ? (hasH ? 82 : 74) : (hasH ? 60 : 44),
-    padR: showDim ? 60 : 44,
-    padT: 110, // 加大顶部留白，强制图形下移，避免与右上角文字重叠
-    padB: showDim ? 62 : 32
+    padL: showDim ? (hasH ? 80 : 70) : (hasH ? 60 : 44),
+    padR: showDim ? 50 : 44,
+    padT: 75, 
+    padB: showDim ? 45 : 25
   });
   const T = theme();
   ctx.fillStyle=T.bg; ctx.fillRect(0,0,W,H);

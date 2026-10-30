@@ -1901,9 +1901,10 @@
     b.x += b.vx * dt;
     b.y += b.vy * dt;
 
-    if(b.x - BALL_R < WALL){ b.x = WALL + BALL_R; b.vx = Math.abs(b.vx); sfxWall(); G.shake = Math.max(G.shake, 1.5); }
-    if(b.x + BALL_R > W - WALL){ b.x = W - WALL - BALL_R; b.vx = -Math.abs(b.vx); sfxWall(); G.shake = Math.max(G.shake, 1.5); }
-    if(b.y - BALL_R < WALL){ b.y = WALL + BALL_R; b.vy = Math.abs(b.vy); sfxWall(); G.shake = Math.max(G.shake, 1.5); }
+    // 【修复】增加速度方向判定，防止误判导致粘墙或鬼畜弹射
+    if(b.x - BALL_R < WALL && b.vx < 0){ b.x = WALL + BALL_R; b.vx = Math.abs(b.vx); sfxWall(); G.shake = Math.max(G.shake, 1.5); }
+    if(b.x + BALL_R > W - WALL && b.vx > 0){ b.x = W - WALL - BALL_R; b.vx = -Math.abs(b.vx); sfxWall(); G.shake = Math.max(G.shake, 1.5); }
+    if(b.y - BALL_R < WALL && b.vy < 0){ b.y = WALL + BALL_R; b.vy = Math.abs(b.vy); sfxWall(); G.shake = Math.max(G.shake, 1.5); }
 
     const half = G.paddle.w / 2;
     const px1 = G.paddle.x - half, px2 = G.paddle.x + half;

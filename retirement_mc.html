@@ -1,0 +1,2227 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="四资产跨期配置的蒙特卡洛仿真与动态提取规则设计：含动态提取、回撤保护、现金池缓冲机制。">
+<meta name="author" content="Zhao | Struct. E.">
+<meta name="theme-color" content="#0b0d13">
+<title>四资产跨期配置的蒙特卡洛仿真与动态提取规则设计 · Zhao | Struct. E.</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<script defer src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<style>
+:root {
+  --bg-0: #0b0d13;
+  --bg-1: #101624;
+  --card-bg-1: #161b26;
+  --card-bg-2: #1a1d2e;
+  --border: rgba(255,255,255,0.06);
+  --text: #e8edf5;
+  --text-body: #d0d6e0;
+  --text-muted: #9aa4b8;
+  --text-dim: #7a8499;
+  --accent: #00b4ff;
+  --accent-2: #6bb6e8;
+  --success: #00e68a;
+  --warn: #ffab00;
+  --danger: #ff4757;
+  --gold: #ffd93d;
+  --cn-stock: #6bb6e8;
+  --us-stock: #ff6b6b;
+  --bond: #ffd93d;
+  --gold-asset: #6bcb77;
+  --radius-lg: 20px;
+  --radius-md: 14px;
+  --radius-sm: 10px;
+  --shadow-1: 0 6px 24px rgba(0,0,0,0.3);
+  --shadow-2: 0 12px 36px rgba(0,0,0,0.4);
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --h1: 32px;
+  --h2: 22px;
+  --h3: 17px;
+  --body: 15px;
+  --small: 13px;
+  --topnav-h: 56px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: linear-gradient(160deg, var(--bg-0) 0%, var(--bg-1) 50%, #0d1117 100%);
+  color: var(--text-body);
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+  font-size: var(--body);
+  line-height: 1.8;
+}
+body::before {
+  content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="260" height="260" viewBox="0 0 260 260"><text x="130" y="130" transform="rotate(-35 130 130)" font-size="13" fill="rgb(160,170,190)" fill-opacity="0.13" font-family="Arial" text-anchor="middle" font-weight="bold" letter-spacing="2">Zhao | Struct. E.</text></svg>');
+  background-size: 260px 260px; pointer-events: none; z-index: 0;
+}
+body::after {
+  content: 'Zhao | Struct. E.'; position: fixed; top: 50%; left: 50%;
+  transform: translate(-50%, -50%) rotate(-35deg); font-size: 120px; font-weight: 900;
+  letter-spacing: 10px; color: rgba(255, 255, 255, 0.03); pointer-events: none;
+  z-index: 0; white-space: nowrap; font-family: 'Segoe UI', 'PingFang SC', sans-serif;
+}
+::selection { background: rgba(0,180,255,.35); color: #fff; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+
+/* 无障碍：仅供屏幕阅读器 */
+.sr-only {
+  position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+/* 滚动条 */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: #0f1420; }
+::-webkit-scrollbar-thumb { background: #2a2d3a; border-radius: 5px; }
+::-webkit-scrollbar-thumb:hover { background: #3a3e50; }
+
+/* ============ 顶部吸顶导航栏 ============ */
+.topnav {
+  position: sticky; top: 0; z-index: 1000;
+  background: rgba(11, 13, 19, 0.82);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  box-shadow: 0 2px 20px rgba(0,0,0,0.35);
+}
+.topnav-inner {
+  max-width: 1280px; margin: 0 auto;
+  padding: 10px 20px;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 20px;
+}
+.topnav-brand {
+  font-size: 13px; font-weight: 800; color: var(--text);
+  letter-spacing: .5px; white-space: nowrap; display: flex; align-items: center; gap: 8px;
+}
+/* 新增：返回主工具按钮样式 */
+.topnav-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-decoration: none;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: all 0.2s var(--ease);
+  white-space: nowrap;
+}
+.topnav-back:hover {
+  color: var(--accent);
+  background: rgba(0, 180, 255, 0.12);
+  border-color: rgba(0, 180, 255, 0.3);
+  transform: translateX(-2px); /* 悬浮时产生轻微左移反馈 */
+}
+.topnav-brand::before {
+  content: ''; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent); box-shadow: 0 0 12px var(--accent);
+}
+.topnav-links {
+  display: flex; gap: 4px; overflow-x: auto; flex-wrap: nowrap;
+  scrollbar-width: none; -ms-overflow-style: none;
+}
+.topnav-links::-webkit-scrollbar { display: none; }
+.topnav-link {
+  font-size: 13px; color: var(--text-muted); text-decoration: none;
+  padding: 8px 14px; border-radius: 8px;
+  transition: all .2s var(--ease); white-space: nowrap;
+  border: 1px solid transparent; font-weight: 600;
+  background: transparent; font-family: inherit; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.topnav-link:hover { color: var(--text); background: rgba(0,180,255,.08); }
+.topnav-link.active {
+  color: var(--accent); background: rgba(0,180,255,.12);
+  border-color: rgba(0,180,255,.3);
+}
+.topnav-link.contact { color: var(--gold); }
+.topnav-link.contact:hover { background: rgba(255,217,61,.1); color: var(--gold); }
+.topnav-link.contact.copied {
+  color: var(--success); background: rgba(0,230,138,.12);
+  border-color: rgba(0,230,138,.3);
+}
+.read-progress {
+  position: absolute; bottom: 0; left: 0; height: 2px; width: 0;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2), var(--gold));
+  transition: width .1s linear;
+  box-shadow: 0 0 12px rgba(0,180,255,.6);
+}
+
+/* 回到顶部 */
+#backTop {
+  position: fixed; right: 20px; bottom: 24px; z-index: 900;
+  width: 46px; height: 46px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), #0072ff);
+  color: #fff; border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; box-shadow: 0 6px 20px rgba(0,180,255,.4);
+  opacity: 0; pointer-events: none; transition: all .3s var(--ease);
+}
+#backTop.show { opacity: 1; pointer-events: auto; }
+#backTop:hover { transform: translateY(-3px); box-shadow: 0 8px 28px rgba(0,180,255,.6); }
+
+/* 悬浮赞赏按钮 */
+#tipBtn {
+  position: fixed; right: 20px; bottom: 84px; z-index: 900;
+  width: 46px; height: 46px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--gold), #ff9f43);
+  color: #7a4b00; border: 2px solid #fff; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; box-shadow: 0 6px 20px rgba(255,217,61,.4);
+  transition: all .3s var(--ease);
+}
+#tipBtn:hover { transform: translateY(-3px) scale(1.05); }
+#tipModal {
+  position: fixed; inset: 0; z-index: 9998;
+  background: rgba(0,0,0,.75); backdrop-filter: blur(6px);
+  display: none; align-items: center; justify-content: center; padding: 24px;
+}
+#tipModal.show { display: flex; }
+.tip-modal-inner {
+  background: #fff; border-radius: 16px; padding: 18px; max-width: 340px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.6); position: relative;
+}
+.tip-modal-inner img { width: 100%; border-radius: 10px; display: block; }
+.tip-modal-close {
+  position: absolute; top: -12px; right: -12px; width: 32px; height: 32px;
+  border-radius: 50%; background: var(--danger); color: #fff; border: 2px solid #fff;
+  font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.tip-modal-caption {
+  text-align: center; margin-top: 10px; color: #333; font-size: 13px; font-weight: 600;
+}
+
+.container { max-width: 1280px; margin: 0 auto; padding: 24px 20px 20px; position: relative; z-index: 1; }
+
+/* Header 精简版 */
+header {
+  background: linear-gradient(135deg, #12182b, #1a1f35, #0e1625);
+  border-radius: var(--radius-lg); padding: 36px 40px; margin-bottom: 28px;
+  border: 1px solid rgba(0, 180, 255, .2); position: relative;
+  box-shadow: var(--shadow-2), inset 0 1px 0 rgba(255, 255, 255, .05);
+  overflow: hidden;
+}
+header::before {
+  content: ''; position: absolute; top: -60px; right: -60px; width: 220px; height: 220px;
+  background: radial-gradient(circle, rgba(0, 180, 255, .25), transparent 70%); border-radius: 50%;
+}
+header::after {
+  content: ''; position: absolute; bottom: -30px; left: 20px; width: 120px; height: 120px;
+  background: radial-gradient(circle, rgba(255, 217, 61, .15), transparent 70%); border-radius: 50%;
+}
+.header-inner { position: relative; z-index: 2; }
+.header-tag {
+  display: inline-block; font-size: 12px; color: var(--gold); font-weight: 700;
+  letter-spacing: 2px; margin-bottom: 14px; text-transform: uppercase;
+}
+h1 {
+  font-size: var(--h1); font-weight: 900; letter-spacing: 1px;
+  background: linear-gradient(90deg, #fff, #a8c6fa, #00b4ff);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  line-height: 1.35; margin-bottom: 16px;
+}
+.h1-author {
+  display: block;
+  margin-top: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: var(--accent-2);
+  -webkit-text-fill-color: var(--accent-2);
+  background: none;
+  opacity: .9;
+}
+.header-conclusion {
+  font-size: 16px; color: var(--text); line-height: 1.8; margin-bottom: 18px;
+  max-width: 900px;
+}
+.header-conclusion .hl { color: var(--gold); font-weight: 700; }
+.header-conclusion .hl-blue { color: var(--accent); font-weight: 700; }
+.header-badges { display: flex; flex-wrap: wrap; gap: 8px; }
+.badge {
+  background: rgba(0, 180, 255, .12); border: 1px solid rgba(0, 180, 255, .3);
+  color: var(--accent-2); border-radius: 20px; padding: 6px 16px;
+  font-size: 13px; font-weight: 600;
+}
+.badge.gold { background: rgba(255,217,61,.1); border-color: rgba(255,217,61,.3); color: var(--gold); }
+
+/* Section 结构 */
+.section {
+  margin-bottom: 32px; scroll-margin-top: calc(var(--topnav-h) + 16px);
+}
+.section-header {
+  display: flex; align-items: baseline; gap: 14px; margin-bottom: 18px;
+  padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,.05);
+}
+.section-num {
+  font-size: 13px; font-weight: 800; color: var(--accent);
+  letter-spacing: 2px; font-family: 'Consolas', monospace;
+}
+.section-title { font-size: var(--h2); font-weight: 800; color: var(--text); }
+.section-sub { font-size: 13px; color: var(--text-dim); margin-left: auto; }
+
+/* 卡片 */
+.card {
+  background: linear-gradient(145deg, var(--card-bg-1), var(--card-bg-2));
+  border-radius: var(--radius-lg); padding: 24px;
+  border: 1px solid var(--border); box-shadow: var(--shadow-1);
+  position: relative; transition: all .3s var(--ease); overflow: hidden;
+}
+.card::before {
+  content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0, 180, 255, .5), transparent);
+}
+.card:hover { transform: translateY(-3px); box-shadow: var(--shadow-2), 0 0 0 1px rgba(0, 180, 255, .15); }
+.card-title {
+  font-size: var(--h3); font-weight: 800; color: var(--text);
+  margin-bottom: 6px; display: flex; align-items: center; gap: 8px; letter-spacing: .3px;
+}
+.card-subtitle {
+  font-size: var(--small); color: var(--text-muted); margin-bottom: 18px;
+  border-left: 2px solid rgba(0, 180, 255, .3); padding-left: 10px; line-height: 1.7;
+}
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 22px; margin-bottom: 20px; align-items: start; }
+.chart { width: 100%; height: 370px; }
+.chart-lg { height: 440px; }
+.chart-sm { height: 240px; }
+
+/* 图表骨架屏 */
+.chart-skeleton {
+  position: relative; overflow: hidden; background: rgba(255,255,255,0.02);
+  border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center;
+  color: var(--text-dim); font-size: 13px;
+}
+.chart-skeleton::before {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(0,180,255,.08), transparent);
+  animation: shimmer 1.6s infinite;
+}
+@keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+.chart-fallback {
+  display: flex; align-items: center; justify-content: center; flex-direction: column;
+  height: 100%; color: #ff6b6b; font-size: 13px; text-align: center; padding: 20px; line-height: 1.8;
+}
+
+/* 指标卡 */
+.metrics-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-bottom: 20px; }
+.metric-box {
+  background: linear-gradient(145deg, #181d2a, #1f2435); border-radius: var(--radius-lg);
+  padding: 24px 20px; text-align: center; border: 1px solid rgba(0, 180, 255, .1);
+  position: relative; overflow: hidden;
+}
+.metric-box::after {
+  content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 3px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2), transparent);
+}
+.metric-icon { font-size: 26px; margin-bottom: 8px; }
+.metric-value {
+  font-size: 38px; font-weight: 900; color: var(--accent);
+  line-height: 1.2; letter-spacing: -1px; font-variant-numeric: tabular-nums;
+}
+.metric-label { font-size: var(--small); color: var(--text-muted); margin-top: 8px; font-weight: 500; }
+.metric-note {
+  font-size: 11px; color: var(--text-muted); margin-top: 8px; line-height: 1.6;
+  text-align: center; background: rgba(0, 0, 0, .2); padding: 8px; border-radius: 8px;
+  border: 1px solid rgba(255,255,255,.05);
+}
+
+/* 表格容器（含右侧渐隐遮罩，不随滚动移动） */
+.table-outer { position: relative; margin-bottom: 20px; }
+.table-wrap {
+  background: #141925; border-radius: var(--radius-lg); overflow-x: auto;
+  border: 1px solid rgba(255, 255, 255, .05);
+  position: relative;
+}
+.table-outer .scroll-hint {
+  position: absolute; top: 10px; right: 14px; font-size: 11px; color: var(--text-dim);
+  background: rgba(0,0,0,.6); padding: 3px 10px; border-radius: 20px;
+  border: 1px solid rgba(255,255,255,.08); pointer-events: none; z-index: 3;
+  opacity: 0.85; transition: opacity .25s var(--ease);
+}
+.table-outer.at-end .scroll-hint { opacity: 0; }
+.table-fade {
+  position: absolute; top: 0; right: 0; bottom: 0; width: 40px;
+  background: linear-gradient(90deg, transparent, rgba(10,14,22,.92));
+  pointer-events: none; z-index: 2;
+  border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+  opacity: 1; transition: opacity .25s var(--ease);
+}
+.table-outer.at-end .table-fade { opacity: 0; }
+table { width: 100%; border-collapse: collapse; min-width: 900px; }
+table th {
+  background: #1a1f30; color: var(--text-muted); font-size: var(--small);
+  padding: 14px; text-align: left; font-weight: 700;
+  border-bottom: 1px solid rgba(255, 255, 255, .06); white-space: nowrap;
+}
+table td {
+  padding: 13px 14px; font-size: 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, .03);
+  font-variant-numeric: tabular-nums;
+}
+table tr:hover { background: rgba(0, 180, 255, .03); }
+.success { color: var(--success); } .warn { color: var(--warn); } .danger { color: var(--danger); }
+
+abbr[title] {
+  text-decoration: none;
+  border-bottom: 1px dashed rgba(255,255,255,.3);
+  cursor: help;
+}
+
+.table-footnote {
+  font-size: 12px; color: var(--text-muted); line-height: 1.9;
+  background: rgba(0,0,0,.18); border-left: 3px solid var(--accent-2);
+  border-radius: 8px; padding: 12px 16px; margin-top: 12px;
+}
+.table-footnote strong { color: var(--text); }
+
+/* 红绿灯 */
+.traffic-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
+.traffic-item {
+  border-radius: 16px; padding: 22px 18px; text-align: center;
+  transition: all .3s var(--ease); cursor: pointer;
+}
+.traffic-item:hover { transform: translateY(-4px); }
+.traffic-item.green { background: linear-gradient(145deg, rgba(0,230,138,.15), rgba(0,230,138,.05)); border: 1px solid rgba(0,230,138,.4); }
+.traffic-item.yellow { background: linear-gradient(145deg, rgba(255,171,0,.15), rgba(255,171,0,.05)); border: 1px solid rgba(255,171,0,.4); }
+.traffic-item.red { background: linear-gradient(145deg, rgba(255,71,87,.15), rgba(255,71,87,.05)); border: 1px solid rgba(255,71,87,.4); }
+.traffic-item.blue { background: linear-gradient(145deg, rgba(0,180,255,.15), rgba(0,180,255,.05)); border: 1px solid rgba(0,180,255,.4); }
+.traffic-light-icon { font-size: 32px; margin-bottom: 8px; }
+.traffic-title { font-size: 15px; font-weight: 800; margin-bottom: 6px; }
+.traffic-item.green .traffic-title { color: var(--success); }
+.traffic-item.yellow .traffic-title { color: var(--warn); }
+.traffic-item.red .traffic-title { color: var(--danger); }
+.traffic-item.blue .traffic-title { color: var(--accent-2); }
+.traffic-desc { font-size: var(--small); color: var(--text-muted); line-height: 1.7; }
+.traffic-age { font-size: 11px; color: var(--text-dim); margin-top: 8px; font-weight: 600; }
+
+/* 向导 */
+.wizard-grid { display: grid; grid-template-columns: 220px 1fr; gap: 20px; align-items: start; }
+.wizard-age-box {
+  background: rgba(0,0,0,0.25); border-radius: var(--radius-md);
+  padding: 20px; text-align: center; border: 1px solid rgba(0,180,255,.2);
+}
+.wizard-age-row {
+  display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 4px;
+}
+.stepper-btn {
+  width: 36px; height: 36px; border-radius: 50%; flex: 0 0 36px;
+  background: rgba(0,180,255,.12); border: 1px solid rgba(0,180,255,.3);
+  color: var(--accent); font-size: 20px; font-weight: 800; line-height: 1;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all .2s var(--ease); font-family: inherit; user-select: none;
+}
+.stepper-btn:hover { background: rgba(0,180,255,.25); transform: translateY(-1px); }
+.stepper-btn:active { transform: translateY(0); }
+.wizard-age-input {
+  font-size: 42px; font-weight: 900; color: var(--accent);
+  background: transparent; border: none; text-align: center; width: 100%;
+  outline: none; font-family: inherit; font-variant-numeric: tabular-nums;
+  min-width: 0;
+}
+.wizard-age-input::-webkit-outer-spin-button,
+.wizard-age-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.wizard-age-input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+.wizard-age-label { font-size: 12px; color: var(--text-dim); margin-top: 6px; }
+.wizard-content {
+  background: rgba(0,0,0,0.2); border-radius: var(--radius-md);
+  padding: 20px; border-left: 3px solid var(--accent); min-height: 180px;
+}
+.wizard-step {
+  display: flex; gap: 12px; padding: 10px 0;
+  border-bottom: 1px dashed rgba(255,255,255,.06); font-size: 14px;
+  color: var(--text); line-height: 1.75;
+}
+.wizard-step:last-child { border-bottom: none; }
+.wizard-step-icon { font-size: 20px; flex-shrink: 0; }
+.wizard-step strong { color: var(--gold); }
+
+/* 通用 grid */
+.rules-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+.rule-item {
+  background: rgba(0, 0, 0, .2); border-radius: var(--radius-sm);
+  padding: 14px; border-left: 3px solid var(--accent);
+  font-size: var(--small); line-height: 1.7; color: #b0b8c8;
+}
+.rule-item strong { color: var(--text); }
+.rule-item.success { border-left-color: var(--success); }
+.rule-item.gold { border-left-color: var(--gold); }
+.rule-item.danger { border-left-color: var(--danger); }
+.rule-item.info { border-left-color: #a8c6fa; }
+.principle-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.principle-item {
+  background: rgba(0, 0, 0, .15); border-radius: var(--radius-sm);
+  padding: 16px; border: 1px solid rgba(0, 180, 255, .1);
+  font-size: 14px; line-height: 1.7; color: #b0b8c8;
+  display: flex; gap: 10px; align-items: flex-start;
+}
+.principle-item .p-icon { font-size: 20px; }
+.principle-item .p-body { font-size: 13px; }
+.risk-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+.risk-item {
+  background: rgba(255, 70, 80, .05); border-radius: var(--radius-md);
+  padding: 16px; border: 1px solid rgba(255, 70, 80, .15); text-align: center;
+}
+.risk-icon { font-size: 28px; margin-bottom: 8px; }
+.risk-title { font-size: 14px; font-weight: 700; color: #ff8a8a; margin-bottom: 4px; }
+.risk-desc { font-size: 12px; color: var(--text-muted); line-height: 1.6; }
+
+/* 计算器 */
+.calc-label { font-size: var(--small); color: var(--text-muted); display: block; margin-bottom: 6px; font-weight: 600; }
+.calc-input {
+  width: 100%; padding: 12px 14px; background: #0f1420;
+  border: 1px solid #2a2d3a; border-radius: 10px; color: #e0e0e0;
+  font-size: 15px; min-height: 46px; transition: all .2s var(--ease);
+  font-variant-numeric: tabular-nums; font-family: inherit;
+}
+.calc-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,180,255,.15); }
+.calc-input.invalid { border-color: var(--danger); background: rgba(255,71,87,.05); }
+.calc-actions { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.calc-btn {
+  background: linear-gradient(135deg, var(--accent), #0072ff); color: white;
+  border: none; padding: 15px 36px; border-radius: 10px;
+  font-size: 15px; font-weight: 700; cursor: pointer;
+  transition: all .2s var(--ease); box-shadow: 0 4px 14px rgba(0, 180, 255, .3);
+  position: relative; overflow: hidden; font-family: inherit;
+}
+.calc-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0, 180, 255, .5); }
+.calc-btn:active:not(:disabled) { transform: translateY(0); }
+.calc-btn:disabled { opacity: .7; cursor: wait; }
+.calc-btn.ghost {
+  background: transparent; border: 1px solid rgba(255,255,255,.15);
+  color: var(--text-muted); box-shadow: none; padding: 14px 26px;
+}
+.calc-btn.ghost:hover:not(:disabled) {
+  border-color: var(--accent); color: var(--accent);
+  background: rgba(0,180,255,.06); box-shadow: none;
+}
+.calc-btn.success-flash { animation: successFlash .8s var(--ease); }
+@keyframes successFlash {
+  0% { box-shadow: 0 4px 14px rgba(0,180,255,.3); }
+  50% { box-shadow: 0 0 0 8px rgba(0,230,138,.4); }
+  100% { box-shadow: 0 4px 14px rgba(0,180,255,.3); }
+}
+.result-box {
+  background: rgba(0, 0, 0, 0.3); border-radius: var(--radius-md);
+  padding: 22px; border: 1px solid rgba(0, 180, 255, 0.2); margin-top: 20px;
+  animation: fadeInUp .5s var(--ease);
+}
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.result-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 0; border-bottom: 1px dashed rgba(255,255,255,.06);
+  font-size: 14px; gap: 12px; flex-wrap: wrap;
+}
+.result-item:last-child { border-bottom: none; }
+.result-label { color: var(--text-muted); }
+.result-value { color: var(--text); font-weight: 700; font-family: 'Consolas', monospace; text-align: right; font-variant-numeric: tabular-nums; }
+.explain-box {
+  background: rgba(0, 180, 255, 0.06); border-radius: var(--radius-sm);
+  padding: 16px 18px; margin-top: 14px; border-left: 3px solid var(--accent-2);
+  font-size: var(--small); color: #b0b8c8; line-height: 1.9;
+}
+.explain-box strong { color: var(--text); }
+.inline-alert {
+  display: none; margin-top: 10px; padding: 10px 14px; border-radius: 8px;
+  font-size: var(--small); line-height: 1.5;
+}
+.inline-alert.error { background: rgba(255, 71, 87, .12); border-left: 3px solid var(--danger); color: #ff8a8a; }
+
+/* 术语词典：全宽 + 4 列 */
+.term-grid-wide {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 14px; font-size: var(--small); line-height: 1.8; color: #b0b8c8;
+}
+.term-cell {
+  background: rgba(0,0,0,.15); border-radius: 10px; padding: 12px 14px;
+  border: 1px solid rgba(255,255,255,.04); border-left: 3px solid var(--accent-2);
+}
+.term-cell .term-name { color: #a8c6fa; font-weight: 700; }
+.term-cell .term-def { color: var(--text-muted); margin-top: 4px; display: block; font-size: 12px; }
+.term { border-bottom: 1px dashed var(--accent-2); cursor: help; color: #a8c6fa; position: relative; outline: none; font-weight: 700; }
+.term:hover::after, .term:focus::after, .term:active::after {
+  content: attr(data-tip); position: absolute; left: 50%; bottom: 100%;
+  transform: translateX(-50%); background: #1e2230; color: var(--text);
+  padding: 10px 14px; border-radius: 8px; border: 1px solid var(--accent-2);
+  font-size: 12px; white-space: normal; width: 260px; z-index: 999;
+  line-height: 1.6; text-align: left; box-shadow: 0 4px 16px rgba(0,0,0,.5);
+  pointer-events: none; margin-bottom: 8px;
+}
+
+/* 新手错误：全宽 + 3 列 */
+.mistake-grid-wide { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.mistake-item {
+  background: rgba(255,70,80,.06); border-radius: var(--radius-md);
+  padding: 16px; border: 1px solid rgba(255,70,80,.2);
+  display: flex; gap: 12px; align-items: flex-start;
+}
+.mistake-icon { font-size: 24px; flex-shrink: 0; line-height: 1; }
+.mistake-content { font-size: var(--small); line-height: 1.7; color: #b0b8c8; }
+.mistake-title { font-size: 14px; font-weight: 800; color: #ff8a8a; margin-bottom: 6px; }
+.mistake-correct { color: var(--success); font-weight: 600; }
+
+/* 基金费率表 */
+.fee-note { font-size: 12px; color: var(--text-muted); margin-top: 12px; line-height: 1.7; }
+
+/* 五步指南 */
+.guide-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 20px; }
+.guide-step {
+  background: linear-gradient(145deg, #151a26, #1b1f2e);
+  border-radius: 16px; padding: 20px; border: 1px solid rgba(255, 255, 255, .04);
+  transition: all .3s var(--ease);
+}
+.guide-step:hover { transform: translateY(-3px); border-color: rgba(0,180,255,.2); }
+.guide-num {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), #0072ff);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 14px; color: #fff; margin-bottom: 12px;
+}
+.guide-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+.guide-desc { font-size: var(--small); color: var(--text-muted); line-height: 1.75; }
+.guide-note { font-size: var(--small); color: var(--gold); margin-bottom: 15px; font-weight: 500; }
+
+/* 静态 grid */
+.premise-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 10px; }
+.feature-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 10px; }
+.flow-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 14px; }
+.hist-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 16px; }
+.form-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 16px; }
+.form-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 16px; }
+
+/* 入场动画 */
+.reveal { opacity: 0; transform: translateY(24px); transition: opacity .6s var(--ease), transform .6s var(--ease); }
+.reveal.visible { opacity: 1; transform: translateY(0); }
+
+footer {
+  text-align: center; padding: 40px 0 60px;
+  border-top: 1px solid rgba(255, 255, 255, .04); margin-top: 20px;
+}
+.footer-wm { font-size: 14px; color: rgba(160, 170, 190, .5); letter-spacing: 2px; font-weight: 700; }
+.footer-note { font-size: 12px; color: #6a7385; margin-top: 10px; line-height: 1.7; }
+.tip-hint {
+  display: inline-block; margin-top: 16px; padding: 10px 20px;
+  font-size: 13px; color: var(--gold); font-weight: 600;
+  background: rgba(255, 217, 61, .07);
+  border: 1px dashed rgba(255, 217, 61, .35);
+  border-radius: 30px; line-height: 1.6;
+}
+.tip-hint strong { color: #fff; }
+
+/* 免责声明区 */
+.disclaimer-section {
+  background: rgba(255, 171, 0, .06); border: 1px solid rgba(255, 171, 0, .18);
+  border-left: 4px solid var(--warn); border-radius: var(--radius-md);
+  padding: 16px 20px; font-size: var(--small); color: #c8c0a8; line-height: 1.85;
+  margin-top: 20px;
+}
+.disclaimer-section strong { color: var(--warn); }
+
+/* 响应式 */
+@media(max-width:1200px) {
+  .guide-grid { grid-template-columns: repeat(3, 1fr); }
+  .metrics-row { grid-template-columns: repeat(2, 1fr); }
+  .principle-grid { grid-template-columns: 1fr 1fr; }
+  .traffic-grid { grid-template-columns: 1fr 1fr; }
+  .mistake-grid-wide { grid-template-columns: 1fr 1fr; }
+  .wizard-grid { grid-template-columns: 1fr; }
+  .hist-grid { grid-template-columns: repeat(2, 1fr); }
+  .premise-grid { grid-template-columns: 1fr 1fr; }
+  .term-grid-wide { grid-template-columns: repeat(3, 1fr); }
+}
+@media(max-width:800px) {
+  /* 手机端缩小头像 */
+  .header-inner > div:first-child img {
+    width: 60px !important;
+    height: 60px !important;
+  }
+  .header-inner > div:first-child {
+    gap: 12px !important;
+  }
+  :root {
+    --h1: 22px; --h2: 19px; --h3: 16px; --body: 14px; --small: 12px;
+    --topnav-h: 48px;
+  }
+  .container { padding: 16px 14px; }
+  header { padding: 24px 20px; }
+  .header-conclusion { font-size: 14px; }
+  .h1-author { font-size: 13px; letter-spacing: 2px; }
+  .grid { grid-template-columns: 1fr; }
+  .guide-grid { grid-template-columns: 1fr 1fr; }
+  .risk-grid { grid-template-columns: 1fr 1fr; }
+  .principle-grid { grid-template-columns: 1fr; }
+  .traffic-grid { grid-template-columns: 1fr; }
+  .mistake-grid-wide { grid-template-columns: 1fr; }
+  .metrics-row { grid-template-columns: 1fr 1fr; }
+  .rules-grid { grid-template-columns: 1fr; }
+  .term-grid-wide { grid-template-columns: 1fr 1fr; }
+  .premise-grid { grid-template-columns: 1fr; }
+  .feature-grid { grid-template-columns: 1fr; }
+  .hist-grid { grid-template-columns: 1fr 1fr; }
+  .flow-grid { grid-template-columns: 1fr; }
+  .form-grid-4 { grid-template-columns: 1fr 1fr; }
+  .form-grid-3 { grid-template-columns: 1fr; }
+  .chart { height: 260px; }
+  .chart-lg { height: 300px; }
+  .chart-sm { height: 190px; }
+  .metric-value { font-size: 28px; }
+  #backTop, #tipBtn { right: 14px; width: 42px; height: 42px; font-size: 18px; }
+  #backTop { bottom: 18px; }
+  #tipBtn { bottom: 68px; }
+  .section-header { flex-wrap: wrap; }
+  .section-sub { margin-left: 0; width: 100%; }
+  table { min-width: 720px; }
+  table th, table td { padding: 11px 10px; font-size: 13px; }
+  .table-outer .scroll-hint { opacity: 1; }
+  .topnav-inner { padding: 8px 14px; gap: 10px; }
+  .topnav-brand { display: none; }
+  .topnav-link { padding: 7px 11px; font-size: 12px; }
+  .term:hover::after, .term:focus::after, .term:active::after {
+    width: calc(100vw - 48px); left: 0; transform: none;
+  }
+}
+@media(max-width:480px) {
+  .metrics-row { grid-template-columns: 1fr; }
+  .guide-grid { grid-template-columns: 1fr; }
+  .hist-grid { grid-template-columns: 1fr; }
+  .form-grid-4 { grid-template-columns: 1fr; }
+  .term-grid-wide { grid-template-columns: 1fr; }
+  .calc-btn { width: 100%; }
+  .calc-actions { flex-direction: column; align-items: stretch; }
+}
+@media(prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .reveal { opacity: 1; transform: none; }
+}
+
+/* 打印样式 */
+@media print {
+  .topnav, #backTop, #tipBtn, #tipModal, .read-progress { display: none !important; }
+  body { background: #fff !important; color: #111 !important; }
+  body::before, body::after { display: none !important; }
+  header, .card, .table-wrap, .metric-box, .rule-item, .term-cell,
+  .traffic-item, .wizard-content, .result-box, .explain-box {
+    background: #fff !important; color: #111 !important;
+    border-color: #ccc !important; box-shadow: none !important;
+  }
+  h1, .card-title, .section-title, .metric-value { color: #111 !important; -webkit-text-fill-color: #111 !important; background: none !important; }
+  .chart, .table-outer { break-inside: avoid; }
+}
+</style>
+<!-- 百度统计开始 -->
+<script>
+var _hmt = _hmt || [];
+(function() {
+  var hm = document.createElement("script");
+  hm.src = "https://hm.baidu.com/hm.js?0fdd438b3cc317189d52cd3529367d1e";
+  var s = document.getElementsByTagName("script")[0]; 
+  s.parentNode.insertBefore(hm, s);
+})();
+</script>
+<!-- 百度统计结束 -->
+</head>
+<body>
+
+<!-- 顶部吸顶导航 -->
+<nav class="topnav" id="topnav" aria-label="章节导航">
+  <div class="topnav-inner">
+    <div style="display:flex; align-items:center; gap:16px; flex-shrink:0;">
+      <a href="index.html" class="topnav-back" title="返回 Structura 主工具">
+        <span aria-hidden="true">←</span> 返回
+      </a>
+      <div class="topnav-brand">四资产跨期配置仿真</div>
+    </div>
+    <div class="topnav-links">
+      <a href="#sec-1" class="topnav-link" data-target="sec-1">我该做什么</a>
+      <a href="#sec-2" class="topnav-link" data-target="sec-2">为什么这样做</a>
+      <a href="#sec-3" class="topnav-link" data-target="sec-3">细节与工具</a>
+      <a href="#sec-4" class="topnav-link" data-target="sec-4">模拟结果</a>
+      <a href="#sec-5" class="topnav-link" data-target="sec-5">风险与声明</a>
+      <button type="button" class="topnav-link contact" id="contactBtn" title="点击复制微信号">联系方式 · zcy1314121</button>
+    </div>
+  </div>
+  <div class="read-progress" id="readProgress" role="progressbar" aria-label="阅读进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+</nav>
+
+<button type="button" id="backTop" aria-label="回到顶部"><span aria-hidden="true">↑</span></button>
+<button type="button" id="tipBtn" aria-label="扫码支持作者"><span aria-hidden="true">☕</span></button>
+
+<div id="tipModal" role="dialog" aria-modal="true" aria-label="赞赏码">
+  <div class="tip-modal-inner">
+    <button type="button" class="tip-modal-close" id="tipClose" aria-label="关闭">✕</button>
+    <img src="ma.jpg" alt="赞赏码" onerror="this.parentNode.innerHTML='<p style=\'padding:20px;color:#333;text-align:center;\'>图片未加载，请检查 ma.jpg 是否存在</p>'">
+    <div class="tip-modal-caption">扫码支持 · 感谢鼓励</div>
+  </div>
+</div>
+
+<div class="container">
+
+<!-- 精简首屏 -->
+<header>
+    <div class="header-inner">
+    <!-- 新增：头像与标题的 Flex 布局 -->
+    <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 10px;">
+      <img src="avatar.jpg" alt="头像" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent); box-shadow: 0 0 15px rgba(0,180,255,0.4);">
+      <div>
+        <div class="header-tag" style="margin-bottom: 8px;">FOUR-ASSET · MONTE CARLO · DYNAMIC WITHDRAWAL</div>
+        <h1 style="margin-bottom: 0;">四资产跨期配置的蒙特卡洛仿真与动态提取规则设计<span class="h1-author">Zhao | Struct. E.</span></h1>
+      </div>
+    </div>
+    <p class="header-conclusion">
+      34 岁起每日定投 200 元，60 岁退休目标年提取 5 万元。基准情景下
+      <span class="hl-blue">90 岁模拟成功率 100%</span>，
+      90 岁中位总资产 <span class="hl">585.4 万元</span>（名义值）。
+      覆盖中国股票、美国股票、中国债券、黄金四类资产，含动态提取、回撤保护与现金池缓冲。
+    </p>
+    <div class="header-badges">
+      <span class="badge">📊 10,000 条路径模拟</span>
+      <span class="badge gold">⚡ 基准成功率 100%（模拟值，非收益保证）</span>
+    </div>
+  </div>
+</header>
+
+<!-- ============================================================
+     PART 1 · 我该做什么
+     ============================================================ -->
+<section class="section reveal" id="sec-1">
+  <div class="section-header">
+    <span class="section-num">PART 1</span>
+    <h2 class="section-title">我该做什么</h2>
+    <span class="section-sub">红绿灯 · 年龄向导 · 五步执行</span>
+  </div>
+
+  <!-- 红绿灯 -->
+  <div style="margin-bottom:24px;">
+    <div class="traffic-grid">
+      <div class="traffic-item green"><div class="traffic-light-icon" aria-hidden="true">🟢</div><div class="traffic-title">绿灯：定投期</div><div class="traffic-desc">每个交易日定投 200 元，按比例买入；每年 12 月 31 日再平衡；每 3 年做一次检视。</div><div class="traffic-age">适用年龄：34~59 岁</div></div>
+      <div class="traffic-item blue"><div class="traffic-light-icon" aria-hidden="true">🔵</div><div class="traffic-title">蓝灯：提取期</div><div class="traffic-desc">每年 1 月 1 日评估并提取；优先动用现金池，不足部分再卖债券、黄金、美股、A 股。</div><div class="traffic-age">适用年龄：60~95 岁</div></div>
+      <div class="traffic-item yellow"><div class="traffic-light-icon" aria-hidden="true">🟡</div><div class="traffic-title">黄灯：丰收年</div><div class="traffic-desc">总资产 &gt; 1.2 倍基准，可加提 10% 超额部分（上限 6 万随通胀）；同时启动现金池回补。</div><div class="traffic-age">触发条件：TA &gt; 1.2 × B0_real</div></div>
+      <div class="traffic-item red"><div class="traffic-light-icon" aria-hidden="true">🔴</div><div class="traffic-title">红灯：禁售期</div><div class="traffic-desc">权益回撤 ≥ 20% 时禁售股票，只卖债券、黄金或动用现金池。</div><div class="traffic-age">触发条件：权益回撤 ≥ 20%</div></div>
+    </div>
+  </div>
+
+  <!-- 年龄向导 -->
+  <div class="card" style="margin-bottom:20px; border-left: 4px solid var(--accent);">
+    <h3 class="card-title" style="color: var(--accent);">🧭 现在该做什么？年龄向导</h3>
+    <div class="card-subtitle">输入你现在的年龄，一键生成从今天开始的完整行动清单</div>
+    <div class="wizard-grid">
+      <div class="wizard-age-box">
+        <label for="wizardAge" class="wizard-age-label" style="display:block;">你的年龄</label>
+        <div class="wizard-age-row">
+          <button type="button" class="stepper-btn" id="wizardMinus" aria-label="年龄减一">−</button>
+          <input type="number" id="wizardAge" class="wizard-age-input" value="34" min="34" max="95" inputmode="numeric" aria-label="你的年龄">
+          <button type="button" class="stepper-btn" id="wizardPlus" aria-label="年龄加一">+</button>
+        </div>
+        <div class="wizard-age-label">岁 · 请输入你的年龄（34~95）</div>
+        <button type="button" class="calc-btn" id="wizardBtn" style="margin-top:16px; padding:10px 24px; font-size:14px;">📋 生成行动清单</button>
+      </div>
+      <div class="wizard-content" id="wizardContent" aria-live="polite">
+        <div style="color:var(--text-muted);font-size:14px;">输入你的年龄后，点击左侧按钮，这里会显示你现在该做什么。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 五步执行 -->
+  <div style="margin-bottom:20px;">
+    <div class="guide-note">💡 每日定投金额仅供参考，实际可以进行等比例缩放。</div>
+    <div class="guide-grid">
+      <div class="guide-step"><div class="guide-num">1</div><div class="guide-title">账户准备</div><div class="guide-desc">在券商或基金平台开通账户，准备 6 个月生活应急金，配置好医疗险、意外险等基础保障。</div></div>
+      <div class="guide-step"><div class="guide-num">2</div><div class="guide-title">设定定投</div><div class="guide-desc">每个交易日定投 200 元（年约 5 万元），按当前年龄对应的目标配置比例分配（34 岁时为 A 股 50% / 债券 25% / 美股 20% / 黄金 5%）。场外份额满 2 万元后转投场内 ETF。</div></div>
+      <div class="guide-step"><div class="guide-num">3</div><div class="guide-title">年度再平衡</div><div class="guide-desc">每年 12 月 31 日，将组合调整至下一年龄的目标配置比例。</div></div>
+      <div class="guide-step"><div class="guide-num">4</div><div class="guide-title">定期检视</div><div class="guide-desc">每 3 年对比实际 TWR 与中枢 TWR，差额 &gt; ±2% 时调整定投（+10% 或 -5%）。</div></div>
+      <div class="guide-step"><div class="guide-num">5</div><div class="guide-title">退休提取</div><div class="guide-desc">60 岁后按动态规则提取，丰收年加提、困难年保底，权益回撤 20% 时禁售股票。</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     PART 2 · 为什么这样做
+     ============================================================ -->
+<section class="section reveal" id="sec-2">
+  <div class="section-header">
+    <span class="section-num">PART 2</span>
+    <h2 class="section-title">为什么这样做</h2>
+    <span class="section-sub">核心逻辑 · 资产假设 · 历史对照</span>
+  </div>
+
+  <!-- 核心特点 -->
+  <div class="card" style="margin-bottom:20px; border-left: 4px solid var(--accent);">
+    <h3 class="card-title" style="color: var(--accent);">🧭 方案核心特点</h3>
+    <div class="card-subtitle">本方案设计的六大底层逻辑与核心策略</div>
+    <div class="feature-grid">
+      <div class="principle-item"><span class="p-icon" aria-hidden="true">🛡️</span><div class="p-body"><strong>0. 风险管理与货币匹配</strong><br>该组合充分考虑了汇率风险、货币匹配以及尾部风险。</div></div>
+      <div class="principle-item"><span class="p-icon" aria-hidden="true">⏱️</span><div class="p-body"><strong>1. 定投不择时</strong><br>采用每日定投入场策略，不进行市场择时。</div></div>
+      <div class="principle-item"><span class="p-icon" aria-hidden="true">🔄</span><div class="p-body"><strong>2. 每年再平衡</strong><br>每年年末进行一次组合再平衡，将权重恢复至目标配置。</div></div>
+      <div class="principle-item"><span class="p-icon" aria-hidden="true">📉</span><div class="p-body"><strong>3. 权益资产动态减少</strong><br>权益资产随年龄增长逐步减少，构建下滑路径。</div></div>
+      <div class="principle-item"><span class="p-icon" aria-hidden="true">🔍</span><div class="p-body"><strong>4. 定期寻优标的</strong><br>每隔 3 年寻找更优投资标的，纳入组合替代不达标资产。</div></div>
+      <div class="principle-item"><span class="p-icon" aria-hidden="true">🌳</span><div class="p-body"><strong>5. 永久持有期</strong><br>持有期设定为永久，不做短期波段交易。</div></div>
+    </div>
+  </div>
+
+  <!-- 资产收益率 -->
+  <div class="card" style="margin-bottom:20px;">
+    <h3 class="card-title">📈 各类资产预估收益率与波动率</h3>
+    <div class="card-subtitle">未扣除基金费用、通胀；标普 500 为美元计价，汇率变动另计</div>
+    <div class="table-outer">
+      <span class="scroll-hint" aria-hidden="true">← 左右滑动 →</span>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th scope="col">资产</th><th scope="col">计价货币</th><th scope="col">压力收益率</th><th scope="col">保守收益率</th><th scope="col">中枢收益率</th><th scope="col">乐观收益率</th><th scope="col">年化波动率</th></tr></thead>
+          <tbody>
+            <tr><td>中证 A500</td><td>人民币</td><td>2.0% / 1.5%</td><td>4.5%</td><td>6.5%</td><td>9.0%</td><td>22.0%</td></tr>
+            <tr><td>华夏亚债中国指数</td><td>人民币</td><td>1.5% / 1.0%</td><td>2.5%</td><td>3.0%</td><td>3.8%</td><td>2.5%</td></tr>
+            <tr><td>标普 500（美元）</td><td>美元</td><td>2.5% / 1.5%</td><td>5.5%</td><td>7.0%</td><td>8.5%</td><td>17.0%</td></tr>
+            <tr><td>黄金（人民币）</td><td>人民币</td><td>1.5% / 1.0%</td><td>3.5%</td><td>4.5%</td><td>6.0%</td><td>16.0%</td></tr>
+            <tr><td>美元兑人民币汇率变动</td><td>—</td><td>-3.0%</td><td>-0.5%</td><td>0.0%</td><td>+3.0%</td><td>4.5%</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <span class="table-fade" aria-hidden="true"></span>
+    </div>
+    <p class="fee-note">注：标普 500 人民币净收益 = (1 + 美元收益 - 1.00%) × (1 + 汇率变动) - 1；组合净收益率 = Σ(资产比例 × 资产净收益率)。</p>
+  </div>
+
+  <!-- CPI -->
+  <div class="card" style="margin-bottom:20px;">
+    <h3 class="card-title">📉 中国历史 CPI 同比增速（2000-2026，年度）</h3>
+    <div class="card-subtitle">数据来源：国家统计局 · 与方案假设 2.5% 通胀率对照</div>
+    <div id="cpiChart" class="chart-lg chart-skeleton" data-chart="cpiChart" role="img" aria-label="中国历史 CPI 同比增速柱状图">图表加载中…</div>
+    <p class="fee-note">过去 27 年中国 CPI 同比增速均值约 1.90%，2025 年全年 CPI 与上年持平，2026 年基于前 8 个月累计同比涨幅估算为 0.9%（估算值）。方案假设的 2.5% 通胀率偏保守，为长期购买力提供更稳妥的缓冲。</p>
+  </div>
+
+  <!-- 资产配置 + 相关性 -->
+  <div class="grid">
+    <div class="card">
+      <h3 class="card-title">📊 生命周期资产配置下滑路径</h3>
+      <div class="card-subtitle">34 → 65 岁关键节点线性插值</div>
+      <div id="allocationChart" class="chart chart-skeleton" data-chart="allocationChart" role="img" aria-label="生命周期资产配置下滑路径">图表加载中…</div>
+    </div>
+    <div class="card">
+      <h3 class="card-title">🔗 风险因子相关系数矩阵</h3>
+      <div class="card-subtitle">基于近 20 年历史数据估算</div>
+      <div id="corrChart" class="chart chart-skeleton" data-chart="corrChart" role="img" aria-label="风险因子相关系数矩阵">图表加载中…</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     PART 3 · 细节与工具
+     ============================================================ -->
+<section class="section reveal" id="sec-3">
+  <div class="section-header">
+    <span class="section-num">PART 3</span>
+    <h2 class="section-title">细节与工具</h2>
+    <span class="section-sub">计算器 · 规则 · 组合 · 术语</span>
+  </div>
+
+  <!-- 三年检视计算器 -->
+  <div class="card" style="margin-bottom:20px; border-left: 4px solid var(--success);">
+    <h3 class="card-title" style="color: var(--success);">🧮 三年检视定投金额调整计算器</h3>
+    <div class="card-subtitle">输入过去 3 年实际收益率与 CPI，自动对比中枢 TWR 并计算下一年每日定投金额</div>
+    <div class="form-grid-4">
+      <div><label class="calc-label" for="calcAge">当前年龄（34-59）</label><input type="number" id="calcAge" class="calc-input" value="36" min="34" max="59" inputmode="numeric"></div>
+      <div><label class="calc-label" for="calcDaily">当前每日定投（元）</label><input type="number" id="calcDaily" class="calc-input" value="200" min="160" max="400" inputmode="decimal"></div>
+      <div><label class="calc-label" for="calcR1">第 1 年实际收益率（%）</label><input type="number" id="calcR1" class="calc-input" value="4.5" step="0.1" inputmode="decimal"></div>
+      <div><label class="calc-label" for="calcCPI1">第 1 年 CPI（%）</label><input type="number" id="calcCPI1" class="calc-input" value="2.0" step="0.1" inputmode="decimal"></div>
+    </div>
+    <div class="form-grid-4">
+      <div><label class="calc-label" for="calcR2">第 2 年实际收益率（%）</label><input type="number" id="calcR2" class="calc-input" value="3.2" step="0.1" inputmode="decimal"></div>
+      <div><label class="calc-label" for="calcCPI2">第 2 年 CPI（%）</label><input type="number" id="calcCPI2" class="calc-input" value="1.5" step="0.1" inputmode="decimal"></div>
+      <div><label class="calc-label" for="calcR3">第 3 年实际收益率（%）</label><input type="number" id="calcR3" class="calc-input" value="5.8" step="0.1" inputmode="decimal"></div>
+      <div><label class="calc-label" for="calcCPI3">第 3 年 CPI（%）</label><input type="number" id="calcCPI3" class="calc-input" value="2.5" step="0.1" inputmode="decimal"></div>
+    </div>
+    <div class="calc-actions">
+      <button type="button" class="calc-btn" id="calcBtn">📊 计算调整后定投金额</button>
+      <button type="button" class="calc-btn ghost" id="calcReset">↺ 恢复默认值</button>
+    </div>
+    <div id="calcError" class="inline-alert error" role="alert"></div>
+    <div id="calcResult" style="display:none;" aria-live="polite"></div>
+  </div>
+
+  <!-- 退休提取计算器 -->
+  <div class="card" style="margin-bottom:20px; border-left: 4px solid var(--gold);">
+    <h3 class="card-title" style="color: var(--gold);">💸 退休后提取额快速计算器</h3>
+    <div class="card-subtitle">输入当前总资产和退休基准，自动计算当年应提取金额</div>
+    <div class="form-grid-3">
+      <div><label class="calc-label" for="withdrawAge">当前年龄（60-95）</label><input type="number" id="withdrawAge" class="calc-input" value="65" min="60" max="95" inputmode="numeric"></div>
+      <div><label class="calc-label" for="withdrawTA">当前总资产 TA（万元）</label><input type="number" id="withdrawTA" class="calc-input" value="120" step="0.1" inputmode="decimal"></div>
+      <div><label class="calc-label" for="withdrawB0">退休基准 B0_smooth（万元）</label><input type="number" id="withdrawB0" class="calc-input" value="100" step="0.1" inputmode="decimal"></div>
+    </div>
+    <div class="calc-actions">
+      <button type="button" class="calc-btn" id="withdrawBtn" style="background:linear-gradient(135deg,#ffd93d,#ff9f43);box-shadow:0 4px 14px rgba(255,217,61,.3);color:#4a3000;">💰 计算当年提取额</button>
+      <button type="button" class="calc-btn ghost" id="withdrawReset">↺ 恢复默认值</button>
+    </div>
+    <div id="withdrawError" class="inline-alert error" role="alert"></div>
+    <div id="withdrawResult" style="display:none;" aria-live="polite"></div>
+  </div>
+
+  <!-- 动态提取流程 -->
+  <div class="card" style="margin-bottom:20px;">
+    <h3 class="card-title">💡 退休后动态提取流程详解</h3>
+    <div class="card-subtitle">每年 1 月 1 日评估，基于总资产（组合 + 现金池）决定提取额</div>
+    <div class="flow-grid">
+      <div class="rule-item"><strong>① 计算比值 r</strong><br>r = 总资产 TA / 通胀调整后基准 B0_real</div>
+      <div class="rule-item gold"><strong>② 确定提取额</strong><br>r &gt; 1.2：目标 + 10% 超额，上限 6 万<br>0.8 ≤ r ≤ 1.2：目标额 5 万<br>r &lt; 0.8：保底额 3.5 万</div>
+      <div class="rule-item danger"><strong>③ 扣款顺序</strong><br>现金池 → 债券 → 黄金 → 美股 → A 股</div>
+    </div>
+    <div style="background:rgba(0,0,0,.2);border-radius:12px;padding:14px;font-size:13px;color:#b0b8c8;line-height:1.85;">
+      <strong>示例：</strong>60 岁退休，目标 5 万，B0_smooth = 100 万。若总资产 120 万（r = 1.2），提取 5 万；若总资产 150 万（r = 1.5），提取 5 万 + 10% × 30 万 = 8 万，但不超过 6 万。若总资产 70 万（r = 0.7），提取保底 3.5 万。若权益回撤 ≥ 20%，禁售股票，优先动用现金池、债券、黄金。
+    </div>
+  </div>
+
+  <!-- 基金组合 -->
+  <div class="card" style="margin-bottom:20px;">
+    <h3 class="card-title">📌 核心基金组合</h3>
+    <div class="card-subtitle">四类资产、四只基金、综合费率 0.55%</div>
+    <div class="table-outer">
+      <span class="scroll-hint" aria-hidden="true">← 左右滑动 →</span>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th scope="col">基金名称</th><th scope="col">代码</th><th scope="col">类别</th><th scope="col">配置比例</th><th scope="col">显性费率</th><th scope="col">综合费率</th></tr></thead>
+          <tbody>
+            <tr><td>华泰柏瑞中证 A500 ETF 联接 A</td><td>022438</td><td>中国股票</td><td>50%</td><td>0.20%</td><td>0.53%</td></tr>
+            <tr><td>华夏亚债中国指数 A</td><td>001021</td><td>中国债券</td><td>25%</td><td>0.18%</td><td>0.23%</td></tr>
+            <tr><td>博时标普 500 ETF 联接 A</td><td>050025</td><td>美国股票</td><td>20%</td><td>0.80%</td><td>1.00%</td></tr>
+            <tr><td>华夏黄金 ETF 联接 A</td><td>008701</td><td>黄金</td><td>5%</td><td>0.20%</td><td>0.49%</td></tr>
+            <tr style="background:rgba(0,180,255,.05);"><td><strong>加权平均</strong></td><td>—</td><td>—</td><td><strong>100%</strong></td><td><strong>0.32%</strong></td><td><strong>0.55%</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <span class="table-fade" aria-hidden="true"></span>
+    </div>
+    <p class="fee-note">⚠️ 基金代码与费率仅为示例，请以基金公司最新公告为准。</p>
+  </div>
+
+  <!-- 规则速查 -->
+  <div class="card" style="margin-bottom:20px;">
+    <h3 class="card-title">⚙️ 核心执行规则速查</h3>
+    <div class="card-subtitle">务必牢记的 11 条关键规则</div>
+    <div class="rules-grid">
+      <div class="rule-item"><strong>① 扣款顺序</strong>：现金池 → 债券 → 黄金 → 美股 → A 股</div>
+      <div class="rule-item"><strong>② 权益禁售</strong>：年度回报 ≤ -20% 或累计回撤 ≥ 20% 时禁售股票</div>
+      <div class="rule-item"><strong>③ 现金池上限</strong>：3 倍目标提取额，年收益 0%</div>
+      <div class="rule-item"><strong>④ 定投范围</strong>：每个交易日 160~400 元，年增 2.5%</div>
+      <div class="rule-item success"><strong>⑤ 场外转场内</strong>：单只基金场外份额满 2 万元后转投对应场内 ETF</div>
+      <div class="rule-item"><strong>⑥ 再平衡</strong>：每年 12 月 31 日调整至下一年龄配置</div>
+      <div class="rule-item"><strong>⑦ 检视周期</strong>：每 3 年 TWR 差 &gt; ±2% 时调整定投</div>
+      <div class="rule-item"><strong>⑧ 55 岁预存</strong>：55 岁起每年转 2.5 万（通胀调整）至现金池</div>
+      <div class="rule-item"><strong>⑨ 提取策略</strong>：丰收年加提 10%；正常年目标额 5 万；困难年保底 3.5 万</div>
+      <div class="rule-item gold"><strong>⑩ 丰收年回补</strong>：若总资产 &gt; 1.2 倍基准且现金池低于 3 倍目标额，自动补足</div>
+      <div class="rule-item danger"><strong>⑪ 困难年动用</strong>：若总资产 &lt; 0.8 倍基准，动用现金池兜底保底提取额</div>
+    </div>
+  </div>
+
+  <!-- 术语词典（全宽 4 列） -->
+  <div class="card" style="margin-bottom:20px; border-left: 4px solid #a8c6fa;">
+    <h3 class="card-title" style="color: #a8c6fa;">📖 小白术语词典</h3>
+    <div class="card-subtitle">鼠标悬停、点击或键盘 Tab 聚焦术语，查看白话解释</div>
+    <div class="term-grid-wide">
+      <div class="term-cell">
+        <span class="term-name term" tabindex="0" aria-describedby="term-twr" data-tip="时间加权收益率，剔除资金进出影响后的真实投资表现。">TWR</span>
+        <span id="term-twr" class="sr-only">时间加权收益率，剔除资金进出影响后的真实投资表现。</span>
+        <span class="term-def">剔除资金进出影响的真实收益率</span>
+      </div>
+      <div class="term-cell">
+        <span class="term-name term" tabindex="0" aria-describedby="term-b0" data-tip="退休基准。用退休前 3 年组合账户净值的平均值，作为提取比例的基准。">B0_smooth</span>
+        <span id="term-b0" class="sr-only">退休基准。用退休前 3 年组合账户净值的平均值，作为提取比例的基准。</span>
+        <span class="term-def">退休基准</span>
+      </div>
+      <div class="term-cell">
+        <span class="term-name term" tabindex="0" aria-describedby="term-rebalance" data-tip="把涨得多的资产卖掉一部分，跌得多的补上，让各资产恢复最初设定的比例。">再平衡</span>
+        <span id="term-rebalance" class="sr-only">把涨得多的资产卖掉一部分，跌得多的补上，让各资产恢复最初设定的比例。</span>
+        <span class="term-def">每年年末把资产恢复目标配置</span>
+      </div>
+      <div class="term-cell">
+        <span class="term-name term" tabindex="0" aria-describedby="term-drawdown" data-tip="资产从历史高点下跌的幅度。比如从 100 万跌到 80 万，回撤 20%。">回撤</span>
+        <span id="term-drawdown" class="sr-only">资产从历史高点下跌的幅度。比如从 100 万跌到 80 万，回撤 20%。</span>
+        <span class="term-def">从最高点下跌的百分比</span>
+      </div>
+      <div class="term-cell">
+        <span class="term-name term" tabindex="0" aria-describedby="term-equity" data-tip="权益类资产包括股票型基金，即中证 A500 和标普 500。">权益资产</span>
+        <span id="term-equity" class="sr-only">权益类资产包括股票型基金，即中证 A500 和标普 500。</span>
+        <span class="term-def">股票类资产</span>
+      </div>
+      <div class="term-cell">
+        <span class="term-name term" tabindex="0" aria-describedby="term-floor" data-tip="退休后市场极差时（总资产低于 0.8 倍基准），至少也能提取到的保底金额。">保底提取额</span>
+        <span id="term-floor" class="sr-only">退休后市场极差时（总资产低于 0.8 倍基准），至少也能提取到的保底金额。</span>
+        <span class="term-def">最差情况下的保底金额</span>
+      </div>
+      <div class="term-cell">
+        <span class="term-name term" tabindex="0" aria-describedby="term-bonus" data-tip="退休后市场特别好时（总资产超过 1.2 倍基准），除目标额外可加提 10% 超额部分。">丰收年加提</span>
+        <span id="term-bonus" class="sr-only">退休后市场特别好时（总资产超过 1.2 倍基准），除目标额外可加提 10% 超额部分。</span>
+        <span class="term-def">资产特别好时多提一点</span>
+      </div>
+      <div class="term-cell">
+        <span class="term-name term" tabindex="0" aria-describedby="term-cashpool" data-tip="独立于投资组合的现金储备池，年收益 0%。用于困难年份补充提取。">现金池</span>
+        <span id="term-cashpool" class="sr-only">独立于投资组合的现金储备池，年收益 0%。用于困难年份补充提取。</span>
+        <span class="term-def">兜底用的现金缓冲池</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 新手常见错误（全宽 3 列） -->
+  <div class="card" style="margin-bottom:20px; border-left: 4px solid #ff6b6b;">
+    <h3 class="card-title" style="color: #ff6b6b;">⚠️ 新手常见错误清单</h3>
+    <div class="card-subtitle">以下 6 个错误，是 90% 的小白都会踩的坑。绿色是正确做法</div>
+    <div class="mistake-grid-wide">
+      <div class="mistake-item"><div class="mistake-icon" aria-hidden="true">😱</div><div class="mistake-content"><div class="mistake-title">① 大跌时恐慌卖出</div><div>市场暴跌 20% 时把基金全卖了。</div><div class="mistake-correct">✅ 正确：继续定投，甚至加大定投</div></div></div>
+      <div class="mistake-item"><div class="mistake-icon" aria-hidden="true">🤩</div><div class="mistake-content"><div class="mistake-title">② 涨得好就频繁加仓</div><div>看到账户涨了，忍不住多投钱进去。</div><div class="mistake-correct">✅ 正确：按计划定投，每 3 年检视，Δ &gt; +2% 时反而要减少定投</div></div></div>
+      <div class="mistake-item"><div class="mistake-icon" aria-hidden="true">💸</div><div class="mistake-content"><div class="mistake-title">③ 提取时先卖股票</div><div>觉得股票涨得好，先从股票里拿钱。</div><div class="mistake-correct">✅ 正确：先动用现金池，再卖债券 → 黄金 → 美股 → A 股</div></div></div>
+      <div class="mistake-item"><div class="mistake-icon" aria-hidden="true">🎲</div><div class="mistake-content"><div class="mistake-title">④ 一次性满仓买入</div><div>攒了 10 万块，一次性全买进去。</div><div class="mistake-correct">✅ 正确：每个交易日定投，摊平成本，避免择时</div></div></div>
+      <div class="mistake-item"><div class="mistake-icon" aria-hidden="true">🔄</div><div class="mistake-content"><div class="mistake-title">⑤ 忘记每年再平衡</div><div>买完就不管了，几年后再看比例全乱了。</div><div class="mistake-correct">✅ 正确：每年 12 月 31 日调回目标比例</div></div></div>
+      <div class="mistake-item"><div class="mistake-icon" aria-hidden="true">📉</div><div class="mistake-content"><div class="mistake-title">⑥ 退休后熊市还猛卖股票</div><div>退休后遇到股市大跌，还在卖股票提取。</div><div class="mistake-correct">✅ 正确：权益回撤 ≥ 20% 时禁售股票，只卖债券、黄金或用现金池</div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     PART 4 · 模拟结果
+     ============================================================ -->
+<section class="section reveal" id="sec-4">
+  <div class="section-header">
+    <span class="section-num">PART 4</span>
+    <h2 class="section-title">模拟结果</h2>
+    <span class="section-sub">成功率 · 资产路径 · 提取路径 · 分布</span>
+  </div>
+
+  <!-- 核心指标 -->
+  <div class="metrics-row">
+    <div class="metric-box"><div class="metric-icon" aria-hidden="true">🎯</div><div class="metric-value">100.00%</div><div class="metric-label">90 岁模拟成功率（基准）</div></div>
+    <div class="metric-box"><div class="metric-icon" aria-hidden="true">💰</div><div class="metric-value">585.4 万</div><div class="metric-label" style="font-size:11px;">90 岁中位总资产（名义值）</div></div>
+    <div class="metric-box"><div class="metric-icon" aria-hidden="true">💸</div><div class="metric-value">48,241 元</div><div class="metric-label" style="font-size:11px;">年均实际提取额（60 岁购买力）</div></div>
+    <div class="metric-box"><div class="metric-icon" aria-hidden="true">🏦</div><div class="metric-value">5.9 年</div><div class="metric-label">平均现金池扣款年数</div><div class="metric-note">困难年真正兜底（压力 1.1 年）；丰收年先提取后回补（乐观 21.9 年）。<strong>数值高低不代表资产好坏。</strong></div></div>
+  </div>
+
+  <!-- 成功率 -->
+  <div class="card" style="margin-bottom:20px;">
+    <h3 class="card-title">📈 不同情景下退休计划成功率</h3>
+    <div class="card-subtitle">90 岁与 95 岁成功率对比 · 7 种情景</div>
+    <div id="successChart" class="chart-lg chart-skeleton" data-chart="successChart" role="img" aria-label="不同情景下退休计划成功率">图表加载中…</div>
+  </div>
+
+  <!-- 资产路径三图 -->
+  <div class="grid">
+    <div class="card">
+      <h3 class="card-title">💰 组合账户净值（基准）</h3>
+      <div class="card-subtitle">中位数与 5%~95% 分位区间（名义值）</div>
+      <div id="portfolioChart" class="chart chart-skeleton" data-chart="portfolioChart" role="img" aria-label="组合账户净值">图表加载中…</div>
+    </div>
+    <div class="card">
+      <h3 class="card-title">🏦 备用现金池（基准）</h3>
+      <div class="card-subtitle">中位数与 5%~95% 分位区间（名义值）</div>
+      <div id="cashPoolChart" class="chart chart-skeleton" data-chart="cashPoolChart" role="img" aria-label="备用现金池">图表加载中…</div>
+    </div>
+    <div class="card">
+      <h3 class="card-title">📊 总资产（基准）</h3>
+      <div class="card-subtitle">组合账户 + 现金池（名义值）</div>
+      <div id="totalAssetChart" class="chart chart-skeleton" data-chart="totalAssetChart" role="img" aria-label="总资产">图表加载中…</div>
+    </div>
+  </div>
+
+  <!-- 提取额路径 -->
+  <div class="card" style="margin-bottom:20px;">
+    <h3 class="card-title">💸 退休后提取额中位数路径（基准 · 示意）</h3>
+    <div class="card-subtitle">实际提取 vs 目标提取 vs 保底提取（曲线为规则示意，非逐路径模拟输出）</div>
+    <div id="withdrawalChart" class="chart-lg chart-skeleton" data-chart="withdrawalChart" role="img" aria-label="退休后提取额路径">图表加载中…</div>
+  </div>
+
+  <!-- 增速解释 -->
+  <div class="card" style="margin-bottom:20px;">
+    <div class="explain-box" style="margin-top:0;">
+      <strong>🔍 为什么 80 岁后资产增速加快（斜率变大）？</strong><br><br>
+      这并非策略调整所致，而是 <strong>复利效应 + 提取占比下降</strong> 的必然数学结果。<br><br>
+      <strong>① 绝对基数变大：</strong>60 岁时组合约 240 万，收益按 5% 算为 12 万/年；80 岁时已达约 420 万，同样 5% 收益为 21 万/年。<br><br>
+      <strong>② 提取占比降低：</strong>80 岁时提取 8 万仅占 420 万资产的不到 2%，剩余收益全部留存复利。<strong>资产进入"收益远大于提取"的滚雪球阶段</strong>。<br><br>
+      <strong>结论：</strong>这是指数曲线末端的自然形态，并非模型错误。
+    </div>
+  </div>
+
+  <!-- 直方图 -->
+  <div class="card" style="margin-bottom:20px;">
+    <h3 class="card-title">📉 90 岁通胀调整后总资产分布</h3>
+    <div class="card-subtitle">不同情景下的资产分布 · 模拟样本近似</div>
+    <div class="hist-grid">
+      <div id="histBenchmark" class="chart-sm chart-skeleton" data-chart="histBenchmark" role="img" aria-label="基准情景资产分布">加载中</div>
+      <div id="histStress" class="chart-sm chart-skeleton" data-chart="histStress" role="img" aria-label="压力情景资产分布">加载中</div>
+      <div id="histConservative" class="chart-sm chart-skeleton" data-chart="histConservative" role="img" aria-label="保守情景资产分布">加载中</div>
+      <div id="histOptimistic" class="chart-sm chart-skeleton" data-chart="histOptimistic" role="img" aria-label="乐观情景资产分布">加载中</div>
+      <div id="histFatTail" class="chart-sm chart-skeleton" data-chart="histFatTail" role="img" aria-label="厚尾情景资产分布">加载中</div>
+      <div id="histHighInflation" class="chart-sm chart-skeleton" data-chart="histHighInflation" role="img" aria-label="高通胀情景资产分布">加载中</div>
+      <div id="histMedical" class="chart-sm chart-skeleton" data-chart="histMedical" role="img" aria-label="医疗支出情景资产分布">加载中</div>
+      <div style="display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.1);border-radius:12px;height:240px;flex-direction:column;">
+        <div style="font-size:44px;margin-bottom:10px;" aria-hidden="true">📊</div>
+        <div style="font-size:13px;color:var(--text-muted);text-align:center;padding:0 20px;">共 7 种情景<br>每次 10,000 条模拟路径</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 汇总表 -->
+  <div class="card" style="margin-bottom:20px;">
+    <h3 class="card-title">📋 蒙特卡洛模拟结果汇总</h3>
+    <div class="card-subtitle">所有情景核心指标对比</div>
+    <p style="font-size:12px;color:var(--warn);margin-bottom:12px;padding:10px;background:rgba(255,171,0,.08);border-left:3px solid var(--warn);line-height:1.7;border-radius:6px;">
+      <strong>重要提示一（金额口径）：</strong>表中所有金额均为<strong>名义值</strong>（当年实际货币金额，未扣除通胀影响）。如需折算为 60 岁购买力，请参考"平均提取额"等指标。<br><br>
+      <strong>重要提示二（现金池动用年数定义）：</strong>该指标统计"当年提取时从现金池扣款"的年份数，含两种性质完全不同的情形：① 困难年真正兜底（压力仅 1.1 年）；② 丰收年"先提取后回补"的过路循环（乐观高达 21.9 年）。<strong>数值高低不能直接对应资产好坏。</strong>
+    </p>
+    <div class="table-outer">
+      <span class="scroll-hint" aria-hidden="true">← 左右滑动 →</span>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">情景</th>
+              <th scope="col">90 岁成功率</th>
+              <th scope="col">95 岁成功率</th>
+              <th scope="col">90 岁中位（万，名义）</th>
+              <th scope="col">90 岁 5% 分位（万，名义）</th>
+              <th scope="col">95 岁中位（万，名义）</th>
+              <th scope="col">95 岁 5% 分位（万，名义）</th>
+              <th scope="col">平均提取（元）</th>
+              <th scope="col"><abbr title="模拟中实际提取额低于当年保底额（3.5 万通胀调整值）的路径比例">保底失败概率</abbr></th>
+              <th scope="col"><abbr title="模拟中实际提取额低于当年目标额（5 万通胀调整值）的路径比例">提取缺口概率</abbr></th>
+              <th scope="col">现金池动用年数</th>
+            </tr>
+          </thead>
+          <tbody id="resultTable"></tbody>
+        </table>
+      </div>
+      <span class="table-fade" aria-hidden="true"></span>
+    </div>
+    <div class="table-footnote">
+      <strong>指标口径说明：</strong><br>
+      ① <strong>保底失败概率</strong>：模拟中实际提取额低于当年保底额（3.5 万元通胀调整值）的路径比例，数值越低越好；<br>
+      ② <strong>提取缺口概率</strong>：模拟中实际提取额低于当年目标额（5 万元通胀调整值）的路径比例，反映"达不到目标生活水准"的可能性；<br>
+      ③ 表中金额均为<strong>名义值</strong>（未扣除通胀），"中位""5% 分位"为对应时点总资产的分布统计；<br>
+      ④ <strong>现金池动用年数</strong>同时包含"困难年兜底"与"丰收年过路"两种情形，需结合情景综合判断。
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     PART 5 · 风险与声明
+     ============================================================ -->
+<section class="section reveal" id="sec-5">
+  <div class="section-header">
+    <span class="section-num">PART 5</span>
+    <h2 class="section-title">风险与声明</h2>
+    <span class="section-sub">风险提示 · 投资前提 · 免责声明</span>
+  </div>
+
+  <!-- 投资前提 -->
+  <div class="card" style="margin-bottom:20px; border-left: 4px solid #ff6b6b;">
+    <h3 class="card-title" style="color: #ff6b6b;">⚠️ 投资前提（重点说明）</h3>
+    <div class="card-subtitle">进入本方案前，必须先满足以下 4 项基础条件</div>
+    <div class="premise-grid">
+      <div class="rule-item danger"><strong>① 无负债压力</strong><br>没有负债，或即使长期失业也不影响继续还贷。</div>
+      <div class="rule-item danger"><strong>② 留有应急金</strong><br>至少留有 6 个月的生活开销作为应急资金。</div>
+      <div class="rule-item danger"><strong>③ 收入稳定覆盖</strong><br>日常收入能够稳定覆盖生活支出。</div>
+      <div class="rule-item danger"><strong>④ 全家保险配置齐全</strong><br>配置医疗险、意外险，选配重疾险，顶梁柱加寿险。</div>
+    </div>
+  </div>
+
+  <!-- 风险提示 -->
+  <div class="card" style="margin-bottom:20px;">
+    <h3 class="card-title">⚠️ 风险提示</h3>
+    <div class="card-subtitle">投资有风险，本方案不构成收益保证</div>
+    <div class="risk-grid">
+      <div class="risk-item"><div class="risk-icon" aria-hidden="true">📉</div><div class="risk-title">市场风险</div><div class="risk-desc">股票、债券价格波动可能导致资产缩水，压力情景下模拟成功率约 87.11%</div></div>
+      <div class="risk-item"><div class="risk-icon" aria-hidden="true">💱</div><div class="risk-title">汇率风险</div><div class="risk-desc">美元兑人民币大幅升值时，美股资产的人民币收益可能被侵蚀</div></div>
+      <div class="risk-item"><div class="risk-icon" aria-hidden="true">🔥</div><div class="risk-title">通胀风险</div><div class="risk-desc">若通胀率超过 4%，实际购买力将大幅缩水，需提高定投金额</div></div>
+      <div class="risk-item"><div class="risk-icon" aria-hidden="true">👴</div><div class="risk-title">长寿风险</div><div class="risk-desc">活到 95 岁以上时，资产可能不足以覆盖生活开支，需提前规划</div></div>
+    </div>
+  </div>
+
+  <!-- 免责声明 -->
+  <div class="disclaimer-section">
+    <strong>⚠️ 免责声明</strong><br>
+    本页面仅用于策略研究与可视化演示，<strong>不构成任何投资建议或收益保证</strong>。页面中所有基金名称、代码、费率均为示例，请以基金公司最新公告为准。所有模拟结果（成功率、分位数、资产路径）均基于特定假设，<strong>不代表未来实际表现</strong>。投资有风险，决策需谨慎，请根据自身情况咨询专业人士。
+  </div>
+</section>
+
+<footer>
+  <div class="footer-wm">Zhao | Struct. E.</div>
+  <p class="footer-note">方案基于蒙特卡洛模拟生成，仅供参考 · 数据更新时间：2026 年 9 月 · 本页面不构成投资建议</p>
+  <p class="tip-hint">☕ 如果这份内容对你有帮助，<strong>打赏作者请点击右下角圆圈</strong>，感谢支持。</p>
+</footer>
+
+</div><!-- /.container -->
+
+<script>
+(function () {
+  'use strict';
+
+  /* ==================== 全局常量（规则集中管理） ==================== */
+  var RULES = {
+    W_TARGET: 50000,          // 目标提取额
+    W_MIN: 35000,             // 保底提取额
+    W_MAX: 60000,             // 上限提取额
+    INFLATION: 0.025,         // 通胀率
+    BAND_HIGH: 1.2,           // 丰收年阈值
+    BAND_LOW: 0.8,            // 困难年阈值
+    BONUS_RATE: 0.10,         // 丰收年加提比例
+    DAILY_MIN: 160,
+    DAILY_MAX: 400,
+    DAILY_BASE_GROWTH: 0.025,
+    DAILY_UP: 1.10,
+    DAILY_DOWN: 0.95,
+    TWR_BAND: 0.02,
+    RET_CN_STOCK: 0.065,
+    RET_BOND: 0.030,
+    RET_US_STOCK: 0.070,
+    RET_GOLD: 0.045,
+    FEE_CN_STOCK: 0.0053,
+    FEE_BOND: 0.0023,
+    FEE_US_STOCK: 0.0100,
+    FEE_GOLD: 0.0049
+  };
+
+  var CALC_DEFAULTS = {
+    calcAge: 36, calcDaily: 200,
+    calcR1: 4.5, calcCPI1: 2.0,
+    calcR2: 3.2, calcCPI2: 1.5,
+    calcR3: 5.8, calcCPI3: 2.5
+  };
+  var WITHDRAW_DEFAULTS = { withdrawAge: 65, withdrawTA: 120, withdrawB0: 100 };
+
+  /* ==================== 全局数据 ==================== */
+  var allocNodes = [
+    { age: 34, cnStock: 0.50, usStock: 0.20, bond: 0.25, gold: 0.05 },
+    { age: 40, cnStock: 0.44, usStock: 0.18, bond: 0.33, gold: 0.05 },
+    { age: 45, cnStock: 0.39, usStock: 0.16, bond: 0.40, gold: 0.05 },
+    { age: 50, cnStock: 0.34, usStock: 0.14, bond: 0.47, gold: 0.05 },
+    { age: 55, cnStock: 0.30, usStock: 0.12, bond: 0.53, gold: 0.05 },
+    { age: 60, cnStock: 0.22, usStock: 0.09, bond: 0.65, gold: 0.04 },
+    { age: 65, cnStock: 0.12, usStock: 0.05, bond: 0.80, gold: 0.03 }
+  ];
+  var ages = [];
+  for (var a = 34; a <= 95; a++) ages.push(a);
+
+  function linInterp(nodes, age) {
+    if (age <= nodes[0].age) return Object.assign({}, nodes[0]);
+    if (age >= nodes[nodes.length - 1].age) return Object.assign({}, nodes[nodes.length - 1]);
+    for (var i = 0; i < nodes.length - 1; i++) {
+      var a = nodes[i], b = nodes[i + 1];
+      if (age >= a.age && age <= b.age) {
+        var t = (age - a.age) / (b.age - a.age);
+        return {
+          cnStock: a.cnStock + (b.cnStock - a.cnStock) * t,
+          usStock: a.usStock + (b.usStock - a.usStock) * t,
+          bond: a.bond + (b.bond - a.bond) * t,
+          gold: a.gold + (b.gold - a.gold) * t
+        };
+      }
+    }
+  }
+
+  var allocData = ages.map(function (age) {
+    var al = linInterp(allocNodes, age);
+    return { age: age, cnStock: al.cnStock, usStock: al.usStock, bond: al.bond, gold: al.gold };
+  });
+
+  function centralNetReturn(age) {
+    var al = linInterp(allocNodes, age);
+    var aNet = RULES.RET_CN_STOCK - RULES.FEE_CN_STOCK,
+        bondNet = RULES.RET_BOND - RULES.FEE_BOND,
+        usdNet = RULES.RET_US_STOCK - RULES.FEE_US_STOCK,
+        usCnyNet = (1 + usdNet) * (1 + 0) - 1,
+        goldNet = RULES.RET_GOLD - RULES.FEE_GOLD;
+    return al.cnStock * aNet + al.bond * bondNet + al.usStock * usCnyNet + al.gold * goldNet;
+  }
+
+  var scenarios = [
+    { name: '基准', success90: 100.00, success95: 100.00, median90: 585.4, q5_90: 277.0, median95: 633.3, q5_95: 276.8, avgWithdraw: 48241, failureProb: 0.00, gapProb: 16.02, cashYears: 5.9 },
+    { name: '压力', success90: 87.11, success95: 65.89, median90: 83.4, q5_90: 8.1, median95: 45.8, q5_95: 4.1, avgWithdraw: 36974, failureProb: 34.11, gapProb: 98.33, cashYears: 1.1 },
+    { name: '保守', success90: 99.99, success95: 99.76, median90: 356.5, q5_90: 150.9, median95: 360.3, q5_95: 127.6, avgWithdraw: 43293, failureProb: 0.24, gapProb: 48.76, cashYears: 2.1 },
+    { name: '乐观', success90: 100.00, success95: 100.00, median90: 1236.6, q5_90: 606.8, median95: 1456.0, q5_95: 686.2, avgWithdraw: 55723, failureProb: 0.00, gapProb: 0.37, cashYears: 21.9 },
+    { name: '厚尾', success90: 100.00, success95: 99.97, median90: 596.3, q5_90: 294.6, median95: 644.1, q5_95: 296.1, avgWithdraw: 48437, failureProb: 0.03, gapProb: 14.25, cashYears: 5.8 },
+    { name: '高通胀', success90: 99.99, success95: 99.91, median90: 606.8, q5_90: 260.3, median95: 642.8, q5_95: 232.6, avgWithdraw: 42359, failureProb: 0.09, gapProb: 58.67, cashYears: 2.0 },
+    { name: '医疗支出', success90: 99.96, success95: 99.83, median90: 521.5, q5_90: 215.9, median95: 550.2, q5_95: 197.1, avgWithdraw: 56617, failureProb: 0.17, gapProb: 25.82, cashYears: 4.4 }
+  ];
+
+  var cpiYears = ['2000','2001','2002','2003','2004','2005','2006','2007','2008','2009','2010','2011','2012','2013','2014','2015','2016','2017','2018','2019','2020','2021','2022','2023','2024','2025','2026'];
+  var cpiData = [0.35, 0.72, -0.73, 1.13, 3.82, 1.78, 1.65, 4.82, 5.93, -0.73, 3.18, 5.55, 2.62, 2.62, 1.92, 1.44, 2.00, 1.59, 2.07, 2.90, 2.42, 0.98, 1.97, 0.23, 0.22, 0.00, 0.90];
+  var cpiMean = cpiData.reduce(function (a, b) { return a + b; }, 0) / cpiData.length;
+
+  var corrMatrix = [
+    [1.00, -0.05, 0.45, 0.15, -0.10],
+    [-0.05, 1.00, 0.10, 0.25, 0.00],
+    [0.45, 0.10, 1.00, 0.10, -0.25],
+    [0.15, 0.25, 0.10, 1.00, 0.20],
+    [-0.10, 0.00, -0.25, 0.20, 1.00]
+  ];
+  var corrLabels = ['中证 A500', '中国债券', '标普 500 美元', '黄金人民币', '汇率变动'];
+
+  var totalMedian = { 34: 0, 40: 35, 45: 72, 50: 118, 55: 178, 60: 250, 65: 288, 70: 328, 75: 372, 80: 425, 85: 495, 90: 585.4, 95: 633.3 };
+  var totalQ5 = { 34: 0, 40: 25, 45: 48, 50: 75, 55: 108, 60: 142, 65: 140, 70: 142, 75: 155, 80: 175, 85: 215, 90: 277.0, 95: 276.8 };
+  var totalQ95 = { 34: 0, 40: 48, 45: 100, 50: 165, 55: 245, 60: 340, 65: 430, 70: 540, 75: 700, 80: 920, 85: 1300, 90: 1850, 95: 2200 };
+  var cashMedian = { 34: 0, 50: 0, 55: 0, 56: 2.5, 57: 5, 58: 7.5, 59: 10, 60: 12.5, 65: 10, 70: 10, 75: 12, 80: 15, 85: 18, 90: 22, 95: 25 };
+  var cashQ5 = { 34: 0, 50: 0, 60: 2, 70: 0, 80: 3, 90: 8, 95: 12 };
+  var cashQ95 = { 34: 0, 50: 0, 60: 15, 70: 18, 80: 22, 85: 26, 90: 30, 95: 35 };
+
+  function interpolatePoints(pointMap) {
+    var keys = Object.keys(pointMap).map(Number).sort(function (a, b) { return a - b; });
+    return ages.map(function (age) {
+      if (age <= keys[0]) return pointMap[keys[0]];
+      if (age >= keys[keys.length - 1]) return pointMap[keys[keys.length - 1]];
+      for (var i = 0; i < keys.length - 1; i++) {
+        if (age >= keys[i] && age <= keys[i + 1]) {
+          return pointMap[keys[i]] + (pointMap[keys[i + 1]] - pointMap[keys[i]]) * (age - keys[i]) / (keys[i + 1] - keys[i]);
+        }
+      }
+    });
+  }
+
+  /* ==================== 通用格式化 ==================== */
+  var fmtYuan = function (x) { return Math.round(x).toLocaleString('zh-CN'); };
+  var fmtPct = function (x) { return (x * 100).toFixed(2) + '%'; };
+  var fmtWan = function (x) { return x.toFixed(1); };
+
+  function showInlineError(el, msg) { el.textContent = msg; el.style.display = 'block'; }
+  function hideInlineError(el) { el.style.display = 'none'; el.textContent = ''; }
+
+  /* ==================== 1. 顶部导航 + 进度条 + 回到顶部 ==================== */
+  function initNav() {
+    var progressBar = document.getElementById('readProgress');
+    var backTop = document.getElementById('backTop');
+    var navLinks = document.querySelectorAll('.topnav-link');
+    var sections = [
+      document.getElementById('sec-1'),
+      document.getElementById('sec-2'),
+      document.getElementById('sec-3'),
+      document.getElementById('sec-4'),
+      document.getElementById('sec-5')
+    ].filter(Boolean);
+
+    function updateOnScroll() {
+      var h = document.documentElement;
+      var scrolled = h.scrollTop || document.body.scrollTop;
+      var total = h.scrollHeight - h.clientHeight;
+      var pct = total > 0 ? (scrolled / total) * 100 : 0;
+      progressBar.style.width = pct.toFixed(2) + '%';
+      progressBar.setAttribute('aria-valuenow', Math.round(pct));
+
+      if (scrolled > 600) backTop.classList.add('show');
+      else backTop.classList.remove('show');
+
+      // 高亮当前章节
+      var navH = document.getElementById('topnav').offsetHeight || 60;
+      var currentId = sections[0] ? sections[0].id : '';
+      var probe = scrolled + navH + 40;
+      sections.forEach(function (sec) {
+        if (sec.offsetTop <= probe) currentId = sec.id;
+      });
+      navLinks.forEach(function (link) {
+        link.classList.toggle('active', link.getAttribute('data-target') === currentId);
+      });
+    }
+
+    var ticking = false;
+    window.addEventListener('scroll', function () {
+      if (!ticking) {
+        window.requestAnimationFrame(function () { updateOnScroll(); ticking = false; });
+        ticking = true;
+      }
+    }, { passive: true });
+    window.addEventListener('resize', updateOnScroll);
+    updateOnScroll();
+
+    backTop.addEventListener('click', function () {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  }
+
+  /* ==================== 2. 联系方式复制 ==================== */
+  function initContact() {
+    var contactBtn = document.getElementById('contactBtn');
+    if (!contactBtn) return;
+    var WX = 'zcy1314121';
+    var originalText = contactBtn.textContent;
+
+    function fallbackCopy(text, done) {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.top = '-1000px';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); } catch (e) {}
+      document.body.removeChild(ta);
+      done();
+    }
+
+    contactBtn.addEventListener('click', function () {
+      function done() {
+        contactBtn.classList.add('copied');
+        contactBtn.textContent = '微信号已复制 ✓ ' + WX;
+        setTimeout(function () {
+          contactBtn.textContent = originalText;
+          contactBtn.classList.remove('copied');
+        }, 1800);
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(WX).then(done).catch(function () { fallbackCopy(WX, done); });
+      } else {
+        fallbackCopy(WX, done);
+      }
+    });
+  }
+
+  /* ==================== 3. 悬浮赞赏码（含焦点管理） ==================== */
+  function initTipModal() {
+    var tipBtn = document.getElementById('tipBtn');
+    var tipModal = document.getElementById('tipModal');
+    var tipClose = document.getElementById('tipClose');
+    if (!tipBtn || !tipModal) return;
+
+    function openModal() {
+      tipModal.classList.add('show');
+      if (tipClose) tipClose.focus();
+    }
+    function closeModal() {
+      tipModal.classList.remove('show');
+      tipBtn.focus();
+    }
+    tipBtn.addEventListener('click', openModal);
+    if (tipClose) tipClose.addEventListener('click', closeModal);
+    tipModal.addEventListener('click', function (e) {
+      if (e.target === tipModal) closeModal();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && tipModal.classList.contains('show')) closeModal();
+      // 简易焦点环
+      if (e.key === 'Tab' && tipModal.classList.contains('show')) {
+        e.preventDefault();
+        if (tipClose) tipClose.focus();
+      }
+    });
+  }
+
+  /* ==================== 4. 入场动画 ==================== */
+  function initReveal() {
+    var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduceMotion || !('IntersectionObserver' in window)) {
+      document.querySelectorAll('.reveal').forEach(function (el) { el.classList.add('visible'); });
+      return;
+    }
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          io.unobserve(entry.target);
+        }
+      });
+    }, { rootMargin: '0px 0px -60px 0px', threshold: 0.05 });
+    document.querySelectorAll('.reveal').forEach(function (el) { io.observe(el); });
+  }
+
+  /* ==================== 5. 计算器实时校验 ==================== */
+  function attachLiveValidation(inputId, validator) {
+    var el = document.getElementById(inputId);
+    if (!el) return;
+    el.addEventListener('input', function () {
+      var v = parseFloat(el.value);
+      var ok = validator(v);
+      el.classList.toggle('invalid', !ok);
+    });
+  }
+
+  function initLiveValidation() {
+    attachLiveValidation('calcAge', function (v) { return !isNaN(v) && v >= 34 && v <= 59; });
+    attachLiveValidation('calcDaily', function (v) { return !isNaN(v) && v >= RULES.DAILY_MIN && v <= RULES.DAILY_MAX; });
+    ['calcR1','calcR2','calcR3'].forEach(function (id) {
+      attachLiveValidation(id, function (v) { return !isNaN(v); });
+    });
+    ['calcCPI1','calcCPI2','calcCPI3'].forEach(function (id) {
+      attachLiveValidation(id, function (v) { return !isNaN(v); });
+    });
+    attachLiveValidation('withdrawAge', function (v) { return !isNaN(v) && v >= 60 && v <= 95; });
+    attachLiveValidation('withdrawTA', function (v) { return !isNaN(v) && v > 0; });
+    attachLiveValidation('withdrawB0', function (v) { return !isNaN(v) && v > 0; });
+    attachLiveValidation('wizardAge', function (v) { return !isNaN(v) && v >= 34 && v <= 95; });
+  }
+
+  function flashSuccess(btn) {
+    var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduceMotion) return;
+    btn.classList.add('success-flash');
+    setTimeout(function () { btn.classList.remove('success-flash'); }, 800);
+  }
+
+  /* ==================== 6. 年龄向导（修正口径 + 无 alert + 步进按钮） ==================== */
+  function initWizard() {
+    var wizardBtn = document.getElementById('wizardBtn');
+    var wizardContent = document.getElementById('wizardContent');
+    var wizardAgeEl = document.getElementById('wizardAge');
+    var wizardMinus = document.getElementById('wizardMinus');
+    var wizardPlus = document.getElementById('wizardPlus');
+    if (!wizardBtn || !wizardContent || !wizardAgeEl) return;
+
+    function render() {
+      var age = parseInt(wizardAgeEl.value, 10);
+      if (isNaN(age) || age < 34 || age > 95) {
+        wizardContent.innerHTML =
+          '<div class="inline-alert error" style="display:block;" role="alert">请输入 34–95 之间的年龄</div>';
+        return;
+      }
+
+      var w = linInterp(allocNodes, Math.min(age, 65));
+      var allocStr = 'A 股 ' + (w.cnStock * 100).toFixed(0) + '% · 债券 ' + (w.bond * 100).toFixed(0) + '% · 美股 ' + (w.usStock * 100).toFixed(0) + '% · 黄金 ' + (w.gold * 100).toFixed(0) + '%';
+      var allocStrDetailed = 'A 股 ' + (w.cnStock * 100).toFixed(0) + '% + 债券 ' + (w.bond * 100).toFixed(0) + '% + 美股 ' + (w.usStock * 100).toFixed(0) + '% + 黄金 ' + (w.gold * 100).toFixed(0) + '%';
+
+      var steps = [];
+      if (age < 60) {
+        steps.push({ icon: '📝', text: '<strong>立即行动：</strong>如果还没开户，先在券商或基金平台开通账户，准备好 6 个月生活应急金，配置好医疗险、意外险。' });
+        steps.push({ icon: '💵', text: '<strong>今天开始：</strong>每个交易日定投 200 元。按<strong>当前年龄目标配置</strong>买入：' + allocStrDetailed + '。年投入约 5 万元。' });
+        steps.push({ icon: '⚖️', text: '<strong>每年 12 月 31 日：</strong>做年度再平衡，把资产调回下一年龄的目标配置。' });
+        if (age >= 55) {
+          var y2r = 60 - age;
+          steps.push({ icon: '🏦', text: '<strong>55 岁起预存：</strong>每年从组合转出约 2.5 万元（通胀调整）到现金池。距离 60 岁还有 ' + y2r + ' 年，还需预存约 ' + y2r + ' 次。' });
+        }
+        var nextCheck = 3 - ((age - 34) % 3);
+        steps.push({ icon: '🔍', text: '<strong>下次三年检视：</strong>' + nextCheck + ' 年后（即 ' + (age + nextCheck) + ' 岁）。届时用页面上的"三年检视计算器"计算是否需要调整定投。' });
+        steps.push({ icon: '📊', text: '<strong>当前目标配置：</strong>' + allocStr });
+      } else {
+        steps.push({ icon: '💰', text: '<strong>每年 1 月 1 日：</strong>评估并提取。用"退休后提取额快速计算器"输入当年总资产和 B0_smooth 即可算出金额。' });
+        steps.push({ icon: '📉', text: '<strong>扣款顺序：</strong>先动用现金池，不足再卖债券 → 黄金 → 美股 → A 股。' });
+        steps.push({ icon: '🛑', text: '<strong>权益禁售检查：</strong>如果上一年度权益回报 ≤ -20% 或从退休后历史高点累计回撤 ≥ 20%，本年禁止卖股票。' });
+        steps.push({ icon: '📊', text: '<strong>当前目标配置：</strong>' + allocStr });
+        if (age >= 65) steps.push({ icon: '📈', text: '<strong>注意：</strong>80 岁后资产增速加快是正常现象（复利效应 + 提取占比下降）。' });
+        steps.push({ icon: '🔄', text: '<strong>每年 12 月 31 日：</strong>仍然要做再平衡（禁售期内跳过股票部分）。' });
+      }
+
+      var html = '<div style="font-size:15px;font-weight:800;color:#fff;margin-bottom:10px;">📋 ' + age + ' 岁 · 你的行动清单</div>';
+      steps.forEach(function (s) {
+        html += '<div class="wizard-step"><div class="wizard-step-icon" aria-hidden="true">' + s.icon + '</div><div>' + s.text + '</div></div>';
+      });
+      wizardContent.innerHTML = html;
+    }
+
+    wizardBtn.addEventListener('click', function () {
+      render();
+      flashSuccess(wizardBtn);
+    });
+
+    function step(delta) {
+      var v = parseInt(wizardAgeEl.value, 10);
+      if (isNaN(v)) v = 34;
+      wizardAgeEl.value = Math.max(34, Math.min(95, v + delta));
+      render();
+    }
+    if (wizardMinus) wizardMinus.addEventListener('click', function () { step(-1); });
+    if (wizardPlus) wizardPlus.addEventListener('click', function () { step(1); });
+
+    // 首次进入视口时自动生成一次，避免加载即触发
+    if ('IntersectionObserver' in window) {
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            render();
+            io.disconnect();
+          }
+        });
+      }, { rootMargin: '0px 0px -40px 0px' });
+      io.observe(wizardContent);
+    } else {
+      render();
+    }
+  }
+
+  /* ==================== 7. 三年检视计算器（含重置） ==================== */
+  function initCalcReview() {
+    var calcBtn = document.getElementById('calcBtn');
+    var calcReset = document.getElementById('calcReset');
+    var calcErr = document.getElementById('calcError');
+    var calcResult = document.getElementById('calcResult');
+    if (!calcBtn) return;
+
+    calcBtn.addEventListener('click', function () {
+      hideInlineError(calcErr);
+      var age = parseInt(document.getElementById('calcAge').value, 10);
+      var daily = parseFloat(document.getElementById('calcDaily').value);
+      var r1 = parseFloat(document.getElementById('calcR1').value) / 100;
+      var r2 = parseFloat(document.getElementById('calcR2').value) / 100;
+      var r3 = parseFloat(document.getElementById('calcR3').value) / 100;
+      var cpi1 = parseFloat(document.getElementById('calcCPI1').value);
+      var cpi2 = parseFloat(document.getElementById('calcCPI2').value);
+      var cpi3 = parseFloat(document.getElementById('calcCPI3').value);
+      if (isNaN(age) || age < 34 || age > 59) { showInlineError(calcErr, '当前年龄必须在 34-59 之间'); return; }
+      if (isNaN(daily) || daily < RULES.DAILY_MIN || daily > RULES.DAILY_MAX) { showInlineError(calcErr, '当前每日定投金额必须在 ' + RULES.DAILY_MIN + '-' + RULES.DAILY_MAX + ' 元之间'); return; }
+      if (isNaN(r1) || isNaN(r2) || isNaN(r3)) { showInlineError(calcErr, '请填写过去 3 年的实际收益率'); return; }
+      if (isNaN(cpi1) || isNaN(cpi2) || isNaN(cpi3)) { showInlineError(calcErr, '请填写过去 3 年的 CPI 数据'); return; }
+
+      calcBtn.disabled = true;
+      setTimeout(function () {
+        var actualTWR = Math.pow((1 + r1) * (1 + r2) * (1 + r3), 1 / 3) - 1;
+        var product = 1;
+        for (var i = 0; i < 3; i++) product *= (1 + centralNetReturn(age - 2 + i));
+        var centralTWR = Math.pow(product, 1 / 3) - 1;
+        var delta = actualTWR - centralTWR;
+        var newDaily = daily * (1 + RULES.DAILY_BASE_GROWTH);
+        var decision = '维持原定投增长', decisionColor = 'var(--text-muted)', decisionIcon = '➡️';
+        var decisionBg = 'rgba(136,146,176,0.1)', baseAdjustDesc = '仅按 2.5% 通胀增长';
+        if (delta < -RULES.TWR_BAND) {
+          newDaily *= RULES.DAILY_UP;
+          decision = '额外增加 10%'; decisionColor = 'var(--success)'; decisionIcon = '⬆️';
+          decisionBg = 'rgba(0,230,138,0.08)'; baseAdjustDesc = '基础增长 2.5% × 额外增加 10%';
+        } else if (delta > RULES.TWR_BAND) {
+          newDaily *= RULES.DAILY_DOWN;
+          decision = '减少 5%'; decisionColor = 'var(--warn)'; decisionIcon = '⬇️';
+          decisionBg = 'rgba(255,171,0,0.08)'; baseAdjustDesc = '基础增长 2.5% × 减少 5%';
+        }
+        var beforeClip = newDaily;
+        newDaily = Math.max(RULES.DAILY_MIN, Math.min(RULES.DAILY_MAX, newDaily));
+        var wasClipped = Math.abs(beforeClip - newDaily) > 0.01;
+        var avgCPI = (cpi1 + cpi2 + cpi3) / 3 / 100;
+        var realTWR = (1 + actualTWR) / (1 + avgCPI) - 1;
+
+        var html = '<div class="result-box">' +
+          '<div style="font-size:15px;font-weight:800;color:#fff;margin-bottom:14px;">📊 检视结果（当前年龄 ' + age + ' 岁）</div>' +
+          '<div class="result-item"><span class="result-label">① 实际 TWR（3 年几何平均）</span><span class="result-value" style="color:var(--accent);">' + fmtPct(actualTWR) + '</span></div>' +
+          '<div class="result-item"><span class="result-label">② 中枢 TWR（基于目标配置）</span><span class="result-value" style="color:var(--gold);">' + fmtPct(centralTWR) + '</span></div>' +
+          '<div class="result-item"><span class="result-label">③ 差值 Δ = ① - ②</span><span class="result-value" style="color:' + (delta > RULES.TWR_BAND ? 'var(--warn)' : delta < -RULES.TWR_BAND ? 'var(--success)' : 'var(--text-muted)') + ';">' + (delta >= 0 ? '+' : '') + fmtPct(delta) + '</span></div>' +
+          '<div class="result-item"><span class="result-label">④ 通胀调整后实际收益率（参考）</span><span class="result-value" style="color:var(--text-muted);">' + fmtPct(realTWR) + '</span></div>' +
+          '<div style="margin-top:16px;padding:14px;border-radius:10px;background:' + decisionBg + ';border-left:3px solid ' + decisionColor + ';">' +
+          '<div style="font-size:14px;color:' + decisionColor + ';font-weight:700;margin-bottom:8px;">' + decisionIcon + ' 调整决策：' + decision + '</div>' +
+          '<div style="font-size:12px;color:var(--text-muted);line-height:1.7;">调整逻辑：' + baseAdjustDesc + '<br>触发条件：' + (delta < -RULES.TWR_BAND ? 'Δ < -2.0%，实际表现低于中枢，需加大定投' : delta > RULES.TWR_BAND ? 'Δ > +2.0%，实际表现高于中枢，可适度减少定投' : '|Δ| ≤ 2.0%，实际表现与中枢基本一致，维持原计划') + '</div></div>' +
+          '<div style="margin-top:16px;padding:18px;border-radius:12px;background:linear-gradient(135deg,rgba(0,180,255,0.12),rgba(0,114,255,0.06));border:1px solid rgba(0,180,255,0.3);">' +
+          '<div style="font-size:13px;color:var(--text-muted);margin-bottom:8px;">下一年每日定投金额</div>' +
+          '<div style="display:flex;align-items:baseline;gap:12px;margin-bottom:8px;flex-wrap:wrap;">' +
+          '<span style="font-size:16px;color:var(--text-muted);">' + fmtYuan(daily) + ' 元/日</span>' +
+          '<span style="font-size:20px;color:' + decisionColor + ';font-weight:bold;">→</span>' +
+          '<span style="font-size:32px;color:' + decisionColor + ';font-weight:900;">' + fmtYuan(newDaily) + ' 元/日</span></div>' +
+          '<div style="font-size:12px;color:var(--text-muted);">折合年定投金额约 ' + fmtYuan(newDaily * 250) + ' 元（按 250 个交易日）' +
+          (wasClipped ? '<br><span style="color:var(--warn);">⚠️ 已触发边界约束：调整后金额超出 [' + RULES.DAILY_MIN + ',' + RULES.DAILY_MAX + '] 元/日区间，已自动限制在边界值。</span>' : '') +
+          '</div></div></div>';
+        calcResult.innerHTML = html;
+        calcResult.style.display = 'block';
+        calcResult.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        flashSuccess(calcBtn);
+        calcBtn.disabled = false;
+      }, 120);
+    });
+
+    if (calcReset) {
+      calcReset.addEventListener('click', function () {
+        Object.keys(CALC_DEFAULTS).forEach(function (id) {
+          var el = document.getElementById(id);
+          if (el) { el.value = CALC_DEFAULTS[id]; el.classList.remove('invalid'); }
+        });
+        hideInlineError(calcErr);
+        calcResult.style.display = 'none';
+        calcResult.innerHTML = '';
+      });
+    }
+  }
+
+  /* ==================== 8. 退休提取计算器（含重置） ==================== */
+  function initWithdrawCalc() {
+    var withdrawBtn = document.getElementById('withdrawBtn');
+    var withdrawReset = document.getElementById('withdrawReset');
+    var wErr = document.getElementById('withdrawError');
+    var withdrawResult = document.getElementById('withdrawResult');
+    if (!withdrawBtn) return;
+
+    withdrawBtn.addEventListener('click', function () {
+      hideInlineError(wErr);
+      var age = parseInt(document.getElementById('withdrawAge').value, 10);
+      var ta = parseFloat(document.getElementById('withdrawTA').value) * 10000;
+      var b0 = parseFloat(document.getElementById('withdrawB0').value) * 10000;
+      if (isNaN(age) || age < 60 || age > 95) { showInlineError(wErr, '当前年龄必须在 60-95 之间'); return; }
+      if (isNaN(ta) || ta <= 0) { showInlineError(wErr, '请输入有效的总资产金额'); return; }
+      if (isNaN(b0) || b0 <= 0) { showInlineError(wErr, '请输入有效的退休基准金额'); return; }
+
+      withdrawBtn.disabled = true;
+      setTimeout(function () {
+        var t = age - 60, pi = RULES.INFLATION;
+        var B0_real = b0 * Math.pow(1 + pi, t);
+        var W_target = RULES.W_TARGET * Math.pow(1 + pi, t);
+        var W_min = RULES.W_MIN * Math.pow(1 + pi, t);
+        var W_max = RULES.W_MAX * Math.pow(1 + pi, t);
+        var r = ta / B0_real;
+        var W, tier, tierColor, tierIcon, tierDesc;
+        if (r > RULES.BAND_HIGH) {
+          W = Math.min(W_target + RULES.BONUS_RATE * (ta - RULES.BAND_HIGH * B0_real), W_max);
+          tier = '丰收年（加提）'; tierColor = 'var(--success)'; tierIcon = '🌟';
+          tierDesc = '总资产 TA = ' + fmtWan(ta / 10000) + ' 万，超过 ' + RULES.BAND_HIGH + ' 倍基准（' + fmtWan(RULES.BAND_HIGH * B0_real / 10000) + ' 万）。提取额 = 目标额 + 10% × 超额部分，封顶于上限。';
+        } else if (r >= RULES.BAND_LOW) {
+          W = W_target; tier = '正常年（目标额）'; tierColor = 'var(--accent-2)'; tierIcon = '✅';
+          tierDesc = '总资产 TA = ' + fmtWan(ta / 10000) + ' 万，处于 ' + RULES.BAND_LOW + '~' + RULES.BAND_HIGH + ' 倍基准之间。提取目标额。';
+        } else {
+          W = W_min; tier = '困难年（保底额）'; tierColor = 'var(--danger)'; tierIcon = '🛡️';
+          tierDesc = '总资产 TA = ' + fmtWan(ta / 10000) + ' 万，低于 ' + RULES.BAND_LOW + ' 倍基准。仅提取保底额，保护资产不被过度消耗。';
+        }
+
+        var html = '<div class="result-box" style="border-color:' + tierColor + '40;">' +
+          '<div style="font-size:15px;font-weight:800;color:#fff;margin-bottom:14px;">💰 提取结果（' + age + ' 岁，退休第 ' + t + ' 年）</div>' +
+          '<div class="result-item"><span class="result-label">① 总资产 TA</span><span class="result-value">' + fmtYuan(ta) + ' 元</span></div>' +
+          '<div class="result-item"><span class="result-label">② 通胀调整后基准 B0_real</span><span class="result-value">' + fmtYuan(B0_real) + ' 元</span></div>' +
+          '<div class="result-item"><span class="result-label">③ 比值 r = TA / B0_real</span><span class="result-value" style="color:' + tierColor + ';">' + r.toFixed(3) + '</span></div>' +
+          '<div class="result-item"><span class="result-label">④ 目标提取额 W_target</span><span class="result-value" style="color:var(--accent-2);">' + fmtYuan(W_target) + ' 元</span></div>' +
+          '<div class="result-item"><span class="result-label">⑤ 保底提取额 W_min</span><span class="result-value" style="color:#ff6b6b;">' + fmtYuan(W_min) + ' 元</span></div>' +
+          '<div class="result-item"><span class="result-label">⑥ 上限提取额 W_max</span><span class="result-value" style="color:var(--gold);">' + fmtYuan(W_max) + ' 元</span></div>' +
+          '<div style="margin-top:16px;padding:16px;border-radius:12px;background:' + tierColor + '10;border-left:3px solid ' + tierColor + ';">' +
+          '<div style="font-size:14px;color:' + tierColor + ';font-weight:700;margin-bottom:8px;">' + tierIcon + ' 当年档位：' + tier + '</div>' +
+          '<div style="font-size:12px;color:var(--text-muted);line-height:1.7;">' + tierDesc + '</div></div>' +
+          '<div style="margin-top:16px;padding:20px;border-radius:12px;background:linear-gradient(135deg,' + tierColor + '20,' + tierColor + '08);border:1px solid ' + tierColor + '50;">' +
+          '<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px;">💰 当年应提取金额</div>' +
+          '<div style="font-size:42px;color:' + tierColor + ';font-weight:900;letter-spacing:-1px;">' + fmtYuan(W) + ' <span style="font-size:18px;color:var(--text-muted);">元</span></div>' +
+          '<div style="font-size:12px;color:var(--text-muted);margin-top:8px;">折合每月约 ' + fmtYuan(W / 12) + ' 元</div></div>' +
+          '<div style="margin-top:16px;padding:14px;border-radius:10px;background:rgba(0,0,0,0.2);font-size:12px;color:var(--text-muted);line-height:1.9;">' +
+          '<strong style="color:var(--text);">📌 提取操作建议：</strong><br>' +
+          '① 优先从<b style="color:var(--gold);">备用现金池</b>扣减，不足部分再卖出组合资产<br>' +
+          '② 扣款顺序：<b style="color:var(--accent-2);">现金池 → 债券 → 黄金 → 美股 → A 股</b><br>' +
+          '③ 权益禁售检查：若上一年度权益回报 ≤ -20% 或从退休后历史高点累计回撤 ≥ 20%，则跳过美股和 A 股<br>' +
+          '④ 提取后组合权重暂不调整，年末再平衡时统一恢复至目标配置</div></div>';
+        withdrawResult.innerHTML = html;
+        withdrawResult.style.display = 'block';
+        withdrawResult.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        flashSuccess(withdrawBtn);
+        withdrawBtn.disabled = false;
+      }, 120);
+    });
+
+    if (withdrawReset) {
+      withdrawReset.addEventListener('click', function () {
+        Object.keys(WITHDRAW_DEFAULTS).forEach(function (id) {
+          var el = document.getElementById(id);
+          if (el) { el.value = WITHDRAW_DEFAULTS[id]; el.classList.remove('invalid'); }
+        });
+        hideInlineError(wErr);
+        withdrawResult.style.display = 'none';
+        withdrawResult.innerHTML = '';
+      });
+    }
+  }
+
+  /* ==================== 9. 图表（懒加载 + CDN 回退 + 清空占位文本） ==================== */
+  var builders = {};
+  var charts = [];
+
+  function registerBuilders() {
+    var textStyle = { color: '#9aa4b8', fontFamily: "'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif" };
+    var tooltipStyle = {
+      backgroundColor: '#1e2230', borderColor: '#2a2d3a',
+      textStyle: { color: '#e0e0e0', fontSize: 12 },
+      extraCssText: 'border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.5);'
+    };
+
+    var totalMedArr = interpolatePoints(totalMedian),
+        totalQ5Arr = interpolatePoints(totalQ5),
+        totalQ95Arr = interpolatePoints(totalQ95);
+    var cashMedArr = interpolatePoints(cashMedian),
+        cashQ5Arr = interpolatePoints(cashQ5),
+        cashQ95Arr = interpolatePoints(cashQ95);
+
+    var portfolioMed = totalMedArr.map(function (v, i) { return Math.max(0, v - cashMedArr[i]); });
+    var portfolioQ5 = totalQ5Arr.map(function (v, i) { return Math.max(0, v - cashQ5Arr[i]); });
+    var portfolioQ95 = totalQ95Arr.map(function (v, i) { return Math.max(0, v - cashQ95Arr[i]); });
+
+    var portfolioBand = portfolioQ95.map(function (v, i) { return Math.max(0, v - portfolioQ5[i]); });
+    var cashBand = cashQ95Arr.map(function (v, i) { return Math.max(0, v - cashQ5Arr[i]); });
+    var totalBand = totalQ95Arr.map(function (v, i) { return Math.max(0, v - totalQ5Arr[i]); });
+
+    function bandSeries(lowData, bandData, color) {
+      return [
+        { name: '下限', type: 'line', data: lowData, stack: 'band', lineStyle: { opacity: 0 }, areaStyle: { opacity: 0 }, symbol: 'none', silent: true, z: 1 },
+        { name: '5%~95% 分位区间', type: 'line', data: bandData, stack: 'band', lineStyle: { opacity: 0 }, areaStyle: { color: color }, symbol: 'none', silent: true, z: 2 }
+      ];
+    }
+    function basePathOption() {
+      return {
+        textStyle: textStyle,
+        tooltip: Object.assign({ trigger: 'axis' }, tooltipStyle),
+        legend: { top: 10, textStyle: { color: '#9aa4b8' }, data: ['中位数', '5%~95% 分位区间'] },
+        grid: { left: 70, right: 20, top: 50, bottom: 40 },
+        xAxis: { type: 'category', data: ages, name: '年龄', nameTextStyle: { color: '#c0c8d8' }, axisLabel: { color: '#e0e0e0', fontSize: 11 } },
+        yAxis: { type: 'value', name: '金额(万)', nameTextStyle: { color: '#c0c8d8' }, axisLabel: { color: '#e0e0e0', fontSize: 11 } }
+      };
+    }
+
+    builders.allocationChart = function () {
+      var el = document.getElementById('allocationChart');
+      var c = echarts.init(el);
+      c.setOption({
+        textStyle: textStyle,
+        tooltip: Object.assign({
+          trigger: 'axis',
+          formatter: function (params) {
+            var str = '年龄: ' + params[0].name + ' 岁<br>';
+            params.forEach(function (p) { str += p.marker + p.seriesName + ': ' + (p.value * 100).toFixed(2) + '%<br>'; });
+            return str;
+          }
+        }, tooltipStyle),
+        legend: { top: 10, textStyle: { color: '#9aa4b8' }, data: ['中国股票', '美国股票', '债券', '黄金'] },
+        grid: { left: 60, right: 20, top: 50, bottom: 40 },
+        xAxis: { type: 'category', data: allocData.map(function (d) { return d.age; }), name: '年龄', nameTextStyle: { color: '#9aa4b8' }, axisLabel: { color: '#e0e0e0', fontSize: 11 } },
+        yAxis: { type: 'value', name: '权重', nameTextStyle: { color: '#9aa4b8' }, axisLabel: { formatter: function (v) { return (v * 100).toFixed(0) + '%'; }, color: '#e0e0e0', fontSize: 11 } },
+        series: [
+          { name: '中国股票', type: 'line', data: allocData.map(function (d) { return d.cnStock; }), lineStyle: { width: 3, color: '#6bb6e8' }, symbol: 'none' },
+          { name: '美国股票', type: 'line', data: allocData.map(function (d) { return d.usStock; }), lineStyle: { width: 3, color: '#ff6b6b' }, symbol: 'none' },
+          { name: '债券', type: 'line', data: allocData.map(function (d) { return d.bond; }), lineStyle: { width: 3, color: '#ffd93d' }, symbol: 'none' },
+          { name: '黄金', type: 'line', data: allocData.map(function (d) { return d.gold; }), lineStyle: { width: 3, color: '#6bcb77' }, symbol: 'none' }
+        ]
+      });
+      charts.push(c);
+    };
+
+    builders.corrChart = function () {
+      var el = document.getElementById('corrChart');
+      var c = echarts.init(el);
+      var corrData = [];
+      for (var ci = 0; ci < 5; ci++) for (var cj = 0; cj < 5; cj++) corrData.push([cj, ci, corrMatrix[ci][cj]]);
+      c.setOption({
+        textStyle: textStyle,
+        tooltip: Object.assign({ position: 'top' }, tooltipStyle),
+        grid: { left: 90, right: 60, top: 20, bottom: 60 },
+        xAxis: { type: 'category', data: corrLabels, axisLabel: { rotate: 30, color: '#9aa4b8', fontSize: 11 } },
+        yAxis: { type: 'category', data: corrLabels, axisLabel: { color: '#9aa4b8', fontSize: 11 } },
+        visualMap: { min: -0.5, max: 1, calculable: true, orient: 'vertical', right: 0, top: 'center', textStyle: { color: '#9aa4b8', fontSize: 10 }, inRange: { color: ['#2d6cdf', '#4ea8de', '#e0e0e0', '#ff6b6b', '#ff4757'] } },
+        series: [{ type: 'heatmap', data: corrData, label: { show: true, formatter: function (p) { return p.value[2].toFixed(2); }, color: '#fff', fontSize: 10 }, itemStyle: { borderColor: '#1a1d28', borderWidth: 2 } }]
+      });
+      charts.push(c);
+    };
+
+    builders.cpiChart = function () {
+      var el = document.getElementById('cpiChart');
+      var c = echarts.init(el);
+      c.setOption({
+        textStyle: textStyle,
+        tooltip: Object.assign({
+          trigger: 'axis',
+          formatter: function (p) { return p[0].name + ' 年<br>' + p[0].marker + 'CPI 同比: ' + p[0].value.toFixed(2) + '%'; }
+        }, tooltipStyle),
+        grid: { left: 70, right: 40, top: 40, bottom: 70 },
+        xAxis: { type: 'category', data: cpiYears, axisLabel: { color: '#e0e0e0', rotate: 45, fontSize: 10, interval: 0 } },
+        yAxis: { type: 'value', name: 'CPI 同比 (%)', nameTextStyle: { color: '#c0c8d8' }, axisLabel: { color: '#e0e0e0', formatter: '{value}%', fontSize: 11 }, splitLine: { lineStyle: { color: '#22252f' } } },
+        series: [{
+          name: 'CPI 同比', type: 'bar', data: cpiData, barWidth: '55%',
+          itemStyle: {
+            color: function (p) {
+              return p.value >= 0
+                ? new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: '#ff6b6b' }, { offset: 1, color: '#a03040' }])
+                : new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: '#4ea8de' }, { offset: 1, color: '#1a5276' }]);
+            }, borderRadius: [4, 4, 0, 0]
+          },
+          markLine: {
+            silent: true, symbol: 'none', lineStyle: { color: '#ffd93d', type: 'dashed', width: 2 },
+            label: { formatter: '均值 ' + cpiMean.toFixed(2) + '%', color: '#ffd93d', position: 'middle', backgroundColor: 'rgba(15,20,32,0.85)', padding: [4, 10], borderRadius: 4, fontSize: 12, fontWeight: 'bold' },
+            data: [{ yAxis: cpiMean }]
+          }
+        }]
+      });
+      charts.push(c);
+    };
+
+    builders.successChart = function () {
+      var el = document.getElementById('successChart');
+      var c = echarts.init(el);
+      c.setOption({
+        textStyle: textStyle,
+        tooltip: Object.assign({ trigger: 'axis' }, tooltipStyle),
+        legend: { top: 10, textStyle: { color: '#9aa4b8' } },
+        grid: { left: 60, right: 20, top: 50, bottom: 60 },
+        xAxis: { type: 'category', data: scenarios.map(function (s) { return s.name; }), axisLabel: { rotate: 30, color: '#9aa4b8', fontSize: 11 } },
+        yAxis: { type: 'value', name: '成功率 (%)', nameTextStyle: { color: '#9aa4b8' }, max: 100, splitLine: { lineStyle: { color: '#22252f' } }, axisLabel: { color: '#e0e0e0', fontSize: 11 } },
+        series: [
+          { name: '90 岁成功率', type: 'bar', data: scenarios.map(function (s) { return s.success90; }), barWidth: 28, itemStyle: { color: '#00b4ff', borderRadius: [6, 6, 0, 0] } },
+          { name: '95 岁成功率', type: 'bar', data: scenarios.map(function (s) { return s.success95; }), barWidth: 28, itemStyle: { color: '#ff9f43', borderRadius: [6, 6, 0, 0] } }
+        ]
+      });
+      charts.push(c);
+    };
+
+    builders.portfolioChart = function () {
+      var el = document.getElementById('portfolioChart');
+      var c = echarts.init(el);
+      c.setOption(Object.assign({}, basePathOption(), {
+        series: bandSeries(portfolioQ5, portfolioBand, 'rgba(0,180,255,0.2)').concat([
+          { name: '中位数', type: 'line', data: portfolioMed, lineStyle: { color: '#00b4ff', width: 3 }, symbol: 'none', z: 5 }
+        ])
+      }));
+      charts.push(c);
+    };
+
+    builders.cashPoolChart = function () {
+      var el = document.getElementById('cashPoolChart');
+      var c = echarts.init(el);
+      c.setOption(Object.assign({}, basePathOption(), {
+        series: bandSeries(cashQ5Arr, cashBand, 'rgba(255,217,61,0.2)').concat([
+          { name: '中位数', type: 'line', data: cashMedArr, lineStyle: { color: '#ffd93d', width: 3 }, symbol: 'none', z: 5 }
+        ])
+      }));
+      charts.push(c);
+    };
+
+    builders.totalAssetChart = function () {
+      var el = document.getElementById('totalAssetChart');
+      var c = echarts.init(el);
+      c.setOption(Object.assign({}, basePathOption(), {
+        series: bandSeries(totalQ5Arr, totalBand, 'rgba(0,230,138,0.2)').concat([
+          { name: '中位数', type: 'line', data: totalMedArr, lineStyle: { color: '#00e68a', width: 3 }, symbol: 'none', z: 5 }
+        ])
+      }));
+      charts.push(c);
+    };
+
+    builders.withdrawalChart = function () {
+      var el = document.getElementById('withdrawalChart');
+      var c = echarts.init(el);
+      var withAges = [60, 65, 70, 75, 80, 85, 90, 95];
+      var targetWith = withAges.map(function (age) { return Math.round(RULES.W_TARGET * Math.pow(1 + RULES.INFLATION, age - 60)); });
+      var minWith = withAges.map(function (age) { return Math.round(RULES.W_MIN * Math.pow(1 + RULES.INFLATION, age - 60)); });
+      // 注意：该曲线为规则示意（按目标额近似），非逐路径模拟输出
+      var actualWith = [50000, 56000, 63000, 71000, 80000, 90000, 102000, 115000];
+      c.setOption({
+        textStyle: textStyle,
+        tooltip: Object.assign({
+          trigger: 'axis',
+          formatter: function (params) {
+            var str = '年龄: ' + params[0].name + ' 岁<br>';
+            params.forEach(function (p) { str += p.marker + p.seriesName + ': ' + fmtYuan(p.value) + ' 元<br>'; });
+            return str;
+          }
+        }, tooltipStyle),
+        legend: { top: 10, textStyle: { color: '#9aa4b8' }, data: ['实际提取中位数（示意）', '目标提取额', '保底提取额'] },
+        grid: { left: 80, right: 20, top: 50, bottom: 40 },
+        xAxis: { type: 'category', data: withAges, name: '年龄', nameTextStyle: { color: '#c0c8d8' }, axisLabel: { color: '#e0e0e0', fontSize: 11 } },
+        yAxis: { type: 'value', name: '金额 (元)', nameTextStyle: { color: '#c0c8d8' }, axisLabel: { color: '#e0e0e0', fontSize: 11 } },
+        series: [
+          { name: '实际提取中位数（示意）', type: 'line', data: actualWith, lineStyle: { color: '#00b4ff', width: 3 }, symbol: 'circle', symbolSize: 6 },
+          { name: '目标提取额', type: 'line', data: targetWith, lineStyle: { color: '#ffd93d', width: 3, type: 'dashed' }, symbol: 'none' },
+          { name: '保底提取额', type: 'line', data: minWith, lineStyle: { color: '#ff6b6b', width: 3, type: 'dashed' }, symbol: 'none' }
+        ]
+      });
+      charts.push(c);
+    };
+
+    // 直方图
+    function createSeededRandom(seed) {
+      var s = seed;
+      return function () {
+        s = (s * 9301 + 49297) % 233280;
+        return s / 233280;
+      };
+    }
+    function generateHistData(median, q5, maxVal, bins) {
+      bins = bins || 20;
+      var mu = Math.log(median * 10000);
+      var sigma = (Math.log(median * 10000) - Math.log(q5 * 10000)) / 1.645;
+      var counts = new Array(bins).fill(0);
+      var binWidth = maxVal * 10000 / bins;
+      var rng = createSeededRandom(Math.round(median * 1000) + 1);
+      for (var i = 0; i < 3000; i++) {
+        // 防止 log(0) 导致 Infinity
+        var u1 = Math.max(rng(), 1e-12), u2 = rng();
+        var z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+        var val = Math.exp(mu + sigma * z);
+        if (!isFinite(val) || val > maxVal * 10000) val = maxVal * 10000;
+        if (val < 0) val = 0;
+        var idx = Math.min(Math.floor(val / binWidth), bins - 1);
+        if (idx < 0) idx = 0;
+        counts[idx]++;
+      }
+      var categories = [];
+      for (var j = 0; j < bins; j++) categories.push(Math.round((j + 0.5) * binWidth / 10000));
+      return { categories: categories, counts: counts };
+    }
+
+    var histConfigs = [
+      { id: 'histBenchmark', median: 585.4, q5: 277.0, maxVal: 4000, title: '基准' },
+      { id: 'histStress', median: 83.4, q5: 8.1, maxVal: 500, title: '压力' },
+      { id: 'histConservative', median: 356.5, q5: 150.9, maxVal: 2000, title: '保守' },
+      { id: 'histOptimistic', median: 1236.6, q5: 606.8, maxVal: 8000, title: '乐观' },
+      { id: 'histFatTail', median: 596.3, q5: 294.6, maxVal: 4000, title: '厚尾' },
+      { id: 'histHighInflation', median: 606.8, q5: 260.3, maxVal: 4000, title: '高通胀' },
+      { id: 'histMedical', median: 521.5, q5: 215.9, maxVal: 4000, title: '医疗支出' }
+    ];
+
+    histConfigs.forEach(function (config) {
+      builders[config.id] = function () {
+        var el = document.getElementById(config.id);
+        var c = echarts.init(el);
+        var histData = generateHistData(config.median, config.q5, config.maxVal, 20);
+        c.setOption({
+          textStyle: textStyle,
+          title: { text: config.title, left: 'center', textStyle: { color: '#9aa4b8', fontSize: 13 } },
+          tooltip: Object.assign({ trigger: 'axis' }, tooltipStyle),
+          grid: { left: 44, right: 10, top: 40, bottom: 36 },
+          xAxis: { type: 'category', data: histData.categories, name: '万元', axisLabel: { fontSize: 9, color: '#9aa4b8' }, nameTextStyle: { fontSize: 10 } },
+          yAxis: { type: 'value', name: '频数', axisLabel: { fontSize: 9, color: '#9aa4b8' }, nameTextStyle: { fontSize: 10 }, splitLine: { lineStyle: { color: '#22252f' } } },
+          series: [{ type: 'bar', data: histData.counts, itemStyle: { color: '#4ea8de', borderRadius: [3, 3, 0, 0] }, barWidth: '80%', animation: false }]
+        });
+        charts.push(c);
+      };
+    });
+  }
+
+  function initChartLazy(hasEcharts) {
+    if (!hasEcharts || typeof echarts === 'undefined') {
+      document.querySelectorAll('[data-chart]').forEach(function (el) {
+        el.classList.remove('chart-skeleton');
+        el.innerHTML = '<div class="chart-fallback">⚠️ 图表库加载失败<br>请检查网络后刷新页面</div>';
+      });
+      return;
+    }
+
+    registerBuilders();
+
+    var loaded = {};
+    function loadChart(el) {
+      var id = el.getAttribute('data-chart');
+      if (loaded[id]) return;
+      loaded[id] = true;
+      // 清除骨架占位文本，避免与图表共存
+      el.textContent = '';
+      if (builders[id]) {
+        try { builders[id](); } catch (e) { console.error('Chart build failed:', id, e); }
+      }
+      el.classList.remove('chart-skeleton');
+    }
+
+    if ('IntersectionObserver' in window) {
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            loadChart(entry.target);
+            io.unobserve(entry.target);
+          }
+        });
+      }, { rootMargin: '200px' });
+      document.querySelectorAll('[data-chart]').forEach(function (el) { io.observe(el); });
+    } else {
+      document.querySelectorAll('[data-chart]').forEach(loadChart);
+    }
+
+    var resizeTimer = null;
+    window.addEventListener('resize', function () {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(function () {
+        charts.forEach(function (c) { c && c.resize(); });
+      }, 120);
+    });
+  }
+
+  /* ECharts 加载失败时的备用 CDN */
+  function ensureEcharts(cb) {
+    if (typeof echarts !== 'undefined') { cb(true); return; }
+    var urls = [
+      'https://unpkg.com/echarts@5.4.3/dist/echarts.min.js',
+      'https://cdn.staticfile.org/echarts/5.4.3/echarts.min.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js'
+    ];
+    var i = 0;
+    function tryNext() {
+      if (i >= urls.length) { cb(false); return; }
+      var s = document.createElement('script');
+      s.src = urls[i++];
+      s.async = true;
+      s.onload = function () { cb(true); };
+      s.onerror = tryNext;
+      document.head.appendChild(s);
+    }
+    tryNext();
+  }
+
+  /* ==================== 10. 结果汇总表（懒渲染） ==================== */
+  function fillResultTable() {
+    var tableBody = document.getElementById('resultTable');
+    if (!tableBody || tableBody.dataset.filled === '1') return;
+    tableBody.dataset.filled = '1';
+    scenarios.forEach(function (s) {
+      var row = document.createElement('tr');
+      row.innerHTML = '<td><strong>' + s.name + '</strong></td>' +
+        '<td class="' + (s.success90 > 90 ? 'success' : s.success90 > 70 ? 'warn' : 'danger') + '">' + s.success90.toFixed(2) + '%</td>' +
+        '<td class="' + (s.success95 > 90 ? 'success' : s.success95 > 70 ? 'warn' : 'danger') + '">' + s.success95.toFixed(2) + '%</td>' +
+        '<td>' + s.median90.toFixed(1) + '</td>' +
+        '<td>' + s.q5_90.toFixed(1) + '</td>' +
+        '<td>' + s.median95.toFixed(1) + '</td>' +
+        '<td>' + s.q5_95.toFixed(1) + '</td>' +
+        '<td>' + s.avgWithdraw.toLocaleString('zh-CN') + '</td>' +
+        '<td class="' + (s.failureProb > 50 ? 'danger' : s.failureProb > 20 ? 'warn' : 'success') + '">' + s.failureProb.toFixed(2) + '%</td>' +
+        '<td class="' + (s.gapProb > 50 ? 'danger' : s.gapProb > 20 ? 'warn' : 'success') + '">' + s.gapProb.toFixed(2) + '%</td>' +
+        '<td>' + s.cashYears.toFixed(1) + '</td>';
+      tableBody.appendChild(row);
+    });
+    updateTableHints();
+  }
+
+  function initResultTable() {
+    var tableBody = document.getElementById('resultTable');
+    if (!tableBody) return;
+    var outer = tableBody.closest('.table-outer');
+    if ('IntersectionObserver' in window && outer) {
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            fillResultTable();
+            io.disconnect();
+          }
+        });
+      }, { rootMargin: '300px' });
+      io.observe(outer);
+    } else {
+      fillResultTable();
+    }
+  }
+
+  /* ==================== 11. 表格滚动提示（右侧渐隐 + 滑动提示） ==================== */
+  function updateTableHints() {
+    document.querySelectorAll('.table-outer').forEach(function (outer) {
+      var wrap = outer.querySelector('.table-wrap');
+      if (!wrap) return;
+      var atEnd = wrap.scrollLeft + wrap.clientWidth >= wrap.scrollWidth - 2;
+      outer.classList.toggle('at-end', atEnd);
+    });
+  }
+
+  function initTableHints() {
+    document.querySelectorAll('.table-outer').forEach(function (outer) {
+      var wrap = outer.querySelector('.table-wrap');
+      if (!wrap) return;
+      wrap.addEventListener('scroll', updateTableHints, { passive: true });
+    });
+    window.addEventListener('resize', updateTableHints);
+    updateTableHints();
+  }
+
+  /* ==================== 启动 ==================== */
+  function boot() {
+    initNav();
+    initContact();
+    initTipModal();
+    initReveal();
+    initLiveValidation();
+    initWizard();
+    initCalcReview();
+    initWithdrawCalc();
+    initResultTable();
+    initTableHints();
+    ensureEcharts(function (ok) { initChartLazy(ok); });
+  }
+
+  if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    setTimeout(boot, 0);
+  } else {
+    window.addEventListener('DOMContentLoaded', boot);
+  }
+})();
+</script>
+</body>
+</html>

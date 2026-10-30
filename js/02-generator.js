@@ -338,6 +338,10 @@ function parametricGenerator(p) {
 
   const getSupportType = (c) => {
     const entry = supportMapSolver[String(c)];
+    // 【修复】若强制施加了转角，力学上等价于固接，界面应同步显示
+    if (entry && entry.rot != null && Math.abs(entry.rot) > 1e-9) {
+      return "fixed";
+    }
     if (entry && entry.type) {
       if (["fixed", "pin", "roller", "spring"].includes(entry.type)) return entry.type;
     }

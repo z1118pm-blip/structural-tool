@@ -29,9 +29,8 @@ function sweepSetValue(key, v){
       S.settleDy = v;
       S.supportMap['0'].dy = v;
     } else if (key === 'supportRot0') {
-      v = Math.max(-30, Math.min(30, v)); // v 是扫掠的度数
-      // 按照 30° 对应 0.01 rad 的约定，同步给底层
-      S.supportMap['0'].rot = v * 0.01 / 30;
+      v = Math.max(-10, Math.min(10, v)); // v 是扫掠的 mrad
+      S.supportMap['0'].rot = v / 1000;
     }
     
     // 直接更新左侧面板对应 UI，不触发整块重绘以防滑块卡顿
@@ -44,23 +43,23 @@ function sweepSetValue(key, v){
       const input = document.querySelector(`.supportRotRange[data-col="0"]`);
       const out = document.getElementById('v-support-rot-0');
       if(input) { 
-        input.value = v / 3; // 转回 mrad 去改变滑块位置
+        input.value = v; // mrad 直接对应滑块值
         updateRangeProgress(input); 
       }
-      if(out) out.textContent = v.toFixed(1) + '°';
+      if(out) out.textContent = v.toFixed(2) + ' mrad (' + (v * 0.0572958).toFixed(2) + '°)';
     }
     
     // 同步进度条
     const progEl = document.getElementById('sweepProgress');
     const progOut = document.getElementById('v-sweepProgress');
     if(progEl) {
-      progEl.min = key === 'settleDy' ? -100 : -30;
-      progEl.max = key === 'settleDy' ? 100 : 30;
+      progEl.min = key === 'settleDy' ? -100 : -10;
+      progEl.max = key === 'settleDy' ? 100 : 10;
       progEl.step = key === 'settleDy' ? 1 : 0.1;
       progEl.value = v;
       updateRangeProgress(progEl);
     }
-    if(progOut) progOut.textContent = v.toFixed(key === 'settleDy' ? 0 : 1) + (key === 'settleDy' ? ' mm' : '°');
+    if(progOut) progOut.textContent = key === 'settleDy' ? v.toFixed(0) + ' mm' : v.toFixed(2) + ' mrad (' + (v * 0.0572958).toFixed(2) + '°)';
     return;
   }
 
@@ -132,6 +131,8 @@ function sweepStop(){
   }
   const wasPlaying = S.sweep.playing;
   S.sweep.playing = false;
+  document.getElementById('chartForce')?.classList.remove('sweeping');
+  document.getElementById('chartDeform')?.classList.remove('sweeping');
   sweepUpdatePlayBtn();
   /* 扫掠期间跳过了刚度分解（额外 2 次 analyze 会拖慢帧率）；
      停止后异步补一次完整计算 */
@@ -146,7 +147,7 @@ function sweepReset(){
   /* settleDy / supportRot0 没有对应的 <input id=...>，
      必须走 sweepSetValue 的代理分支（写 supportMap['0']）。 */
   if(key === 'settleDy' || key === 'supportRot0'){
-    sweepSetValue(key, key === 'settleDy' ? -100 : -30);
+    sweepSetValue(key, key === 'settleDy' ? -100 : -10);
     run();
     return;
   }
@@ -169,13 +170,13 @@ function sweepPlay(loop, forcedRange){
   
   let min, max, cur;
   if (key === 'settleDy' || key === 'supportRot0') {
-    min = key === 'settleDy' ? -100 : -30;
-    max = key === 'settleDy' ? 100 : 30;
+    min = key === 'settleDy' ? -100 : -10;
+    max = key === 'settleDy' ? 100 : 10;
     const colEntry = (S.supportMap && S.supportMap['0']) || {};
     if (key === 'settleDy') {
       cur = colEntry.dy || 0;
     } else {
-      cur = (colEntry.rot || 0) * 3000; // rad 转成度
+      cur = (colEntry.rot || 0) * 1000; // rad 转成 mrad
     }
   } else {
     const el = document.getElementById(key);
@@ -204,6 +205,8 @@ function sweepPlay(loop, forcedRange){
   S.sweep.t0       = performance.now();
   S.sweep.playing  = true;
   S.sweep.loop     = loop !== false;
+  document.getElementById('chartForce')?.classList.add('sweeping');
+  document.getElementById('chartDeform')?.classList.add('sweeping');
 
   sweepUpdatePlayBtn();
 

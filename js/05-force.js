@@ -8,14 +8,14 @@ const THEME = {
     bg:'#1e293b', frame:'#cbd5e1', frameThin:'#94a3b8', frameGhost:'#475569',
     node:'#e2e8f0', nodeBlue:'#7dd3fc', support:'#94a3b8', supportFill:'#1e293b',
     udl:'#f87171', udlLabel:'#fca5a5', udlLabelBg:'rgba(17,24,39,0.8)',
-    hArrow:'#38bdf8', hLabel:'#7dd3fc', deformCurve:'#38bdf8',
+    hArrow:'#38bdf8', hLabel:'#7dd3fc',     deformCurve:'#60a5fa',
     freezeLine:'rgba(192,132,252,0.85)', antiCurve:'#f8fafc'
   },
   light: {
     bg:'#ffffff', frame:'#334155', frameThin:'#64748b', frameGhost:'#cbd5e1',
     node:'#475569', nodeBlue:'#0284c7', support:'#475569', supportFill:'#ffffff',
     udl:'#dc2626', udlLabel:'#dc2626', udlLabelBg:'rgba(255,255,255,0.90)',
-    hArrow:'#0284c7', hLabel:'#0369a1', deformCurve:'#0284c7',
+    hArrow:'#0284c7', hLabel:'#0369a1',     deformCurve:'#2563eb',
     freezeLine:'rgba(139,92,246,0.8)', antiCurve:'#0f172a'
   }
 };
@@ -23,8 +23,8 @@ function theme(){ return S.lightBg ? THEME.light : THEME.dark; }
 
 const FORCE_STYLE = {
   M: { ref: 200, unit: 'kN·m', tag: '弯矩图 M', lbl: '|M|max',
-       col:  { color:'#38bdf8', fill:'rgba(56,189,248,0.32)' },
-       beam: { color:'#f97316', fill:'rgba(249,115,22,0.30)' } },
+       col:  { color:'#22d3ee', fill:'rgba(34,211,238,0.28)' },  /* 柱：亮青色 */
+       beam: { color:'#f97316', fill:'rgba(249,115,22,0.30)' } }, /* 梁：橙色 */
   N: { ref: 500, unit: 'kN', tag: '轴力图 N', lbl: '|N|max',
        col:  { color:'#a855f7', fill:'rgba(168,85,247,0.30)' },
        beam: { color:'#fbcfe8', fill:'rgba(251,207,232,0.28)' } },
@@ -37,8 +37,8 @@ const FORCE_STYLE = {
 };
 const FORCE_STYLE_LIGHT = {
   M: { ref: 200, unit: 'kN·m', tag: '弯矩图 M', lbl: '|M|max',
-       col:  { color:'#0284c7', fill:'rgba(2,132,199,0.26)' },
-       beam: { color:'#ea580c', fill:'rgba(234,88,12,0.24)' } },
+       col:  { color:'#0891b2', fill:'rgba(8,145,178,0.24)' },   /* 柱：深青色 */
+       beam: { color:'#ea580c', fill:'rgba(234,88,12,0.24)' } }, /* 梁：深橙色 */
   N: { ref: 500, unit: 'kN', tag: '轴力图 N', lbl: '|N|max',
        col:  { color:'#7c3aed', fill:'rgba(124,58,237,0.24)' },
        beam: { color:'#be185d', fill:'rgba(190,24,93,0.22)' } },
@@ -89,7 +89,7 @@ function drawInternal(canvas, model, dprOverride){
   const {ctx,W,H} = setupCanvas(canvas, dprOverride);
   const padB = type === 'R' ? 80 : 36; // R 图底部留出更大空间画弯矩
   // 将 padT 从 100 提高到 130，为顶部悬浮按钮留出安全区，防止 mScale 过大时数值重叠
-  const {toS} = makeTransform(model, W, H, { padL: 100, padT: 130, padR: 100, padB });
+  const {toS} = makeTransform(model, W, H, { padL: 70, padT: 90, padR: 70, padB });
 
   ctx.fillStyle=T.bg; ctx.fillRect(0,0,W,H);
   drawGrid(ctx, W, H);
@@ -230,7 +230,7 @@ function drawInternal(canvas, model, dprOverride){
     ctx.fillStyle = sumTxtColor; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
     ctx.fillText(sumTxt, 24, 87);
 
-    drawFrameLines(ctx, model, toS, T.frameThin, 1.5, false, false);
+    drawFrameLines(ctx, model, toS, T.frame, 1.5, false, false);
     drawSupports(ctx, model, toS, model.p.betaF, false);
     
     ctx.fillStyle=T.node;
@@ -332,7 +332,7 @@ function drawInternal(canvas, model, dprOverride){
     ctx.strokeStyle = st.color; ctx.lineWidth = 1.7; ctx.lineJoin = 'round'; ctx.stroke();
   }
 
-  drawFrameLines(ctx, model, toS, T.frameThin, 1.5, false, false);
+  drawFrameLines(ctx, model, toS, T.frame, 1.5, false, false);
   drawSupports(ctx, model, toS, model.p.betaF, false);
 
   if(model.p.showVals){
@@ -374,9 +374,8 @@ function drawInternal(canvas, model, dprOverride){
         if(ni.col === 0) side = -1; // 最左柱：文字移到外侧(左)
         else if(ni.col === model.nCol - 1) side = 1; // 最右柱：文字移到外侧(右)
         else side = (ni.col % 2 === 1) ? -1 : 1; // 中间柱：交替左右
-        /* 偏移随 mScale 对数增长，避免 mScale 放大时曲线穿过文字。 */
-        const safeMScale = Math.max(1, model.p.mScale || 1);
-        const off = 28 + 12 * Math.log2(safeMScale);
+        /* 固定偏移量（35px），不再随 mScale 无限放大，避免缩放拉满时数值飞出屏幕 */
+        const off = 35;
         if(Math.abs(v0) > NZ) ctx.fillText(v0.toFixed(1), ix + side*off, iy + 12); // 底端向下错
         if(Math.abs(vL) > NZ) ctx.fillText(vL.toFixed(1), jx + side*off, jy - 12); // 顶端向上错，避开梁
       } else {
@@ -394,7 +393,7 @@ function drawInternal(canvas, model, dprOverride){
           ctx.fillStyle = T.bg; ctx.fillRect(lx - tw/2 - 3, ly - 7.5, tw + 6, 15);
           ctx.fillStyle = forceStyleOf(type, el.kind).color; ctx.fillText(txt, lx, ly);
         };
-        paintTag(v0, ix, iy,  45); paintTag(vL, jx, jy, -45);
+        paintTag(v0, ix, iy,  15); paintTag(vL, jx, jy, -15);
         if(type === 'M' && Math.abs(el.w) > 1e-12){
           const xs = -res.f[1] / el.w;
           if(xs > 0.05*el.L && xs < 0.95*el.L){
@@ -454,10 +453,19 @@ function drawInternal(canvas, model, dprOverride){
         ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 3; ctx.lineCap = 'round';
         ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(bx,by); ctx.stroke();
         const mx = (ax+bx)/2, my = (ay+by)/2;
-        ctx.font = 'bold 14px ui-sans-serif,system-ui,sans-serif';
+        
+        // 直接在图上写出临界力数值
+        const warnTxt = `⚠ 超限 (Ncr=${Ncr.toFixed(0)}kN)`;
+        ctx.font = 'bold 10.5px "JetBrains Mono", ui-monospace, monospace';
+        const tw = ctx.measureText(warnTxt).width;
+        
+        // 画个半透明背景框防止文字看不清
+        ctx.fillStyle = T.bg; 
+        ctx.fillRect(mx - tw/2 - 4, my - 26, tw + 8, 16);
+        
         ctx.fillStyle = '#ef4444';
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText('⚠', mx, my - 14);
+        ctx.fillText(warnTxt, mx, my - 18);
         ctx.restore();
       }
     }

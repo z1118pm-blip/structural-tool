@@ -6,8 +6,8 @@
 function drawDeform(canvas, model, dprOverride){
   const T = theme();
   const {ctx,W,H} = setupCanvas(canvas, dprOverride);
-  // 加大 padT 到 140，避免“仅变形图”模式下图形与顶部悬浮面板重叠
-  const pad = {padL: 100, padT: 140, padR: 100, padB: 36};
+  // 全屏变形图顶部浮层已变薄，恢复正常的 140 留白，避免图形悬空过低
+  const pad = {padL: 70, padT: 90, padR: 70, padB: 20};
   const {toS} = makeTransform(model, W, H, pad);
 
   ctx.fillStyle=T.bg; ctx.fillRect(0,0,W,H);
@@ -58,7 +58,7 @@ function drawDeform(canvas, model, dprOverride){
   }
 
   const F = model.p.dScale;
-  drawFrameLines(ctx, model, toS, T.frameGhost, 1.5, true, false);
+  drawFrameLines(ctx, model, toS, T.frame, 1.5, true, false);
 
     // 绘制冻结基准的变形图（虚线）
   if(BASE){
@@ -117,7 +117,10 @@ function drawDeform(canvas, model, dprOverride){
     } else {
       ctx.strokeStyle = T.deformCurve;
       ctx.setLineDash([]);
-      ctx.lineWidth = elemLineWidth(el, model) * 0.6;
+      // 如果变形极小（空载），把蓝线画细一点，避免盖住灰色骨架
+      const hasDef = Math.abs(model.U[el.i*3]) > 1e-6 || Math.abs(model.U[el.i*3+1]) > 1e-6 || 
+                     Math.abs(model.U[el.j*3]) > 1e-6 || Math.abs(model.U[el.j*3+1]) > 1e-6;
+      ctx.lineWidth = hasDef ? elemLineWidth(el, model) * 0.6 : 1.5;
     }
 
     ctx.beginPath();
