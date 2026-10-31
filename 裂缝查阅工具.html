@@ -20,15 +20,15 @@
   header{position:sticky;top:0;z-index:20;background:#0a101c;border-bottom:1px solid var(--line);padding:12px 18px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;flex:0 0 auto}
   header h1{font-size:16px;margin:0;white-space:nowrap;color:#f8fafc;display:flex;align-items:center;gap:8px;letter-spacing:0.5px;}
   header h1::before { content: '◆'; color:var(--blue); font-size:12px; }
-  .search{flex:1;min-width:200px;max-width:360px;padding:8px 12px;border:1px solid #334155;background:#111a2c;color:#f8fafc;border-radius:8px;font-size:14px;outline:none;transition:all 0.2s;}
+  .search{flex:1;min-width:200px;max-width:360px;padding:7px 12px;border:1px solid #334155;background:#111a2c;color:#f8fafc;border-radius:6px;font-size:13.5px;outline:none;transition:all 0.2s;}
   .search:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(56,189,248,.15)}
   .search::placeholder{color:#64748b;}
   .risk-filters{display:flex;gap:10px;flex-wrap:wrap;margin-left: auto;}
   .risk-btn{
-    font-size:13px;padding:6px 16px;border-radius:999px;
-    border:1px solid rgba(148,163,184,0.2);background:rgba(30,41,59,0.6);
+    font-size:12.5px;padding:6px 14px;border-radius:6px;
+    border:1px solid rgba(148,163,184,0.15);background:#111a2c;
     cursor:pointer;white-space:nowrap;color:#94a3b8;
-    transition:all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition:all 0.2s;
     display:flex;align-items:center;gap:6px;
   }
   .risk-btn:hover{
@@ -42,6 +42,7 @@
   .risk-btn[data-risk="yellow"]:hover { color: var(--yellow); border-color: var(--yellow); box-shadow: 0 0 10px rgba(251,191,36,0.2); }
   .risk-btn[data-risk="blue"]:hover { color: var(--blue); border-color: var(--blue); box-shadow: 0 0 10px rgba(56,189,248,0.2); }
   .risk-btn[data-risk="gray"]:hover { color: var(--gray); border-color: var(--gray); box-shadow: 0 0 10px rgba(148,163,184,0.2); }
+  .risk-btn[data-risk="theory"]:hover { color: #a855f7; border-color: #a855f7; box-shadow: 0 0 10px rgba(168,85,247,0.2); }
 
   /* 选中状态的基础设置 */
   .risk-btn.active { font-weight: 600; transform: none; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2); }
@@ -53,6 +54,7 @@
   .risk-btn[data-risk="yellow"].active { background: rgba(251,191,36,0.15); color: #fcd34d; border-color: var(--yellow); box-shadow: 0 0 12px rgba(251,191,36,0.3); }
   .risk-btn[data-risk="blue"].active { background: rgba(56,189,248,0.15); color: #7dd3fc; border-color: var(--blue); box-shadow: 0 0 12px rgba(56,189,248,0.3); }
   .risk-btn[data-risk="gray"].active { background: rgba(148,163,184,0.15); color: #cbd5e1; border-color: var(--gray); box-shadow: 0 0 12px rgba(148,163,184,0.3); }
+  .risk-btn[data-risk="theory"].active { background: rgba(168,85,247,0.15); color: #c084fc; border-color: #a855f7; box-shadow: 0 0 12px rgba(168,85,247,0.3); }
 
   /* 风险筛选按钮前面的小圆点 */
   .risk-dot {
@@ -70,6 +72,7 @@
   .risk-btn[data-risk="yellow"] .risk-dot { background-color: var(--yellow); color: var(--yellow); }
   .risk-btn[data-risk="blue"] .risk-dot { background-color: var(--blue); color: var(--blue); }
   .risk-btn[data-risk="gray"] .risk-dot { background-color: var(--gray); color: var(--gray); }
+  .risk-btn[data-risk="theory"] .risk-dot { background-color: #a855f7; color: #a855f7; }
   .app{display:flex;flex:1;min-height:0}
   aside{width:380px;flex:0 0 380px;overflow-y:auto;background:#0d121c;border-right:1px solid var(--line);padding:10px 12px 24px;scrollbar-width:thin;scrollbar-color:rgba(148,163,184,.15) transparent;}
   .detail-panel{flex:1;min-width:0;overflow-y:auto;background:#0d121c;scrollbar-width:thin;scrollbar-color:rgba(148,163,184,.15) transparent;}
@@ -82,14 +85,14 @@
   .tree-group{margin:4px 0}
   .tree-group summary{cursor:pointer;font-weight:600;padding:6px 8px;border-radius:6px;font-size:13px;outline:none;color:#cbd5e1;list-style:none;}
   .tree-group summary::-webkit-details-marker{display:none;}
-  .tree-group summary::before{content:'▸';display:inline-block;transition:transform 0.2s;color:#64748b;margin-right:6px;font-size:12px;}
+  .tree-group summary::before{content:'';display:inline-block;width:0;height:0;border-top:4px solid transparent;border-bottom:4px solid transparent;border-left:5px solid #64748b;transition:transform 0.2s;margin-right:8px;vertical-align:middle;}
   .tree-group[open] summary::before{transform:rotate(90deg);}
   .tree-group summary:hover{background:#1e293b;color:#f8fafc;}
   .tree-group summary:focus-visible{outline:2px solid var(--blue);outline-offset:2px;}
   .tree-sub-group{margin-left:12px}
 .tree-sub-title{cursor:pointer;font-size:12px;color:#94a3b8;padding:6px 8px;border-radius:6px;list-style:none;user-select:none;display:flex;align-items:center;transition:all 0.15s;}
 .tree-sub-title::-webkit-details-marker{display:none}
-.tree-sub-title::before{content:'▸';display:inline-block;transition:transform 0.2s;color:#64748b;margin-right:6px;font-size:10px}
+.tree-sub-title::before{content:'';display:inline-block;width:0;height:0;border-top:3px solid transparent;border-bottom:3px solid transparent;border-left:4px solid #64748b;transition:transform 0.2s;margin-right:8px;vertical-align:middle;}
 .tree-sub-group[open] .tree-sub-title::before{transform:rotate(90deg)}
 .tree-sub-title:hover{background:#1e293b;color:#f8fafc}
 .tree-sub-content{margin-left:14px;border-left:1px solid #1e293b;padding-left:8px;padding-top:4px;padding-bottom:4px;}
@@ -104,6 +107,7 @@
   .badge-yellow{background:var(--yellow-bg);color:#fcd34d;border-color:rgba(251,191,36,0.3)}
   .badge-blue{background:var(--blue-bg);color:#7dd3fc;border-color:rgba(56,189,248,0.3)}
   .badge-gray{background:var(--gray-bg);color:#cbd5e1;border-color:rgba(148,163,184,0.3)}
+  .badge-theory{background:rgba(168,85,247,0.15);color:#c084fc;border-color:rgba(168,85,247,0.3)}
 
   /* 卡片样式已移除，合并入树形列表 */
   
@@ -118,8 +122,9 @@
   .risk-bar.risk-yellow{border-color:var(--yellow);background:rgba(251,191,36,0.05)}
   .risk-bar.risk-blue{border-color:var(--blue);background:rgba(56,189,248,0.05)}
   .risk-bar.risk-gray{border-color:var(--gray);background:rgba(148,163,184,0.05)}
+  .risk-bar.risk-theory{border-color:#a855f7;background:rgba(168,85,247,0.05)}
   
-  .image-panel{border:1px dashed #334155;border-radius:10px;padding:16px;background:#0f172a;margin:20px auto; width: fit-content; max-width: 100%;}
+  .image-panel{border:1px solid rgba(148,163,184,0.15);border-radius:10px;padding:16px;background:#0f172a;margin:20px auto; width: fit-content; max-width: 100%;}
   .image-wrap{display:flex;align-items:center;justify-content:center;min-height:120px;position:relative;}
   .image-wrap img{max-width:100%;max-height:75vh;display:block;object-fit:contain; transition: transform 0.2s, filter 0.3s; filter: invert(1) grayscale(1) brightness(0.85) contrast(1.2); mix-blend-mode: screen;}
 .image-wrap img:hover { transform: scale(1.02); }
@@ -170,6 +175,7 @@
     <button class="risk-btn" data-risk="yellow"><span class="risk-dot"></span>黄色 · 观察</button>
     <button class="risk-btn" data-risk="blue"><span class="risk-dot"></span>蓝色 · 封闭掩饰</button>
     <button class="risk-btn" data-risk="gray"><span class="risk-dot"></span>灰色 · 表层</button>
+    <button class="risk-btn" data-risk="theory"><span class="risk-dot"></span>紫色 · 理论图鉴</button>
   </div>
 </header>
 
@@ -405,7 +411,15 @@ const CRACKS = [
   { id: "C183", category: "十、砌体结构的裂缝", subcategory: "3、砌体的界面裂缝及抹灰层裂缝", itemNo: "第1项", title: "填充墙与周边结构的界面", path: "十、砌体结构的裂缝 / 3、砌体的界面裂缝及抹灰层裂缝 / 第1项", morphology: "沿界面的裂缝。", cause: "构造措施或施工操作缺陷。", nature: "间接裂缝。", impact: "影响观瞻和使用功能，不影响承载力。", treatment: "装修处理或重做。", risk: "gray" },
   { id: "C184", category: "十、砌体结构的裂缝", subcategory: "3、砌体的界面裂缝及抹灰层裂缝", itemNo: "第2项", title: "隔断墙与相邻结构的界面", path: "十、砌体结构的裂缝 / 3、砌体的界面裂缝及抹灰层裂缝 / 第2项", morphology: "沿界面的裂缝。", cause: "构造措施或施工操作缺陷。", nature: "间接裂缝。", impact: "影响观瞻和使用功能，不影响承载力。", treatment: "装修处理或重做。", risk: "gray" },
   { id: "C185", category: "十、砌体结构的裂缝", subcategory: "3、砌体的界面裂缝及抹灰层裂缝", itemNo: "第3项", title: "女儿墙与屋盖结构的界面", path: "十、砌体结构的裂缝 / 3、砌体的界面裂缝及抹灰层裂缝 / 第3项", morphology: "沿界面的裂缝。", cause: "构造措施或施工操作缺陷，温差裂缝。", nature: "间接裂缝。", impact: "影响观瞻和使用功能（渗漏），不影响承载力。", treatment: "装修处理或重做。", risk: "gray" },
-  { id: "C186", category: "十、砌体结构的裂缝", subcategory: "3、砌体的界面裂缝及抹灰层裂缝", itemNo: "第4项", title: "砌体表面抹灰层或饰面", path: "十、砌体结构的裂缝 / 3、砌体的界面裂缝及抹灰层裂缝 / 第4项", morphology: "网状龟裂或空鼓、剥落。", cause: "构造措施或施工操作缺陷。", nature: "间接裂缝。", impact: "影响观瞻和使用功能（渗漏），不影响承载力，可能坠落造成安全问题。", treatment: "装修处理或重做。", risk: "gray" }
+  { id: "C186", category: "十、砌体结构的裂缝", subcategory: "3、砌体的界面裂缝及抹灰层裂缝", itemNo: "第4项", title: "砌体表面抹灰层或饰面", path: "十、砌体结构的裂缝 / 3、砌体的界面裂缝及抹灰层裂缝 / 第4项", morphology: "网状龟裂或空鼓、剥落。", cause: "构造措施或施工操作缺陷。", nature: "间接裂缝。", impact: "影响观瞻和使用功能（渗漏），不影响承载力，可能坠落造成安全问题。", treatment: "装修处理或重做。", risk: "gray" },
+
+  // =============== 十一、宏观破坏形态参考 ===============
+  { id: "T01", category: "十一、宏观破坏形态（理论参考）", subcategory: "1、斜截面破坏形态", itemNo: "理论", title: "斜压破坏", path: "十一、宏观破坏形态（理论参考） / 1、斜截面破坏形态 / 斜压破坏", morphology: "腹部出现多条平行的斜向裂缝。", cause: "剪跨比很小，或腹板很薄，主压应力超过混凝土抗压强度。", nature: "受压破坏，属于脆性破坏。", impact: "承载力取决于混凝土抗压强度，破坏突然，无明显预兆。", treatment: "理论警示：设计时应避免出现此类破坏模式，用于对照实际病害。", risk: "theory" },
+  { id: "T02", category: "十一、宏观破坏形态（理论参考）", subcategory: "1、斜截面破坏形态", itemNo: "理论", title: "剪压破坏", path: "十一、宏观破坏形态（理论参考） / 1、斜截面破坏形态 / 剪压破坏", morphology: "临界斜裂缝发展，剪压区混凝土在剪应力和压应力共同作用下破坏。", cause: "剪跨比适中，箍筋配置适量。", nature: "剪压破坏，属于延性破坏（相对）。", impact: "有明显预兆，是较理想的斜截面破坏形态。", treatment: "理论参考：工程中较理想的破坏模式，用于对照实际病害。", risk: "theory" },
+  { id: "T03", category: "十一、宏观破坏形态（理论参考）", subcategory: "1、斜截面破坏形态", itemNo: "理论", title: "斜拉破坏", path: "十一、宏观破坏形态（理论参考） / 1、斜截面破坏形态 / 斜拉破坏", morphology: "裂缝一出现即迅速向受压区斜向延伸，形成临界斜裂缝。", cause: "剪跨比较大，且未配置腹筋或配箍率极低。", nature: "受拉破坏，属于脆性破坏。", impact: "破坏突然，承载力极低，工程中应严格避免。", treatment: "理论警示：一裂即坏的脆性破坏，需重点防范。", risk: "theory" },
+  { id: "T04", category: "十一、宏观破坏形态（理论参考）", subcategory: "2、正截面破坏形态", itemNo: "理论", title: "适筋破坏", path: "十一、宏观破坏形态（理论参考） / 2、正截面破坏形态 / 适筋破坏", morphology: "受拉区钢筋先屈服，受压区混凝土后压碎，裂缝发展充分。", cause: "配筋率适中（ρ_min ≤ ρ ≤ ρ_max）。", nature: "延性破坏。", impact: "破坏前有明显的挠度和裂缝预兆，是设计的理想状态。", treatment: "理论参考：延性破坏，抗震设计的核心追求。", risk: "theory" },
+  { id: "T05", category: "十一、宏观破坏形态（理论参考）", subcategory: "2、正截面破坏形态", itemNo: "理论", title: "超筋破坏", path: "十一、宏观破坏形态（理论参考） / 2、正截面破坏形态 / 超筋破坏", morphology: "受压区混凝土先被压碎，受拉钢筋未屈服，裂缝多而细。", cause: "配筋率过大（ρ > ρ_max）。", nature: "脆性破坏。", impact: "破坏突然，无预兆，材料未充分利用，应避免。", treatment: "理论警示：配筋过剩导致的脆性破坏，需优化设计。", risk: "theory" },
+  { id: "T06", category: "十一、宏观破坏形态（理论参考）", subcategory: "2、正截面破坏形态", itemNo: "理论", title: "少筋破坏", path: "十一、宏观破坏形态（理论参考） / 2、正截面破坏形态 / 少筋破坏", morphology: "受拉区混凝土一旦开裂，钢筋迅速屈服甚至被拉断，形成极宽裂缝。", cause: "配筋率过低（ρ < ρ_min）。", nature: "脆性破坏。", impact: "一裂即坏，突然断裂，极其危险。", treatment: "理论警示：承载力极低，瞬间断裂，工程红线。", risk: "theory" }
 ];
 
 const RISK = {
@@ -414,6 +428,7 @@ const RISK = {
   yellow: { label: "黄色 · 观察",     badge: "badge-yellow", bar: "risk-yellow", color: "#fbbf24" },
   blue:   { label: "蓝色 · 封闭掩饰", badge: "badge-blue",   bar: "risk-blue",   color: "#38bdf8" },
   gray:   { label: "灰色 · 表层",     badge: "badge-gray",   bar: "risk-gray",   color: "#94a3b8" },
+  theory: { label: "紫色 · 理论图鉴", badge: "badge-theory", bar: "risk-theory", color: "#a855f7" },
   unknown:{ label: "未知 · 待确认",   badge: "badge-gray",   bar: "risk-gray",   color: "#94a3b8" }
 };
 
@@ -572,7 +587,9 @@ function renderDetail() {
   if (!crack) return;
 
   const ri = riskInfo(crack.risk);
-  const img = `./images/${crack.id}.jpg`;
+  // 智能判断后缀：如果是 T 开头的图（宏观理论参考），则是 .png；其他的裂缝默认是 .jpg
+  const ext = crack.id.startsWith("T") ? "png" : "jpg";
+  const img = `./images/${crack.id}.${ext}`;
 
   detailEl.innerHTML = `
     <div class="detail">

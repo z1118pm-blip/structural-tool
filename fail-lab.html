@@ -1,0 +1,1392 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Structura Fail-Lab · 混凝土破坏模式图鉴</title>
+<script>
+  window.FAIL_LAB_VERSION = 'v1.0-M1';
+  document.addEventListener('DOMContentLoaded', () => {
+    if (window.FAIL_LAB_VERSION) {
+      document.title = `Structura Fail-Lab ${window.FAIL_LAB_VERSION} · 混凝土破坏模式图鉴`;
+    }
+  });
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", "Inter", sans-serif;
+  background: #05080f; color: #f8fafc; overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  font-variant-numeric: tabular-nums;
+}
+button:focus-visible, input:focus-visible { outline: 2px solid #38bdf8; outline-offset: 2px; border-radius: 3px; }
+input[type=range]:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(56,189,248,0.4); }
+[hidden] { display: none !important; }
+
+#app { display: flex; height: 100vh; }
+
+/* ============ 左栏 ============ */
+#leftCol {
+  flex: 0 0 360px;
+  display: flex; flex-direction: column;
+  background: #0a101c;
+  border-right: 1px solid rgba(148,163,184,0.08);
+  min-width: 0; overflow: hidden;
+}
+
+.brand {
+  position: relative; display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, rgba(56,189,248,0.08) 0%, rgba(15,23,42,0) 65%);
+}
+.brand::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(56,189,248,.6) 22%, rgba(56,189,248,.6) 78%, transparent);
+}
+.brandIcon {
+  flex: 0 0 auto; width: 44px; height: 44px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid rgba(56,189,248,0.4);
+  background: rgba(15,23,42,0.8);
+  box-shadow: 0 0 16px rgba(56,189,248,0.25);
+  font-size: 22px;
+}
+.brandText { flex: 1; min-width: 0; }
+.brandName { font-size: 18px; font-weight: 600; color: #f1f5f9; white-space: nowrap; }
+.brandName .accent { color: #38bdf8; }
+.brandVer {
+  font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600;
+  color: #7dd3fc; padding: 2px 8px; border-radius: 999px;
+  border: 1px solid rgba(56,189,248,.45); background: rgba(56,189,248,.08);
+}
+.brandRule { height: 1px; width: 56px; margin: 5px 0 4px; background: linear-gradient(90deg, rgba(56,189,248,.85), rgba(56,189,248,0)); }
+.brandSub { font-size: 11px; color: #94a3b8; line-height: 1.5; }
+
+.catList {
+  flex: 1; overflow-y: auto; padding: 14px 12px 20px;
+  scrollbar-width: thin; scrollbar-color: rgba(148,163,184,.15) transparent;
+  scrollbar-gutter: stable;
+}
+.catList::-webkit-scrollbar { width: 6px; }
+.catList::-webkit-scrollbar-thumb { background: rgba(148,163,184,.15); border-radius: 3px; }
+
+.catTitle {
+  font-size: 11px; font-weight: 700; color: #94a3b8;
+  letter-spacing: .8px; margin: 16px 4px 8px;
+  display: flex; align-items: center; gap: 6px;
+}
+.catTitle:first-child { margin-top: 0; }
+
+.selfTestCard {
+  display: flex; flex-direction: column; gap: 5px;
+  padding: 11px 12px; margin-bottom: 8px;
+  background: rgba(30,41,59,.5);
+  border: 1px solid #334155;
+  border-radius: 9px;
+  cursor: pointer; user-select: none;
+  transition: border-color .15s, background .15s, box-shadow .15s, transform .1s;
+}
+.selfTestCard:hover { background: #1e293b; border-color: #475569; box-shadow: 0 4px 14px rgba(0,0,0,.2); }
+.selfTestCard:active { transform: scale(.99); }
+.selfTestCard.active {
+  background: rgba(56,189,248,.06);
+  border-color: rgba(56,189,248,.5);
+  box-shadow: 0 4px 12px rgba(0,0,0,.3);
+}
+.selfTestCard.disabled { opacity: .32; cursor: not-allowed; }
+.selfTestCard.disabled:hover { background: rgba(30,41,59,.5); border-color: #334155; box-shadow: none; }
+
+.stcTitle {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 13px; font-weight: 700; color: #38bdf8;
+}
+.selfTestCard.disabled .stcTitle { color: #64748b; }
+.stcTitleText { display: flex; align-items: center; min-width: 0; flex: 1; margin-right: 8px; }
+.stcTitleMain { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stcLevel {
+  font-size: 9px; padding: 1px 5px; border-radius: 3px;
+  font-weight: 600; background: rgba(255,255,255,.05);
+  color: #38bdf8; border: 1px solid rgba(56,189,248,.3);
+  white-space: nowrap;
+}
+.selfTestCard.disabled .stcLevel { color: #475569; border-color: rgba(148,163,184,.2); }
+.stcDesc { font-size: 11px; color: #94a3b8; line-height: 1.55; }
+.selfTestCard.active .stcDesc { color: #cbd5e1; }
+
+.sideFoot {
+  padding: 10px 14px;
+  border-top: 1px solid rgba(148,163,184,0.08);
+  font-size: 10px; color: #475569; text-align: center; letter-spacing: .5px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ============ 右侧 stage ============ */
+#stage {
+  flex: 1; min-width: 0;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 10px; padding: 10px;
+  background: #05080f;
+}
+
+.topBar {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 14px;
+  background: #111a2c; border-radius: 10px;
+  border: 1px solid rgba(148,163,184,.10);
+  box-shadow: 0 4px 20px rgba(0,0,0,.3);
+  gap: 12px; flex-wrap: wrap;
+}
+.topTitle {
+  font-size: 15px; font-weight: 700; color: #f8fafc;
+  display: flex; align-items: center; gap: 10px; min-width: 0;
+}
+.topTitle .chip {
+  font-size: 10px; padding: 2px 8px; border-radius: 999px;
+  font-weight: 600; background: rgba(34,211,238,.12);
+  color: #22d3ee; border: 1px solid rgba(34,211,238,.3);
+  letter-spacing: .3px; white-space: nowrap;
+}
+.stageNav { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+.stageNav button {
+  font-size: 10px; padding: 3px 8px; font-family: inherit;
+  background: #0b1220; color: #94a3b8;
+  border: 1px solid #334155; border-radius: 5px;
+  cursor: pointer; transition: all .15s; white-space: nowrap;
+}
+.stageNav button:hover { color: #38bdf8; border-color: rgba(56,189,248,.4); }
+.stageNav button.on {
+  background: rgba(56,189,248,.15);
+  color: #38bdf8; border-color: #38bdf8; font-weight: 600;
+}
+.topActions { display: flex; gap: 8px; align-items: center; }
+.btnPlay {
+  padding: 7px 16px; font-size: 12px; font-weight: 600; font-family: inherit;
+  background: rgba(56,189,248,.12); color: #38bdf8;
+  border: 1px solid rgba(56,189,248,.5); border-radius: 7px;
+  cursor: pointer; transition: all .15s;
+}
+.btnPlay:hover { background: rgba(56,189,248,.22); border-color: #38bdf8; }
+.btnReset {
+  padding: 7px 14px; font-size: 12px; font-weight: 600; font-family: inherit;
+  background: #0b1220; color: #cbd5e1;
+  border: 1px solid #1e293b; border-radius: 7px;
+  cursor: pointer; transition: all .15s;
+}
+.btnReset:hover { background: #1e293b; border-color: #334155; }
+
+/* 通用 chart 卡片 */
+.chart {
+  position: relative;
+  background: #111a2c;
+  border-radius: 10px;
+  border: 1px solid rgba(148,163,184,.10);
+  box-shadow: 0 4px 20px rgba(0,0,0,.3);
+  overflow: hidden;
+  display: flex; flex-direction: column; min-height: 0;
+}
+.chart > canvas { flex: 1; min-height: 0; display: block; width: 100%; }
+
+.stageBadge {
+  position: absolute; top: 14px; right: 14px; z-index: 5;
+  padding: 6px 12px; border-radius: 6px;
+  font-size: 11px; font-weight: 700; letter-spacing: .5px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  background: rgba(15,23,42,.85);
+  border: 1px solid rgba(56,189,248,.4);
+  color: #38bdf8; backdrop-filter: blur(6px);
+  pointer-events: none;
+  transition: border-color .2s, color .2s;
+}
+
+.progressBar {
+  flex: 0 0 auto;
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px;
+  border-top: 1px solid rgba(148,163,184,.08);
+  background: rgba(15,23,42,.3);
+}
+.progressBar label { font-size: 11px; color: #94a3b8; white-space: nowrap; }
+.progressBar input[type=range] {
+  -webkit-appearance: none; appearance: none;
+  flex: 1; height: 5px; border-radius: 3px; outline: none;
+  cursor: pointer;
+  background: linear-gradient(90deg, #38bdf8 var(--p, 0%), #334155 var(--p, 0%));
+}
+.progressBar input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 14px; height: 16px;
+  background: linear-gradient(180deg, #f8fafc, #94a3b8);
+  border: 1.5px solid #38bdf8;
+  clip-path: polygon(50% 0, 100% 26%, 100% 74%, 50% 100%, 0 74%, 0 26%);
+  box-shadow: 0 0 8px rgba(56,189,248,.5);
+  cursor: pointer;
+}
+.progVal {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; font-weight: 600; color: #38bdf8;
+  min-width: 42px; text-align: right;
+}
+
+.bottomRow {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 10px; height: 260px; min-height: 0;
+}
+.explain {
+  background: #111a2c;
+  border-radius: 10px;
+  border: 1px solid rgba(148,163,184,.10);
+  box-shadow: 0 4px 20px rgba(0,0,0,.3);
+  padding: 14px 18px;
+  overflow-y: auto; min-height: 0;
+  scrollbar-width: thin;
+}
+.explain::-webkit-scrollbar { width: 6px; }
+.explain::-webkit-scrollbar-thumb { background: rgba(148,163,184,.15); border-radius: 3px; }
+.explainTitle {
+  font-size: 11px; font-weight: 700; color: #94a3b8;
+  letter-spacing: .8px; margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(148,163,184,.1);
+}
+.stageBlock { margin-bottom: 4px; }
+.stageName { font-size: 13px; font-weight: 700; color: #38bdf8; margin-bottom: 4px; }
+.stageDesc { font-size: 12px; line-height: 1.7; color: #cbd5e1; }
+.explain p { font-size: 12.5px; line-height: 1.75; color: #cbd5e1; margin-bottom: 8px; }
+.explain strong { color: #38bdf8; font-weight: 600; }
+.explain em { color: #fbbf24; font-style: normal; font-weight: 600; }
+.explain code {
+  background: #0f172a; padding: 1px 6px; border-radius: 3px;
+  font-size: 11.5px; font-family: 'JetBrains Mono', monospace; color: #38bdf8;
+}
+
+@media (max-width: 900px) {
+  body { overflow: auto; }
+  #app { flex-direction: column; height: auto; min-height: 100vh; }
+  #leftCol { flex: 0 0 auto; border-right: none; border-bottom: 1px solid #1e293b; max-height: 320px; }
+  #stage { grid-template-rows: auto 460px auto; height: auto; }
+  .bottomRow { grid-template-columns: 1fr; height: auto; }
+  .bottomRow .chart { min-height: 220px; }
+  .explain { max-height: 280px; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <aside id="leftCol">
+    <div class="brand">
+      <div class="brandIcon">🧱</div>
+      <div class="brandText">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;">
+          <span class="brandName">Structura <span class="accent">Fail-Lab</span></span>
+          <span class="brandVer" id="ui-ver-brand">v1.0-M1</span>
+        </div>
+        <div class="brandRule"></div>
+        <div class="brandSub">混凝土破坏模式全景图鉴 · 单文件版</div>
+      </div>
+    </div>
+    <div class="catList" id="catList"></div>
+    <div class="sideFoot">M1 · 架构重构 · v1.0</div>
+  </aside>
+
+  <main id="stage">
+    <div class="topBar">
+      <div class="topTitle">
+        <span id="topTitleText">适筋破坏</span>
+        <span class="chip" id="topChip">延性</span>
+      </div>
+      <div class="stageNav" id="stageNav"></div>
+      <div class="topActions">
+        <button class="btnReset" id="btnReset">⟲ 重置</button>
+        <button class="btnPlay" id="btnPlay">▶ 播放演示</button>
+      </div>
+    </div>
+
+    <div class="chart mainChart">
+      <canvas id="cvMain"></canvas>
+      <div class="stageBadge" id="stageBadge">阶段 I · 弹性</div>
+      <div class="progressBar">
+        <label>进度</label>
+        <input type="range" id="progressInput" min="0" max="1000" value="0" step="1">
+        <span class="progVal" id="progressVal">0%</span>
+      </div>
+    </div>
+
+    <div class="bottomRow">
+      <div class="chart curveChart">
+        <canvas id="cvCurve"></canvas>
+      </div>
+      <div class="explain" id="explain"></div>
+    </div>
+  </main>
+</div>
+
+<script>
+"use strict";
+/* =====================================================================
+   Structura Fail-Lab · M1
+   场景契约 + 3 个受弯正截面场景（适筋 / 超筋 / 少筋）
+   ===================================================================== */
+
+/* --------------------------- 核心：状态 --------------------------- */
+const S = {
+  progress: 0,
+  playing: false,
+  lastTs: 0,
+  duration: 8000,
+  sceneId: 'flexure.suitable',
+  listeners: new Set(),
+  subscribe(fn) { this.listeners.add(fn); return () => this.listeners.delete(fn); },
+  emit() { this.listeners.forEach(fn => fn(this)); },
+  setProgress(p) {
+    this.progress = Math.max(0, Math.min(1, p));
+    this.emit();
+  },
+  setScene(id) {
+    if (this.sceneId === id) return;
+    this.sceneId = id;
+    this.progress = 0;
+    this.playing = false;
+    this.lastTs = 0;
+    this.emit();
+  },
+  play() {
+    if (this.progress >= 1) this.progress = 0;
+    this.playing = true; this.lastTs = 0; this.emit();
+  },
+  pause() { this.playing = false; this.emit(); },
+  reset() { this.progress = 0; this.playing = false; this.lastTs = 0; this.emit(); },
+};
+
+/* --------------------------- 渲染工具库 --------------------------- */
+function setupCanvas(canvas, overrideDPR) {
+  const dpr = overrideDPR || window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const W = Math.max(120, rect.width);
+  const H = Math.max(120, rect.height);
+  const newW = Math.round(W * dpr);
+  const newH = Math.round(H * dpr);
+  const ctx = canvas.getContext('2d');
+  if (canvas.width !== newW || canvas.height !== newH) {
+    canvas.width = newW; canvas.height = newH;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  } else {
+    ctx.clearRect(0, 0, W, H);
+  }
+  ctx.textAlign = 'start';
+  ctx.textBaseline = 'alphabetic';
+  ctx.setLineDash([]);
+  return { ctx, W, H };
+}
+function drawGrid(ctx, W, H) {
+  ctx.save();
+  const step = 24;
+  ctx.strokeStyle = 'rgba(148,163,184,0.05)'; ctx.lineWidth = 0.5;
+  for (let x = 0; x <= W; x += step) { ctx.beginPath(); ctx.moveTo(x + 0.5, 0); ctx.lineTo(x + 0.5, H); ctx.stroke(); }
+  for (let y = 0; y <= H; y += step) { ctx.beginPath(); ctx.moveTo(0, y + 0.5); ctx.lineTo(W, y + 0.5); ctx.stroke(); }
+  ctx.strokeStyle = 'rgba(148,163,184,0.10)';
+  for (let x = 0; x <= W; x += step * 5) { ctx.beginPath(); ctx.moveTo(x + 0.5, 0); ctx.lineTo(x + 0.5, H); ctx.stroke(); }
+  for (let y = 0; y <= H; y += step * 5) { ctx.beginPath(); ctx.moveTo(0, y + 0.5); ctx.lineTo(W, y + 0.5); ctx.stroke(); }
+  ctx.restore();
+}
+function drawHUD(ctx, W, H, label) {
+  ctx.save();
+  ctx.strokeStyle = 'rgba(148,163,184,0.4)'; ctx.lineWidth = 1.2;
+  const L = 14, M = 10;
+  const corners = [[M, M, 1, 1], [W - M, M, -1, 1], [M, H - M, 1, -1], [W - M, H - M, -1, -1]];
+  for (const [x, y, dx, dy] of corners) {
+    ctx.beginPath(); ctx.moveTo(x + dx * L, y); ctx.lineTo(x, y); ctx.lineTo(x, y + dy * L); ctx.stroke();
+  }
+  ctx.font = '9.5px "JetBrains Mono", ui-monospace, monospace';
+  ctx.fillStyle = 'rgba(148,163,184,0.6)';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  ctx.fillText('◆ ' + (label || 'STRUCTURA FAIL-LAB'), M + 4, M + 4);
+  ctx.restore();
+}
+function drawSupport(ctx, x, y) {
+  ctx.save();
+  ctx.strokeStyle = '#7dd3fc'; ctx.fillStyle = 'rgba(56,189,248,.15)'; ctx.lineWidth = 1.6;
+  ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 12, y + 18); ctx.lineTo(x + 12, y + 18); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x - 16, y + 18); ctx.lineTo(x + 16, y + 18); ctx.stroke();
+  ctx.restore();
+}
+function drawLoadArrows(ctx, left, right, arrowTopBase, targetY) {
+  ctx.save();
+  ctx.strokeStyle = '#fbbf24'; ctx.fillStyle = '#fbbf24'; ctx.lineWidth = 2.5;
+  ctx.shadowColor = '#fbbf24'; ctx.shadowBlur = 6;
+  
+  const L = right - left;
+  const x1 = left + L / 3;
+  const x2 = left + (L * 2) / 3;
+  
+  // 只画两个集中力箭头
+  [x1, x2].forEach(x => {
+    // 竖线
+    ctx.beginPath(); ctx.moveTo(x, arrowTopBase); ctx.lineTo(x, targetY - 6); ctx.stroke();
+    // 箭头
+    ctx.beginPath(); ctx.moveTo(x, targetY); ctx.lineTo(x - 5, targetY - 10); ctx.lineTo(x + 5, targetY - 10); ctx.closePath(); ctx.fill();
+    
+    // 标注 P/2
+    ctx.font = 'bold 11px Inter, sans-serif';
+    ctx.fillStyle = 'rgba(251,191,36,0.9)';
+    ctx.textAlign = 'center';
+    ctx.fillText('P/2', x, arrowTopBase - 8);
+  });
+  
+  ctx.restore();
+}
+function lerp(a, b, t) { return a + (b - a) * t; }
+function pickStage(stages, p) {
+  let cur = stages[0];
+  for (const s of stages) { if (p >= s.at) cur = s; else break; }
+  return cur;
+}
+
+/* --------------------------- 通用渲染器：受弯梁 --------------------------- */
+function renderBeamFlexure(canvas, scene, state) {
+  const { ctx, W, H } = setupCanvas(canvas);
+  ctx.fillStyle = '#0a101c'; ctx.fillRect(0, 0, W, H);
+  drawGrid(ctx, W, H);
+  drawHUD(ctx, W, H, scene.hudLabel || 'RC BEAM · FLEXURE');
+
+  const p = state.p;
+  const scale = Math.min(1, H / 500);
+  const deflAmp = state.geometry.deflection * scale;
+  const compress = state.geometry.compress;
+  const tension = state.geometry.tension;
+  const naRatio = state.geometry.naRatio;
+  const yieldRatio = state.rebar.yieldRatio;
+  const cracks = state.cracks || [];
+
+  const L = Math.min(W * 0.80, 880);
+  const bh = Math.min(H * 0.16, 110);
+  const cx = W / 2;
+  const cyBase = H * 0.52;
+  const left = cx - L / 2;
+  const right = cx + L / 2;
+
+  const nSeg = 100;
+  const topPts = [], botPts = [], naPts = [];
+  for (let i = 0; i <= nSeg; i++) {
+    const t = i / nSeg;
+    const x = left + L * t;
+    const sag = Math.sin(Math.PI * t) * deflAmp;
+    let yTop = cyBase - bh / 2 + sag;
+    if (compress > 0.1 && t > 0.25 && t < 0.75) {
+      const crushT = compress;
+      const jag = Math.sin(t * 60 + p * 20) * 5 * crushT * Math.sin((t - 0.25) * Math.PI / 0.5);
+      yTop -= Math.max(0, jag);
+    }
+    topPts.push([x, yTop]);
+    botPts.push([x, cyBase + bh / 2 + sag]);
+    naPts.push([x, yTop + bh * naRatio]);
+  }
+
+  ctx.save();
+  ctx.strokeStyle = 'rgba(148,163,184,0.15)'; ctx.setLineDash([4, 4]); ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(left, cyBase + bh / 2); ctx.lineTo(right, cyBase + bh / 2); ctx.stroke();
+  ctx.restore();
+
+  ctx.save();
+  ctx.beginPath();
+  topPts.forEach(([x, y], i) => i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y));
+  for (let i = botPts.length - 1; i >= 0; i--) ctx.lineTo(botPts[i][0], botPts[i][1]);
+  ctx.closePath();
+  const gFill = ctx.createLinearGradient(0, cyBase - bh * 1.2, 0, cyBase + bh * 1.2);
+  gFill.addColorStop(0, `rgba(239,68,68,${0.05 + compress * 0.55})`);
+  gFill.addColorStop(0.5, 'rgba(17,26,44,0.85)');
+  gFill.addColorStop(1, `rgba(34,211,238,${0.10 + tension * 0.22})`);
+  ctx.fillStyle = gFill; ctx.fill();
+  ctx.restore();
+
+  ctx.save();
+  ctx.strokeStyle = 'rgba(56,189,248,0.10)'; ctx.lineWidth = 0.8;
+  for (let k = 1; k < 5; k++) {
+    const frac = k / 5;
+    ctx.beginPath();
+    for (let i = 0; i <= nSeg; i++) {
+      const t = i / nSeg;
+      const x = topPts[i][0];
+      const sag = Math.sin(Math.PI * t) * deflAmp;
+      const y = cyBase - bh / 2 + sag + bh * frac;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  ctx.save();
+  ctx.beginPath();
+  naPts.forEach(([x, y], i) => i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y));
+  ctx.strokeStyle = 'rgba(251, 191, 36, 0.8)'; ctx.lineWidth = 1.5;
+  ctx.setLineDash([6, 4]); ctx.stroke();
+  const naLabelT = 0.1;
+  const naLabelX = left + L * naLabelT;
+  const naLabelY = naPts[Math.round(nSeg * naLabelT)][1];
+  ctx.strokeStyle = 'rgba(251, 191, 36, 0.4)'; ctx.lineWidth = 1; ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(naLabelX, naLabelY); ctx.lineTo(naLabelX - 30, naLabelY - 15); ctx.stroke();
+  ctx.font = '10px "JetBrains Mono", ui-monospace, monospace';
+  ctx.fillStyle = 'rgba(251, 191, 36, 0.9)';
+  ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
+  ctx.fillText('中性轴 (N.A.)', naLabelX - 32, naLabelY - 17);
+  ctx.restore();
+
+  ctx.save();
+  ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 1.8; ctx.shadowColor = '#38bdf8'; ctx.shadowBlur = 8;
+  ctx.beginPath(); topPts.forEach(([x, y], i) => i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)); ctx.stroke();
+  ctx.beginPath(); botPts.forEach(([x, y], i) => i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(left, topPts[0][1]); ctx.lineTo(left, botPts[0][1]);
+  ctx.moveTo(right, topPts[nSeg][1]); ctx.lineTo(right, botPts[nSeg][1]);
+  ctx.stroke();
+  ctx.restore();
+
+  const rebarOffset = bh * 0.15;
+  const rr = Math.round(148 + 107 * yieldRatio);
+  const rg = Math.round(163 - 95 * yieldRatio);
+  const rb = Math.round(184 - 116 * yieldRatio);
+  ctx.save();
+  ctx.strokeStyle = `rgb(${rr},${rg},${rb})`;
+  ctx.lineWidth = 1.5 + yieldRatio * 2;
+  if (yieldRatio > 0.1) { ctx.shadowColor = '#ef4444'; ctx.shadowBlur = 10 * yieldRatio; }
+  ctx.beginPath();
+  botPts.forEach(([x, y], i) => { const yy = y - rebarOffset; i === 0 ? ctx.moveTo(x, yy) : ctx.lineTo(x, yy); });
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.save();
+  // 计算当前受拉区的真实物理高度
+  const tensionHeight = (1 - naRatio) * bh;
+  // 限制裂缝最大高度为受拉区高度的95%，绝不越界
+  const physicalLimitH = tensionHeight * 0.95;
+
+  for (const c of cracks) {
+    if (c.ratio <= 0) continue;
+    const ratio = c.ratio;
+    // 结合该裂缝的固有特征与当前的物理上限，取最小值
+    const baseMaxH = bh * (c.maxHeightRatio || (c.widthMul > 1.5 ? 0.95 : 0.75));
+    const crackMaxH = Math.min(baseMaxH, physicalLimitH);
+    const len = crackMaxH * ratio;
+    const x0c = left + L * c.t;
+    const sag0 = Math.sin(Math.PI * c.t) * deflAmp;
+    const y0c = cyBase + bh / 2 + sag0;
+
+    const segCount = 8;
+    const pts = [[x0c, y0c]];
+    let px = x0c, py = y0c;
+    for (let i = 0; i < segCount; i++) {
+      const dy = len / segCount;
+      const maxDx = 2.0 * c.widthMul * (1 - i / segCount);
+      const dx = Math.sin(c.seed * 13.7 + i * 2.3) * maxDx;
+      px += dx; py -= dy;
+      pts.push([px, py]);
+    }
+
+    const alpha = 0.6 + 0.4 * ratio;
+    ctx.strokeStyle = `rgba(248,113,113,${alpha})`;
+    ctx.lineWidth = Math.min(3.5, (0.6 + ratio * 1.2) * c.widthMul);
+    ctx.lineJoin = 'bevel'; ctx.lineCap = 'round';
+    ctx.shadowColor = '#ef4444'; ctx.shadowBlur = 4 + 4 * ratio;
+    ctx.beginPath();
+    pts.forEach(([x, y], i) => i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y));
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  if (compress > 0.1) {
+    const crushT = compress;
+    const cxTop = left + L * 0.5;
+    const sagTop = Math.sin(Math.PI * 0.5) * deflAmp;
+    const cyTop = cyBase - bh / 2 + sagTop;
+
+    ctx.save();
+    ctx.strokeStyle = `rgba(239,68,68,${0.8 * crushT})`;
+    ctx.lineWidth = 1.5;
+    ctx.shadowColor = '#ef4444'; ctx.shadowBlur = 8;
+    const numCracks = 12;
+    for (let i = 0; i < numCracks; i++) {
+      const t = 0.3 + (i / numCracks) * 0.4;
+      const x = left + L * t;
+      const baseY = cyBase - bh / 2 + Math.sin(Math.PI * t) * deflAmp;
+      const w = 8 + (i % 3) * 3;
+      const h = bh * 0.2 * crushT;
+      ctx.beginPath();
+      ctx.moveTo(x - w, baseY); ctx.lineTo(x + w, baseY + h);
+      ctx.moveTo(x + w, baseY); ctx.lineTo(x - w, baseY + h);
+      ctx.stroke();
+    }
+    if (crushT > 0.3) {
+      const drop = (crushT - 0.3) * 30;
+      ctx.fillStyle = `rgba(239,68,68,${0.6 * crushT})`;
+      for (let i = 0; i < 5; i++) {
+        const x = cxTop - 25 + i * 12;
+        const y = cyTop + drop + Math.sin(i * 10) * 4;
+        ctx.beginPath();
+        ctx.moveTo(x, y); ctx.lineTo(x + 5, y + 7); ctx.lineTo(x - 3, y + 9);
+        ctx.closePath(); ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
+
+  drawSupport(ctx, left, cyBase + bh / 2);
+  drawSupport(ctx, right, cyBase + bh / 2);
+  drawLoadArrows(ctx, left, right, (cyBase - bh / 2) - 45, cyBase - bh / 2);
+
+  ctx.save();
+  ctx.font = '10px "JetBrains Mono", ui-monospace, monospace';
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'right';
+  ctx.fillStyle = 'rgba(239,68,68,0.85)';
+  ctx.fillText('受压区 (砼)', right + 4, cyBase - bh / 2 - 12);
+  ctx.fillStyle = 'rgba(34,211,238,0.85)';
+  ctx.fillText('受拉区 (筋)', right + 4, cyBase + bh / 2 + 12);
+  ctx.restore();
+
+  // 补充教材核心概念：纯弯段标注
+  ctx.save();
+  ctx.font = '11px Inter, sans-serif';
+  ctx.fillStyle = 'rgba(56,189,248,0.7)';
+  ctx.textAlign = 'center';
+  const pureLeft = left + L / 3;
+  const pureRight = left + (L * 2) / 3;
+  ctx.fillText('← 纯弯段 (无剪力) →', (pureLeft + pureRight) / 2, cyBase + bh / 2 + 30);
+  
+  ctx.strokeStyle = 'rgba(56,189,248,0.3)'; ctx.lineWidth = 1; ctx.setLineDash([4,4]);
+  ctx.beginPath(); ctx.moveTo(pureLeft, cyBase - bh/2 - 5); ctx.lineTo(pureLeft, cyBase + bh/2 + 20); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(pureRight, cyBase - bh/2 - 5); ctx.lineTo(pureRight, cyBase + bh/2 + 20); ctx.stroke();
+  ctx.restore();
+}
+
+/* --------------------------- 通用渲染器：P-Δ 曲线 --------------------------- */
+function interpY(points, x) {
+  if (x <= points[0][0]) return points[0][1];
+  if (x >= points[points.length - 1][0]) return points[points.length - 1][1];
+  for (let i = 0; i < points.length - 1; i++) {
+    const [x1, y1] = points[i], [x2, y2] = points[i + 1];
+    if (x >= x1 && x <= x2) {
+      const t = (x - x1) / (x2 - x1 || 1);
+      return lerp(y1, y2, t);
+    }
+  }
+  return 0;
+}
+// 曲线绘制工具（直接连线，保证拐点像教材一样干脆）
+function drawSmoothCurve(ctx, pts, mapX, mapY) {
+  ctx.beginPath();
+  ctx.moveTo(mapX(pts[0][0]), mapY(pts[0][1]));
+  for (let i = 1; i < pts.length; i++) {
+    ctx.lineTo(mapX(pts[i][0]), mapY(pts[i][1]));
+  }
+  ctx.stroke();
+}
+
+function drawCurve(canvas, scene, progress) {
+  const { ctx, W, H } = setupCanvas(canvas);
+  ctx.fillStyle = '#0a101c'; ctx.fillRect(0, 0, W, H);
+
+  const c = (scene && scene.curve) || {};
+  const points = c.points || [[0, 0], [1, 1]];
+  const markers = c.markers || [];
+  const zones = c.zones || [];
+  const platform = c.platform;
+  const xLabel = c.xLabel || 'φ (曲率)';
+  const yLabel = c.yLabel || 'M (弯矩)';
+
+  const padL = 45, padR = 30, padT = 40, padB = 45;
+  const x0 = padL, y0 = H - padB, xw = W - padL - padR, yh = H - padT - padB;
+  const mapX = (x) => x0 + xw * x;
+  const mapY = (y) => y0 - yh * y;
+
+  // 1. 画阶段色带
+  ctx.save();
+  zones.forEach(z => {
+    ctx.fillStyle = z.color;
+    ctx.fillRect(mapX(z.from), mapY(1), mapX(z.to) - mapX(z.from), yh);
+  });
+  ctx.restore();
+
+  // 2. 画网格
+  ctx.save();
+  ctx.strokeStyle = 'rgba(148,163,184,0.06)'; ctx.lineWidth = 0.5;
+  for (let i = 0; i <= 5; i++) {
+    const y = y0 - yh * i / 5;
+    ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x0 + xw, y); ctx.stroke();
+  }
+  for (let i = 0; i <= 5; i++) {
+    const x = x0 + xw * i / 5;
+    ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x, y0 - yh); ctx.stroke();
+  }
+  ctx.restore();
+
+  // 3. 画坐标轴
+  ctx.save();
+  ctx.strokeStyle = 'rgba(148,163,184,0.5)'; ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(x0, y0); ctx.lineTo(x0, y0 - yh - 10);
+  ctx.moveTo(x0, y0); ctx.lineTo(x0 + xw + 10, y0);
+  ctx.stroke();
+  ctx.font = '11px "JetBrains Mono", ui-monospace, monospace';
+  ctx.fillStyle = 'rgba(148,163,184,0.7)';
+  ctx.textAlign = 'center';
+  ctx.fillText(xLabel, x0 + xw / 2, H - 12);
+  ctx.save();
+  ctx.translate(15, y0 - yh / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.textAlign = 'center';
+  ctx.fillText(yLabel, 0, 0);
+  ctx.restore();
+  ctx.restore();
+
+  // 4. 背景幽灵曲线（对比用，显示另外两种梁的形态）
+  const ghostScenes = ['flexure.over', 'flexure.under', 'flexure.suitable'].filter(id => id !== scene.id);
+  ctx.save();
+  ctx.strokeStyle = 'rgba(56, 189, 248, 0.15)'; // 极暗的青色
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([4, 4]);
+  ghostScenes.forEach(gid => {
+    const gScene = SCENE_MAP[gid];
+    if (gScene && gScene.curve && gScene.curve.points) {
+      drawSmoothCurve(ctx, gScene.curve.points, mapX, mapY);
+    }
+  });
+  ctx.restore();
+
+  // 5. 画当前高亮曲线
+  ctx.save();
+  ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 2.5;
+  ctx.shadowColor = '#38bdf8'; ctx.shadowBlur = 8;
+  ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  
+  drawSmoothCurve(ctx, points, mapX, mapY);
+  
+  // 如果曲线提前结束（脆断），用虚线补全到右侧
+  const lastPt = points[points.length - 1];
+  if (lastPt[0] < 0.99) {
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(56,189,248,0.4)';
+    ctx.setLineDash([4, 4]);
+    ctx.moveTo(mapX(lastPt[0]), mapY(lastPt[1]));
+    ctx.lineTo(mapX(1), mapY(lastPt[1]));
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  ctx.restore();
+
+  // 6. 标注平台
+  if (platform) {
+    ctx.save();
+    const pStart = mapX(platform.from);
+    const pEnd = mapX(platform.to);
+    const pY = mapY(interpY(points, platform.from));
+    ctx.strokeStyle = 'rgba(34,211,238,0.4)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(pStart, pY); ctx.lineTo(pEnd, pY); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(34,211,238,0.85)';
+    ctx.font = 'bold 11px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(platform.label || '平台', (pStart + pEnd) / 2, pY - 10);
+    ctx.restore();
+  }
+
+  // 7. 关键点标记
+  ctx.save();
+  markers.forEach(m => {
+    const mx = mapX(m.x), my = mapY(interpY(points, m.x));
+    ctx.fillStyle = '#fbbf24';
+    ctx.beginPath(); ctx.arc(mx, my, 3, 0, Math.PI * 2); ctx.fill();
+    ctx.font = '10px Inter, sans-serif';
+    ctx.fillStyle = 'rgba(148,163,184,0.9)';
+    ctx.textAlign = 'center';
+    ctx.fillText(m.label, mx, my - 9);
+  });
+  ctx.restore();
+
+  // 8. 进度游标 (若进度超过曲线终点，则游标停留在最后一点)
+  const maxCurveX = points[points.length - 1][0];
+  const effProgress = Math.min(progress, maxCurveX);
+  const cxp = mapX(effProgress);
+  const cyp = mapY(interpY(points, effProgress));
+  ctx.save();
+  ctx.strokeStyle = 'rgba(239,68,68,0.4)'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 4]);
+  ctx.beginPath();
+  ctx.moveTo(cxp, y0); ctx.lineTo(cxp, cyp);
+  ctx.moveTo(x0, cyp); ctx.lineTo(cxp, cyp);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#ef4444'; ctx.shadowColor = '#ef4444'; ctx.shadowBlur = 12;
+  ctx.beginPath(); ctx.arc(cxp, cyp, 5, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+
+  // 9. 标题
+  ctx.save();
+  ctx.font = 'bold 12px Inter, sans-serif';
+  ctx.fillStyle = 'rgba(148,163,184,0.8)';
+  ctx.textAlign = 'left';
+  ctx.fillText('M-φ 曲线 (对比图)', 15, 22);
+  ctx.restore();
+}
+
+/* ============================ 场景：适筋破坏 ============================ */
+function _suit_defl(p) {
+  // 教材：裂缝出现时，梁的挠度突然增大。所以在 0.15 处给一个突跳值
+  if (p < 0.15) return (p / 0.15) * 8;
+  if (p < 0.55) return 11 + ((p - 0.15) / 0.40) * 15; // 起始点从8突跳到11
+  if (p < 0.85) return 26 + Math.pow((p - 0.55) / 0.30, 1.5) * 40; // 屈服时再次突跳
+  return 66 + Math.pow((p - 0.85) / 0.15, 2) * 20;
+}
+function _suit_na(p) {
+  if (p < 0.15) return 0.5;
+  if (p < 0.55) return 0.5 - (p - 0.15) / 0.40 * 0.15;
+  return 0.35 - (p - 0.55) / 0.45 * 0.10;
+}
+function _suit_compress(p) { return p < 0.85 ? 0 : (p - 0.85) / 0.15; }
+function _suit_tension(p) {
+  if (p < 0.15) return p / 0.15;
+  if (p < 0.55) return 1;
+  return Math.max(0.3, 1 - (p - 0.55) * 1.5);
+}
+function _suit_yield(p) { return Math.max(0, Math.min(1, (p - 0.55) / 0.30)); }
+
+const SCENE_SUITABLE = {
+  id: 'flexure.suitable',
+  cat: 'flexure-normal',
+  title: '适筋破坏',
+  level: 'L1',
+  tags: ['延性', '抗震理想'],
+  summary: '配筋率适中 · 延性破坏 · 抗震理想模式',
+  hudLabel: 'RC BEAM · FLEXURE · SUITABLE',
+  renderer: 'beamFlexure',
+
+  stages: [
+    { at: 0.00, id: 'elastic', name: '阶段 I · 未裂阶段', desc: '受拉区边缘混凝土表现出塑性，受压区应力图形为直线（接近三角形），受拉区为曲线。注意：此阶段不能称为“弹性阶段”。' },
+    { at: 0.15, id: 'crack', name: '阶段 II · 裂缝阶段', desc: '受拉区混凝土开裂，原先承担的拉力转给钢筋，导致钢筋应力突增，挠度和曲率突然增大，中性轴上移。' },
+    { at: 0.55, id: 'yield', name: '阶段 III · 破坏阶段 (始)', desc: '受拉钢筋屈服，裂缝急剧向上延伸，中和轴继续上移。此时截面承载力几乎不变，但曲率急剧增大（延性）。' },
+    { at: 0.85, id: 'crush', name: '阶段 III · 破坏阶段 (末)', desc: '受压区边缘混凝土达到极限压应变被压碎，梁丧失承载能力，破坏始于钢筋屈服，终结于混凝土压碎。' },
+  ],
+
+  curve: {
+    xLabel: 'φ (曲率)', yLabel: 'M (弯矩)',
+    // 适筋：有长平台，峰后略微下降。横轴铺满整个画布
+    // 适筋：起步极低，屈服后长平台缓升，最后微降
+    points: [[0, 0], [0.06, 0.15], [0.18, 0.40], [0.35, 0.72], [0.60, 0.82], [0.85, 0.87], [0.95, 0.86], [1.00, 0.75]],
+    markers: [
+      { x: 0.06, label: 'C (开裂)' },
+      { x: 0.35, label: 'Y (屈服)' },
+      { x: 0.95, label: 'Ⅲa (压碎)' },
+    ],
+    zones: [
+      { from: 0.00, to: 0.15, color: 'rgba(56,189,248,0.05)' },
+      { from: 0.15, to: 0.40, color: 'rgba(56,189,248,0.02)' },
+      { from: 0.40, to: 0.95, color: 'rgba(34,211,238,0.10)' },
+      { from: 0.95, to: 1.00, color: 'rgba(239,68,68,0.08)' },
+    ],
+    platform: { from: 0.40, to: 0.95, label: '延性平台' },
+  },
+
+  crackPolicy: {
+    items: [
+      { t: 0.50, start: 0.15, end: 0.98, seed: 1.0, widthMul: 3.0 },
+      { t: 0.42, start: 0.20, end: 0.85, seed: 2.3, widthMul: 2.0 },
+      { t: 0.58, start: 0.20, end: 0.85, seed: 3.7, widthMul: 2.0 },
+      { t: 0.34, start: 0.28, end: 0.65, seed: 4.1, widthMul: 1.2 },
+      { t: 0.66, start: 0.28, end: 0.65, seed: 5.9, widthMul: 1.2 },
+      { t: 0.26, start: 0.35, end: 0.50, seed: 6.3, widthMul: 0.8 },
+      { t: 0.74, start: 0.35, end: 0.50, seed: 7.7, widthMul: 0.8 },
+    ],
+  },
+
+  explain: {
+    mechanism: [
+      '适筋梁的破坏是一段<strong>「有预兆」</strong>的缓慢过程。它先后经历弹性、开裂、屈服三个可被观察到的阶段，最后才由受压区混凝土压碎宣告终结。',
+      '核心逻辑：<em>钢筋先屈服，混凝土后压碎</em>。随着受拉区开裂，混凝土退出工作，<strong>中性轴不断上移</strong>，受压区高度逐渐缩小。主裂缝在跨中最先出现且最宽。',
+    ],
+    design: [
+      'M-φ 曲线上的<strong>长平台段</strong>，就是钢筋屈服之后、混凝土压碎之前的那段「延性窗口」。平台越长，结构耗能能力越好。',
+    ],
+    pitfall: [
+      '不要误以为"裂缝越少越好"——适筋梁的裂缝是延性的标志，关键看是否可控。',
+    ],
+  },
+
+  buildState(p) {
+    const stage = pickStage(this.stages, p);
+    const cracks = (this.crackPolicy.items || []).map(c => ({
+      t: c.t, seed: c.seed, widthMul: c.widthMul,
+      maxHeightRatio: c.maxHeightRatio,
+      ratio: p < c.start ? 0 : Math.min(1, (p - c.start) / (c.end - c.start)),
+    }));
+    return {
+      p, stage,
+      geometry: {
+        deflection: _suit_defl(p),
+        naRatio: _suit_na(p),
+        compress: _suit_compress(p),
+        tension: _suit_tension(p),
+      },
+      rebar: { yieldRatio: _suit_yield(p) },
+      concrete: { crushDegree: _suit_compress(p) },
+      cracks,
+    };
+  },
+};
+
+/* ============================ 场景：超筋破坏 ============================ */
+function _over_defl(p) {
+  if (p < 0.20) return (p / 0.20) * 5;
+  if (p < 0.80) return 5 + ((p - 0.20) / 0.60) * 25;
+  return 30 + Math.pow((p - 0.80) / 0.20, 2) * 10;
+}
+function _over_na(p) {
+  if (p < 0.20) return 0.5;
+  if (p < 0.80) return 0.5 + (p - 0.20) / 0.60 * 0.05;
+  return 0.55 - (p - 0.80) / 0.20 * 0.05;
+}
+function _over_compress(p) { return p < 0.80 ? 0 : (p - 0.80) / 0.20; }
+function _over_tension(p) {
+  if (p < 0.20) return p / 0.20;
+  if (p < 0.80) return 1;
+  return 1 - (p - 0.80) / 0.20 * 0.1;
+}
+function _over_yield() { return 0; } // 钢筋未屈服
+
+const SCENE_OVER = {
+  id: 'flexure.over',
+  cat: 'flexure-normal',
+  title: '超筋破坏',
+  level: 'L1',
+  tags: ['脆性', '混凝土先碎'],
+  summary: '配筋率极高 · 无预兆 · 压区先压碎',
+  hudLabel: 'RC BEAM · FLEXURE · OVER-REINFORCED',
+  renderer: 'beamFlexure',
+
+  stages: [
+    { at: 0.00, id: 'elastic', name: '阶段 I · 未裂阶段', desc: '弹性工作，由于配置了过多的受拉钢筋，受压区高度相对较大，中和轴靠近受拉侧。' },
+    { at: 0.20, id: 'crack', name: '阶段 II · 裂缝阶段', desc: '受拉区开裂，但裂缝开展不宽、延伸不高。钢筋应力远未屈服，截面曲率和挠度都不大。' },
+    { at: 0.80, id: 'crush', name: '阶段 III · 压碎破坏', desc: '受压区边缘混凝土先被压碎，纵向受拉钢筋始终未屈服。无明显预兆的脆性破坏。' },
+  ],
+
+  curve: {
+    xLabel: 'φ (曲率)', yLabel: 'M (弯矩)',
+    // 超筋：斜率极陡，峰值最高，无平台，瞬间垂直断崖
+    // 超筋：共同起点后，一路陡峭冲顶，无平台，到顶直接断掉
+    points: [[0, 0], [0.08, 0.20], [0.15, 0.45], [0.25, 0.75], [0.32, 1.00]],
+    markers: [
+      { x: 0.08, label: 'C (开裂)' },
+      { x: 0.32, label: 'C 压碎' },
+    ],
+    zones: [
+      { from: 0.00, to: 0.12, color: 'rgba(56,189,248,0.05)' },
+      { from: 0.12, to: 0.30, color: 'rgba(56,189,248,0.02)' },
+      { from: 0.30, to: 1.00, color: 'rgba(239,68,68,0.10)' },
+    ],
+  },
+
+  crackPolicy: {
+    items: Array.from({ length: 14 }, (_, i) => {
+      const t = 0.18 + (i / 13) * 0.64;
+      return {
+        t, start: 0.20 + Math.random() * 0.08, end: 0.78 + Math.random() * 0.04,
+        seed: 1.0 + i * 0.9,
+        widthMul: 0.4 + (i % 3) * 0.15,
+        maxHeightRatio: 0.55 + (i % 4) * 0.04,
+      };
+    }),
+  },
+
+  explain: {
+    mechanism: [
+      '超筋梁的破坏是<em>「无预兆」的脆性过程</em>。因为配筋率过高，钢筋远未屈服，而受压区混凝土先达到极限应变被压碎。',
+      '裂缝特征：<strong>多而密、宽度小</strong>。因为钢筋数量多，每根钢筋分担的拉力小，裂缝宽度被"稀释"了——这反而让超筋梁的裂缝看起来"不严重"，极具欺骗性。',
+      '中性轴位置：<strong>更靠近受拉侧</strong>。因为压区混凝土承担了更大的压力，需要更大的压区面积来平衡。',
+    ],
+    design: [
+      '规范通过限制<strong>相对受压区高度 ξ ≤ ξb</strong>（即配筋率上限）来避免超筋破坏。',
+      'M-φ 曲线上<strong>没有平台段</strong>——峰值之后几乎垂直下落，这就是脆性的数学表现。',
+    ],
+    pitfall: [
+      '一个反直觉的陷阱：超筋梁的裂缝更"好看"（细密），容易被误判为"质量好"。真正的判断标准是<em>受压区混凝土的应变</em>，不是裂缝外观。',
+      '提高配筋率不等于更安全。适筋梁靠平台段耗能，超筋梁只会更脆。',
+    ],
+  },
+
+  buildState(p) {
+    const stage = pickStage(this.stages, p);
+    const cracks = (this.crackPolicy.items || []).map(c => ({
+      t: c.t, seed: c.seed, widthMul: c.widthMul,
+      maxHeightRatio: c.maxHeightRatio,
+      ratio: p < c.start ? 0 : Math.min(1, (p - c.start) / (c.end - c.start)),
+    }));
+    return {
+      p, stage,
+      geometry: {
+        deflection: _over_defl(p),
+        naRatio: _over_na(p),
+        compress: _over_compress(p),
+        tension: _over_tension(p),
+      },
+      rebar: { yieldRatio: _over_yield(p) },
+      concrete: { crushDegree: _over_compress(p) },
+      cracks,
+    };
+  },
+};
+
+/* ============================ 场景：少筋破坏 ============================ */
+function _under_defl(p) {
+  if (p < 0.10) return (p / 0.10) * 3;
+  if (p < 0.12) return 3 + ((p - 0.10) / 0.02) * 45;
+  return 48 + (p - 0.12) / 0.88 * 5;
+}
+function _under_na(p) {
+  if (p < 0.10) return 0.5;
+  if (p < 0.12) return 0.5 - (p - 0.10) / 0.02 * 0.15;
+  return 0.35 - (p - 0.12) / 0.88 * 0.05;
+}
+function _under_compress() { return 0; }
+function _under_tension(p) {
+  if (p < 0.10) return p / 0.10;
+  if (p < 0.12) return 1;
+  return 1 - (p - 0.12) / 0.88 * 0.95;
+}
+function _under_yield() { return 0; }
+
+const SCENE_UNDER = {
+  id: 'flexure.under',
+  cat: 'flexure-normal',
+  title: '少筋破坏',
+  level: 'L1',
+  tags: ['脆性', '一裂即断'],
+  summary: '配筋率极低 · 一裂即断 · 最危险的脆性',
+  hudLabel: 'RC BEAM · FLEXURE · UNDER-REINFORCED',
+  renderer: 'beamFlexure',
+
+  stages: [
+    { at: 0.00, id: 'elastic', name: '阶段 I · 未裂阶段', desc: '配筋率极低，截面尺寸相对过大。受拉区混凝土承受拉力，这个状态极其短暂。' },
+    { at: 0.10, id: 'crack', name: '阶段 II · 一裂即坏', desc: '受拉区混凝土一旦开裂，拉力瞬间转由极少的钢筋承担，钢筋应力突增并迅速屈服。' },
+    { at: 0.12, id: 'fail', name: '阶段 III · 破坏', desc: '往往仅有一条主裂缝，宽度极大且沿梁高延伸较高。极限弯矩甚至小于开裂弯矩，典型的受拉脆性破坏。' },
+  ],
+
+  curve: {
+    xLabel: 'φ (曲率)', yLabel: 'M (弯矩)',
+    // 少筋：极短的横坐标，极低的峰值，一裂即断
+    // 少筋：比适筋更低的开裂点，一裂直接掉底结束
+    points: [[0, 0], [0.06, 0.15], [0.07, 0.18], [0.09, 0.04]],
+    markers: [
+      { x: 0.06, label: 'A 开裂' },
+      { x: 0.09, label: '断裂' },
+    ],
+    zones: [
+      { from: 0.00, to: 0.05, color: 'rgba(56,189,248,0.05)' },
+      { from: 0.05, to: 1.00, color: 'rgba(239,68,68,0.10)' },
+    ],
+  },
+
+  crackPolicy: {
+    items: [
+      { t: 0.50, start: 0.10, end: 0.12, seed: 2.7, widthMul: 3.5, maxHeightRatio: 1.0 },
+    ],
+  },
+
+  explain: {
+    mechanism: [
+      '少筋梁的破坏是<em>「一裂即断」的典型脆性</em>。因为配筋率太低，受拉区混凝土一旦开裂，全部拉力瞬间转由极少的钢筋承担，钢筋应力瞬间飙升，几乎同时屈服并断裂。',
+      '裂缝特征：<strong>只有一条主裂缝，从梁底瞬时贯通到梁顶</strong>。这条裂缝宽度极大（因为钢筋已经断裂），是识别少筋破坏的视觉指纹。',
+      '从开裂到垮塌，整个过程通常只有几毫秒。在任何监控系统能反应之前，梁已经塌了。',
+    ],
+    design: [
+      '规范通过限制<strong>最小配筋率 ρmin</strong>来避免少筋破坏。',
+      '这也是为什么<em>楼板、次梁</em>这类次要构件容易被施工减料"省掉"钢筋，成为最脆弱的一环。',
+    ],
+    pitfall: [
+      '少筋梁的曲线峰值极低（只有适筋梁的约 1/4），意味着<strong>承载力严重不足</strong>。它既没有强度，也没有延性，是三种破坏形态中最危险的。',
+      '不要被"正常使用阶段看不出来"骗了——少筋梁在正常荷载下可能完全没问题，直到某一天突然垮塌。',
+    ],
+  },
+
+  buildState(p) {
+    const stage = pickStage(this.stages, p);
+    const cracks = (this.crackPolicy.items || []).map(c => ({
+      t: c.t, seed: c.seed, widthMul: c.widthMul,
+      maxHeightRatio: c.maxHeightRatio,
+      ratio: p < c.start ? 0 : Math.min(1, (p - c.start) / (c.end - c.start)),
+    }));
+    return {
+      p, stage,
+      geometry: {
+        deflection: _under_defl(p),
+        naRatio: _under_na(p),
+        compress: _under_compress(p),
+        tension: _under_tension(p),
+      },
+      rebar: { yieldRatio: _under_yield(p) },
+      concrete: { crushDegree: _under_compress(p) },
+      cracks,
+    };
+  },
+};
+
+/* --------------------------- 场景注册表 & 分类目录 --------------------------- */
+const SCENES = [SCENE_SUITABLE, SCENE_OVER, SCENE_UNDER];
+const SCENE_MAP = Object.fromEntries(SCENES.map(s => [s.id, s]));
+
+const CATALOG = [
+  {
+    id: 'flexure-normal',
+    title: '受弯构件 · 正截面',
+    scenes: ['flexure.suitable', 'flexure.over', 'flexure.under'],
+  },
+  {
+    id: 'flexure-shear',
+    title: '受弯构件 · 斜截面',
+    scenes: ['shear.diagonal-compression', 'shear.compression', 'shear.tension'],
+  },
+  {
+    id: 'compression',
+    title: '受压构件',
+    scenes: ['column.axial-short', 'column.axial-slender', 'column.ecc-large', 'column.ecc-small'],
+  },
+  {
+    id: 'torsion',
+    title: '受扭构件',
+    scenes: ['torsion.suitable', 'torsion.under', 'torsion.over'],
+  },
+  {
+    id: 'local',
+    title: '局部与冲切',
+    scenes: ['local.compression', 'punching.slab-column'],
+  },
+  {
+    id: 'bond',
+    title: '粘结 · 疲劳 · 耐久',
+    scenes: ['bond.splitting', 'fatigue.rebar', 'durability.corrosion'],
+  },
+];
+
+/* --------------------------- 侧栏渲染 --------------------------- */
+function renderSidebar(container) {
+  container.innerHTML = '';
+  for (const cat of CATALOG) {
+    const title = document.createElement('div');
+    title.className = 'catTitle';
+    title.textContent = cat.title;
+    container.appendChild(title);
+
+    for (const id of cat.scenes) {
+      const scene = SCENE_MAP[id];
+      const card = document.createElement('div');
+      card.dataset.case = id;
+      if (scene) {
+        card.className = 'selfTestCard';
+        card.innerHTML = `
+          <div class="stcTitle">
+            <span class="stcTitleText"><span class="stcTitleMain">${scene.title}</span></span>
+            <span class="stcLevel">${scene.level || '—'}</span>
+          </div>
+          <div class="stcDesc">${scene.summary || ''}</div>
+        `;
+        card.addEventListener('click', () => {
+          S.setScene(id);
+          location.hash = '#/' + id;
+        });
+      } else {
+        card.className = 'selfTestCard disabled';
+        card.innerHTML = `
+          <div class="stcTitle"><span class="stcTitleText"><span class="stcTitleMain">待添加</span></span><span class="stcLevel">—</span></div>
+          <div class="stcDesc">${id}</div>
+        `;
+      }
+      container.appendChild(card);
+    }
+  }
+}
+function syncSidebarActive(container, activeId) {
+  container.querySelectorAll('.selfTestCard').forEach(card => {
+    card.classList.toggle('active', card.dataset.case === activeId);
+  });
+}
+
+/* --------------------------- 说明面板渲染 --------------------------- */
+function renderPanel(container, scene, progress) {
+  if (!scene) { container.innerHTML = ''; return; }
+  const stage = pickStage(scene.stages, progress);
+  const ex = scene.explain || {};
+  const section = (title, arr) => (arr && arr.length)
+    ? `<div class="explainTitle" style="margin-top:14px;">${title}</div>${arr.map(t => `<p>${t}</p>`).join('')}`
+    : '';
+  container.innerHTML = `
+    <div class="explainTitle">当前阶段</div>
+    <div class="stageBlock">
+      <div class="stageName">${stage.name}</div>
+      <div class="stageDesc">${stage.desc}</div>
+    </div>
+    ${section('破坏机理', ex.mechanism)}
+    ${section('设计意义', ex.design)}
+    ${section('常见误区', ex.pitfall)}
+  `;
+}
+
+/* --------------------------- 顶部栏 & 阶段快捷 --------------------------- */
+function initTopBar() {
+  const btnPlay = document.getElementById('btnPlay');
+  const btnReset = document.getElementById('btnReset');
+  const progressInput = document.getElementById('progressInput');
+  const progressVal = document.getElementById('progressVal');
+  const stageBadge = document.getElementById('stageBadge');
+  const topTitleText = document.getElementById('topTitleText');
+  const topChip = document.getElementById('topChip');
+  const stageNav = document.getElementById('stageNav');
+
+  btnPlay.addEventListener('click', () => {
+    S.playing ? S.pause() : S.play();
+  });
+  btnReset.addEventListener('click', () => S.reset());
+  progressInput.addEventListener('input', () => {
+    S.playing = false;
+    S.lastTs = 0;
+    S.setProgress(parseInt(progressInput.value, 10) / 1000);
+  });
+
+  function rebuildStageNav(scene) {
+    stageNav.innerHTML = '';
+    if (!scene) return;
+    scene.stages.forEach((st, i) => {
+      const btn = document.createElement('button');
+      const roman = ['I', 'II', 'III', 'IV', 'V'][i] || (i + 1);
+      btn.textContent = `阶段 ${roman}`;
+      btn.title = st.name;
+      btn.dataset.stageAt = String(st.at);
+      btn.addEventListener('click', () => {
+        S.playing = false;
+        S.lastTs = 0;
+        // 定位到该阶段起点 + 一点点，让用户看到刚进入的样子
+        const eps = Math.min(0.005, (scene.stages[i + 1] ? scene.stages[i + 1].at - st.at : 1) * 0.05);
+        S.setProgress(Math.min(1, st.at + eps));
+      });
+      stageNav.appendChild(btn);
+    });
+  }
+
+  return {
+    sync(scene, progress) {
+      const pct = progress * 100;
+      progressInput.value = Math.round(progress * 1000);
+      progressInput.style.setProperty('--p', pct + '%');
+      progressVal.textContent = pct.toFixed(0) + '%';
+      btnPlay.textContent = S.playing ? '⏸ 暂停' : '▶ 播放演示';
+
+      if (!scene) return;
+      topTitleText.textContent = scene.title;
+      topChip.textContent = (scene.tags && scene.tags[0]) || '';
+
+      const st = pickStage(scene.stages, progress);
+      stageBadge.textContent = st.name;
+      const isDanger = st.id === 'crush' || st.id === 'fail';
+      stageBadge.style.borderColor = isDanger ? 'rgba(239,68,68,.6)' : 'rgba(56,189,248,.4)';
+      stageBadge.style.color = isDanger ? '#f87171' : '#38bdf8';
+
+      // 更新阶段快捷按钮的 on 状态
+      stageNav.querySelectorAll('button').forEach((btn, i) => {
+        const at = parseFloat(btn.dataset.stageAt);
+        const nextAt = scene.stages[i + 1] ? scene.stages[i + 1].at : 1.0001;
+        const on = progress >= at && progress < nextAt;
+        btn.classList.toggle('on', on);
+      });
+    },
+    rebuildStageNav(scene) {
+      rebuildStageNav(scene);
+    },
+  };
+}
+
+/* --------------------------- 主循环 & 渲染调度 --------------------------- */
+let _dirty = true;
+function markDirty() { _dirty = true; }
+
+const cvMain = document.getElementById('cvMain');
+const cvCurve = document.getElementById('cvCurve');
+const catList = document.getElementById('catList');
+const explain = document.getElementById('explain');
+
+const RENDERERS = { beamFlexure: renderBeamFlexure };
+
+function drawAll() {
+  const scene = SCENE_MAP[S.sceneId];
+  if (!scene) return;
+  const state = scene.buildState(S.progress);
+  const renderer = RENDERERS[scene.renderer] || renderBeamFlexure;
+  renderer(cvMain, scene, state);
+  drawCurve(cvCurve, scene, S.progress);
+}
+
+function loop(ts) {
+  if (S.playing) {
+    if (S.lastTs === 0) S.lastTs = ts;
+    const dt = ts - S.lastTs;
+    S.progress += dt / S.duration;
+    if (S.progress >= 1) { S.progress = 1; S.playing = false; }
+    S.emit();
+    markDirty();
+  }
+  S.lastTs = ts;
+  if (_dirty) { drawAll(); _dirty = false; }
+  requestAnimationFrame(loop);
+}
+
+/* --------------------------- 启动 --------------------------- */
+const toolbar = initTopBar();
+renderSidebar(catList);
+
+// 首次渲染，让 stageNav 与场景联动
+let _lastSceneId = null;
+S.subscribe(() => {
+  const scene = SCENE_MAP[S.sceneId];
+  if (!scene) return;
+  if (_lastSceneId !== S.sceneId) {
+    toolbar.rebuildStageNav(scene);
+    _lastSceneId = S.sceneId;
+  }
+  syncSidebarActive(catList, S.sceneId);
+  toolbar.sync(scene, S.progress);
+  renderPanel(explain, scene, S.progress);
+  markDirty();
+});
+
+// 路由：hash 到场景
+function syncFromHash() {
+  const hash = location.hash.replace(/^#\/?/, '');
+  const id = hash && SCENE_MAP[hash] ? hash : SCENES[0].id;
+  S.setScene(id);
+}
+window.addEventListener('hashchange', syncFromHash);
+
+// 初始
+syncFromHash();
+// 首次主动触发一次（因为 setScene 在 scene 未变时不会 emit）
+S.emit();
+toolbar.rebuildStageNav(SCENE_MAP[S.sceneId]);
+_lastSceneId = S.sceneId;
+
+window.addEventListener('resize', markDirty);
+requestAnimationFrame(loop);
+
+/* 键盘快捷键：空格=播放/暂停，←/→=上/下阶段 */
+document.addEventListener('keydown', (e) => {
+  const t = e.target;
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) return;
+  if (e.code === 'Space') {
+    e.preventDefault();
+    S.playing ? S.pause() : S.play();
+  }
+});
+</script>
+</body>
+</html>
