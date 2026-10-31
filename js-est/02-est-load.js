@@ -96,6 +96,9 @@ function calcLoad() {
     let g_cw = 0;
     let N_col_display = 0;
     let A_col_req_display = 0;
+    // K_COL_SELF_CONC = 1.10：近似计入混凝土柱自重对轴力的放大（免迭代），
+    // 与钢柱 K_COL_SELF=1.10 口径保持一致，避免柱底轴力被系统性低估。
+    const K_COL_SELF_CONC = 1.10;
 
     if (isFrameShear) {
       // 框剪：墙线载 = 墙厚 × 容重 × 层高；含墙率直接表达墙线长/面积
@@ -104,19 +107,27 @@ function calcLoad() {
 
       // 柱截面估算（原“配柱”）：框剪结构竖向轴力由柱和墙按受荷面积分担。柱只承担本柱网的恒载与活载，不包含剪力墙自重（g_cw），也不因剪力墙存在而折减
       const fc = 14300;
-      N_col_display = (1.3 * (g_slab + g_arch + g_beam + g_wall) * K_UNACCOUNTED + 1.5 * qk_area) * A_trib_raw * EST.nLev;
+      // 计入柱自重的放大系数（与钢柱 K_COL_SELF 同口径）
+      N_col_display = (1.3 * (g_slab + g_arch + g_beam + g_wall) * K_UNACCOUNTED + 1.5 * qk_area) * A_trib_raw * EST.nLev * K_COL_SELF_CONC;
       A_col_req_display = N_col_display / (EST.muN * fc);
       col_side_calc = Math.sqrt(A_col_req_display) * 1000;
+      // EST-05：判断是否被构造下限 300mm 钳制（取整后仍 < 300 才算被钳制）
+      const colSideClampedByMin = Math.ceil(col_side_calc / 50) * 50 < 300;
       col_side = Math.max(300, Math.min(1500, Math.ceil(col_side_calc / 50) * 50));
-      g_col = Math.pow(col_side / 1000, 2) * rho_conc * EST.h / A_trib_raw;
+      // 下限钳制且 A_trib_raw > A 时，改用 A 作分母，避免柱网越大柱重反而越小
+      const gColDenom = (colSideClampedByMin && A_trib_raw > A) ? A : A_trib_raw;
+      g_col = Math.pow(col_side / 1000, 2) * rho_conc * EST.h / gColDenom;
     } else {
       // 纯框架柱截面估算（fc 按 C30 取 14.3 MPa，见计算书说明）
       const fc = 14300;
-      N_col_display = (1.3 * (g_slab + g_arch + g_beam + g_wall) * K_UNACCOUNTED + 1.5 * qk_area) * A_trib_raw * EST.nLev;
+      // 计入柱自重的放大系数
+      N_col_display = (1.3 * (g_slab + g_arch + g_beam + g_wall) * K_UNACCOUNTED + 1.5 * qk_area) * A_trib_raw * EST.nLev * K_COL_SELF_CONC;
       A_col_req_display = N_col_display / (EST.muN * fc);
       col_side_calc = Math.sqrt(A_col_req_display) * 1000;
+      const colSideClampedByMin = Math.ceil(col_side_calc / 50) * 50 < 300;
       col_side = Math.max(300, Math.min(1500, Math.ceil(col_side_calc / 50) * 50));
-      g_col = Math.pow(col_side / 1000, 2) * rho_conc * EST.h / A_trib_raw;
+      const gColDenom = (colSideClampedByMin && A_trib_raw > A) ? A : A_trib_raw;
+      g_col = Math.pow(col_side / 1000, 2) * rho_conc * EST.h / gColDenom;
     }
 
     g_detail = g_slab + g_arch + g_beam + g_wall + g_col + g_cw;
@@ -220,7 +231,8 @@ function calcLoad() {
     const g_wall = EST.qWallSteel * wallLineLen / A_trib;
     
     // ===== 钢柱反算（强度 + 稳定 双控） =====
-    const fc_steel = 305000; // Q355，f = 305 MPa = 305000 kN/m²
+    // Q355 按壁厚分档：t ≤ 16mm 取 305 MPa，16 < t ≤ 40mm 取 295 MPa（GB50017 表 4.4.1）
+    const fc_steel = (EST.steelColThk || 20) > 16 ? 295000 : 305000;
     // K_COL_SELF = 1.10：计入钢柱自重对轴力的放大（免迭代）
     const K_COL_SELF = 1.10;
     const N_col = (1.3 * (g_slab + g_arch + g_beam + g_wall) * 1.05 + 1.5 * qk_area)
@@ -258,7 +270,10 @@ function calcLoad() {
     
     const A_col_actual = 4 * t_m * ((a / 1000) - t_m);
     const rho_steel_kN = 7850 * 9.8 / 1000;   // ≈ 76.93 kN/m³
-    const g_col = A_col_actual * rho_steel_kN * EST.h / A_trib_raw;
+    // EST-05：钢柱被 200mm 构造下限钳制且 A_trib_raw > A 时，用 A 作分母
+    const steelColClampedByMin = Math.ceil(a_calc * 1000 / 50) * 50 < 200;
+    const gColDenomSteel = (steelColClampedByMin && A_trib_raw > A) ? A : A_trib_raw;
+    const g_col = A_col_actual * rho_steel_kN * EST.h / gColDenomSteel;
     
     g_detail = g_slab + g_arch + g_beam + g_wall + g_col;
     const steelMass = (g_beam + g_col) * 1000 / 9.8;

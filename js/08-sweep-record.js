@@ -507,11 +507,11 @@ function startRecording(){
   S.lightBg = true;
   S.sweep.durMul = 1;
   document.body.classList.add('recording');
-  sweepReset();
 
   let recorder;
   let stream = null;
   try{
+    sweepReset();   /* 移入 try：异常时走现有 catch 里的统一收尾 */
     stream = src.captureStream(30);
     recorder = new MediaRecorder(stream, {
       mimeType: mime,

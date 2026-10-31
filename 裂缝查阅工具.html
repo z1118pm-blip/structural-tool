@@ -71,8 +71,7 @@
   .risk-btn[data-risk="blue"] .risk-dot { background-color: var(--blue); color: var(--blue); }
   .risk-btn[data-risk="gray"] .risk-dot { background-color: var(--gray); color: var(--gray); }
   .app{display:flex;flex:1;min-height:0}
-  aside{width:280px;flex:0 0 280px;overflow-y:auto;background:#0d121c;border-right:1px solid var(--line);padding:10px 8px 24px;scrollbar-width:thin;scrollbar-color:rgba(148,163,184,.15) transparent;}
-  .list-panel{width:380px;flex:0 0 380px;overflow-y:auto;background:#111827;border-right:1px solid var(--line);scrollbar-width:thin;scrollbar-color:rgba(148,163,184,.15) transparent;}
+  aside{width:380px;flex:0 0 380px;overflow-y:auto;background:#0d121c;border-right:1px solid var(--line);padding:10px 12px 24px;scrollbar-width:thin;scrollbar-color:rgba(148,163,184,.15) transparent;}
   .detail-panel{flex:1;min-width:0;overflow-y:auto;background:#0d121c;scrollbar-width:thin;scrollbar-color:rgba(148,163,184,.15) transparent;}
   
   aside::-webkit-scrollbar, main::-webkit-scrollbar {width:6px;height:6px}
@@ -86,6 +85,7 @@
   .tree-group summary::before{content:'▸';display:inline-block;transition:transform 0.2s;color:#64748b;margin-right:6px;font-size:12px;}
   .tree-group[open] summary::before{transform:rotate(90deg);}
   .tree-group summary:hover{background:#1e293b;color:#f8fafc;}
+  .tree-group summary:focus-visible{outline:2px solid var(--blue);outline-offset:2px;}
   .tree-sub-group{margin-left:12px}
 .tree-sub-title{cursor:pointer;font-size:12px;color:#94a3b8;padding:6px 8px;border-radius:6px;list-style:none;user-select:none;display:flex;align-items:center;transition:all 0.15s;}
 .tree-sub-title::-webkit-details-marker{display:none}
@@ -93,7 +93,7 @@
 .tree-sub-group[open] .tree-sub-title::before{transform:rotate(90deg)}
 .tree-sub-title:hover{background:#1e293b;color:#f8fafc}
 .tree-sub-content{margin-left:14px;border-left:1px solid #1e293b;padding-left:8px;padding-top:4px;padding-bottom:4px;}
-  .tree-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:12.5px;color:#94a3b8;margin:2px 0;transition:all 0.15s;}
+  .tree-item{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border-radius:6px;cursor:pointer;font-size:13px;color:#94a3b8;margin:4px 0;transition:all 0.15s;}
   .tree-item:hover{background:#1e293b;color:#cbd5e1;}
   .tree-item.active{background:rgba(56,189,248,0.1);color:var(--blue);font-weight:600;border-left:2px solid var(--blue);border-radius:0 6px 6px 0;}
   .dot-red{width:6px;height:6px;border-radius:50%;flex:0 0 auto;box-shadow:0 0 6px currentColor;}
@@ -105,15 +105,7 @@
   .badge-blue{background:var(--blue-bg);color:#7dd3fc;border-color:rgba(56,189,248,0.3)}
   .badge-gray{background:var(--gray-bg);color:#cbd5e1;border-color:rgba(148,163,184,0.3)}
 
-  .cards{display:flex;flex-direction:column}
-  .card{display:flex;align-items:flex-start;gap:12px;padding:14px 18px;cursor:pointer;margin:8px 12px;border-radius:8px;background:#1e293b;border:1px solid #334155;transition:all 0.2s;position:relative;}
-  .card:hover{background:#26334d;border-color:#475569;transform:translateY(-1px);}
-  .card.active{background:#1e293b;border:1px solid var(--blue);box-shadow:0 0 10px rgba(56,189,248,0.1);}
-  .card.active::before{display:none;}
-  .card-content{flex:1;min-width:0;}
-  .card h3{font-size:15px;margin:0 0 6px;color:#f8fafc;font-weight:600;display:flex;align-items:center;gap:8px;}
-  .card .path{font-size:12px;color:#64748b;margin-bottom:4px;line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .card .morph{font-size:13px;color:#cbd5e1;line-height:1.5;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;}
+  /* 卡片样式已移除，合并入树形列表 */
   
   .detail{padding:24px;min-height:100%;display:flex;flex-direction:column;}
   .breadcrumb{font-size:12px;color:#64748b;margin-bottom:8px;}
@@ -131,6 +123,8 @@
   .image-wrap{display:flex;align-items:center;justify-content:center;min-height:120px;position:relative;}
   .image-wrap img{max-width:100%;max-height:75vh;display:block;object-fit:contain; transition: transform 0.2s, filter 0.3s; filter: invert(1) grayscale(1) brightness(0.85) contrast(1.2); mix-blend-mode: screen;}
 .image-wrap img:hover { transform: scale(1.02); }
+.image-panel.original { background: #f8fafc; border-color: #cbd5e1; }
+.image-panel.original { background-color: #f8fafc; border-color: #cbd5e1; }
 .image-panel.original .image-wrap img { filter: none; mix-blend-mode: normal; }
   .placeholder{color:#64748b;font-size:13px;padding:20px;font-family:'JetBrains Mono', monospace;}
 
@@ -146,11 +140,17 @@
 .toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(20px);background:#1e293b;color:#f8fafc;padding:10px 24px;border-radius:8px;font-size:14px;border:1px solid #38bdf8;box-shadow:0 10px 15px -3px rgba(0,0,0,0.5);opacity:0;visibility:hidden;transition:all 0.3s cubic-bezier(0.68,-0.55,0.27,1.55);z-index:10000;display:flex;align-items:center;gap:8px;}
 .toast.show{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0);}
 
-@media (max-width: 1024px){
-    .app{flex-direction:column}
-    aside{width:100%;flex:0 0 auto;max-height:30vh;border-right:none;border-bottom:1px solid var(--line)}
-    .list-panel{flex:0 0 40vh;border-right:none;border-bottom:1px solid var(--line)}
-    .detail-panel{width:100%;flex:1}
+  #btnBackToList { display: none; }
+  @media (max-width: 1024px){
+    .app { flex-direction: row; overflow: hidden; position: relative; }
+    aside { width: 100%; flex: 1; border-right: none; max-height: none; }
+    .detail-panel { display: none; width: 100%; flex: 1; border-left: none; }
+    
+    /* 当显示详情时，隐藏侧栏，显示详情 */
+    .app.show-detail aside { display: none; }
+    .app.show-detail .detail-panel { display: block; }
+    
+    #btnBackToList { display: inline-flex; margin-bottom: 16px; }
   }
 </style>
 </head>
@@ -163,7 +163,7 @@
   </a>
   <h1>裂缝查阅工具</h1>
   <input id="searchInput" class="search" type="search" placeholder="搜索形态、成因、性质（支持全字段）…">
-  <div class="risk-filters" id="riskFilters">
+  <div class="risk-filters" id="riskFilters" role="group" aria-label="按风险等级筛选">
     <button class="risk-btn active" data-risk="all">全部</button>
     <button class="risk-btn" data-risk="red"><span class="risk-dot"></span>红色 · 立即处理</button>
     <button class="risk-btn" data-risk="orange"><span class="risk-dot"></span>橙色 · 及时加固</button>
@@ -173,9 +173,8 @@
   </div>
 </header>
 
-<div class="app">
+<div class="app" id="appContainer">
   <aside id="sidebar"></aside>
-  <main id="listPanel" class="list-panel"></main>
   <div id="detailPanel" class="detail-panel"></div>
 </div>
 
@@ -414,13 +413,14 @@ const RISK = {
   orange: { label: "橙色 · 及时加固", badge: "badge-orange", bar: "risk-orange", color: "#f97316" },
   yellow: { label: "黄色 · 观察",     badge: "badge-yellow", bar: "risk-yellow", color: "#fbbf24" },
   blue:   { label: "蓝色 · 封闭掩饰", badge: "badge-blue",   bar: "risk-blue",   color: "#38bdf8" },
-  gray:   { label: "灰色 · 表层",     badge: "badge-gray",   bar: "risk-gray",   color: "#94a3b8" }
+  gray:   { label: "灰色 · 表层",     badge: "badge-gray",   bar: "risk-gray",   color: "#94a3b8" },
+  unknown:{ label: "未知 · 待确认",   badge: "badge-gray",   bar: "risk-gray",   color: "#94a3b8" }
 };
 
 const state = { risk: "all", q: "", selectedId: null, openCategory: null, openSubcategories: new Set(), listScrollTop: 0 };
 const sidebarEl = document.getElementById("sidebar");
 
-const mainEl = document.getElementById("listPanel");
+// 中间列表已移除
 const detailEl = document.getElementById("detailPanel");
 const searchInput = document.getElementById("searchInput");
 
@@ -434,12 +434,15 @@ function escapeHtml(value) {
   }[ch]));
 }
 
+function normalizeRisk(risk) {
+  return Object.prototype.hasOwnProperty.call(RISK, risk) ? risk : "unknown";
+}
 function riskInfo(risk) {
-  return RISK[risk] || RISK.gray;
+  return RISK[normalizeRisk(risk)];
 }
 
 function matches(crack) {
-  if (state.risk !== "all" && crack.risk !== state.risk) return false;
+  if (state.risk !== "all" && normalizeRisk(crack.risk) !== state.risk) return false;
   const q = state.q.trim().toLowerCase();
   if (!q) return true;
   return [
@@ -453,21 +456,7 @@ function filtered() {
   return CRACKS.filter(matches);
 }
 
-function cardHtml(crack) {
-  const ri = riskInfo(crack.risk);
-  const isActive = crack.id === state.selectedId;
-  return `
-    <div class="card ${isActive ? 'active' : ''}" data-id="${crack.id}" role="button" tabindex="0">
-      <div class="card-content">
-        <h3>
-          <span style="color:${ri.color}">■</span>
-          ${escapeHtml(crack.itemNo)} ${escapeHtml(crack.title)}
-        </h3>
-        <div class="morph">形态：${escapeHtml(crack.morphology)}</div>
-      </div>
-    </div>
-  `;
-}
+// 卡片渲染函数已移除
 
 // ========== 渲染左侧侧边栏 ==========
 function renderSidebar() {
@@ -511,9 +500,12 @@ function renderSidebar() {
       items.forEach(crack => {
         const ri = riskInfo(crack.risk);
         html += `
-          <div class="tree-item ${crack.id === state.selectedId ? "active" : ""}" data-id="${crack.id}" role="button" tabindex="0">
-            <span class="dot-red" style="background:${ri.color};color:${ri.color}"></span>
-            <span>${escapeHtml(crack.itemNo)} ${escapeHtml(crack.title)}</span>
+          <div class="tree-item ${crack.id === state.selectedId ? "active" : ""}" data-id="${escapeHtml(crack.id)}" role="button" tabindex="0">
+            <span class="dot-red" style="margin-top:6px; background:${ri.color};color:${ri.color}"></span>
+            <div style="flex:1; min-width:0;">
+              <div style="font-weight:600; color:#cbd5e1; margin-bottom:2px;">${escapeHtml(crack.itemNo)} ${escapeHtml(crack.title)}</div>
+              <div style="font-size:12px; color:#64748b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">形态：${escapeHtml(crack.morphology)}</div>
+            </div>
           </div>
         `;
       });
@@ -555,24 +547,25 @@ function renderSidebar() {
       selectCrack(el.dataset.id);
     });
   });
+
+  // 确保侧栏选中项在可视区域内
+  const activeTreeItem = sidebarEl.querySelector(".tree-item.active");
+  if (activeTreeItem) {
+    const itemRect = activeTreeItem.getBoundingClientRect();
+    const sidebarRect = sidebarEl.getBoundingClientRect();
+    if (itemRect.top < sidebarRect.top || itemRect.bottom > sidebarRect.bottom) {
+      activeTreeItem.scrollIntoView({ block: "nearest" });
+    }
+  }
 }
 
-// ========== 渲染中间列表 ==========
-function renderList() {
-  const list = filtered();
-  mainEl.innerHTML = list.length 
-    ? `<div class="cards">${list.map(cardHtml).join("")}</div>`
-    : '<div class="placeholder" style="padding:20px">没有匹配结果。</div>';
-
-  mainEl.querySelectorAll(".card").forEach(el => {
-    el.addEventListener("click", () => selectCrack(el.dataset.id));
-  });
-}
+// 列表渲染函数已移除
 
 // ========== 渲染右侧详情 ==========
 function renderDetail() {
   if (!state.selectedId) {
     detailEl.innerHTML = '<div class="empty-detail">请在左侧列表中选择一条裂缝查看详情</div>';
+    delete detailEl.dataset.lastId;
     return;
   }
   const crack = CRACKS.find(c => c.id === state.selectedId);
@@ -583,6 +576,10 @@ function renderDetail() {
 
   detailEl.innerHTML = `
     <div class="detail">
+      <button class="risk-btn" id="btnBackToList" style="align-items:center; gap:6px; width: fit-content;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        返回列表
+      </button>
       <div class="breadcrumb">${escapeHtml(crack.path)}</div>
       <h2>
         ${escapeHtml(crack.title)}
@@ -598,10 +595,10 @@ function renderDetail() {
       <div class="image-panel" id="imagePanel">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
           <span style="color:#64748b; font-size:12px; font-weight:600;">点击图片可查看大图</span>
-          <button class="risk-btn" id="btnLineart" style="font-size:12px; border-radius:6px;">切换深/浅色底图</button>
+<button class="risk-btn" id="btnLineart" style="font-size:12px; border-radius:6px;">切换原图/线稿</button>
         </div>
         <div class="image-wrap">
-          <img src="${img}" alt="附图" style="cursor: zoom-in;" onclick="openLightbox('${img}')" onerror="this.style.display='none'; document.getElementById('noImgPlaceholder').style.display='block';">
+          <img src="${escapeHtml(img)}" alt="附图" id="detailImg" style="cursor: zoom-in;" onerror="this.style.display='none'; document.getElementById('noImgPlaceholder').style.display='block';">
           <div class="placeholder" id="noImgPlaceholder" style="display:none;">暂无对应附图</div>
         </div>
       </div>
@@ -616,33 +613,68 @@ function renderDetail() {
     </div>
   `;
 
-  // 绑定复制功能
-  document.getElementById("btnCopy").addEventListener("click", () => {
-    const text = `【${crack.title}】\n分类：${crack.path}\n风险：${ri.label}\n\n【形态】\n${crack.morphology}\n\n【成因】\n${crack.cause}\n\n【性质】\n${crack.nature}\n\n【影响】\n${crack.impact}\n\n【处理】\n${crack.treatment}`;
-    navigator.clipboard.writeText(text).then(() => {
-      showToast("已成功复制到剪贴板");
-    }).catch(() => {
-      showToast("复制失败，请检查浏览器权限");
+  // 绑定返回列表按钮
+  const btnBack = document.getElementById("btnBackToList");
+  if (btnBack) {
+    btnBack.addEventListener("click", () => {
+      document.getElementById("appContainer").classList.remove("show-detail");
+      // 可选：把焦点还给左侧侧边栏的当前激活项
+      const activeTree = sidebarEl.querySelector(".tree-item.active");
+      if (activeTree) activeTree.focus({ preventScroll: true });
     });
+  }
+
+  // 绑定图片灯箱
+  const detailImg = document.getElementById("detailImg");
+  if (detailImg) {
+    detailImg.addEventListener("click", () => openLightbox(detailImg.getAttribute("src")));
+  }
+
+  // 绑定复制功能
+  document.getElementById("btnCopy").addEventListener("click", async () => {
+    const text = `【${crack.title}】\n分类：${crack.path}\n风险：${ri.label}\n\n【形态】\n${crack.morphology}\n\n【成因】\n${crack.cause}\n\n【性质】\n${crack.nature}\n\n【影响】\n${crack.impact}\n\n【处理】\n${crack.treatment}`;
+    try {
+      if (!navigator.clipboard || typeof navigator.clipboard.writeText !== "function") {
+        throw new Error("Clipboard API 不可用");
+      }
+      await navigator.clipboard.writeText(text);
+      showToast("已成功复制到剪贴板");
+    } catch (err) {
+      try {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        const ok = document.execCommand("copy");
+        document.body.removeChild(ta);
+        if (!ok) throw new Error("execCommand 复制失败");
+        showToast("已成功复制到剪贴板");
+      } catch (e2) {
+        showToast("复制失败，请手动选择文本复制");
+      }
+    }
   });
 
   // 绑定背景切换
   document.getElementById("btnLineart").addEventListener("click", (e) => {
     const panel = document.getElementById("imagePanel");
     panel.classList.toggle("original");
-    // 动态改变按钮提示文字
-    if(panel.classList.contains("original")){
-        e.target.textContent = "切换白底/原图";
-    }else{
-        e.target.textContent = "切换深/浅色底图";
-    }
+    e.target.textContent = panel.classList.contains("original") ? "切回线稿" : "切换原图/线稿";
   });
 
-  detailEl.scrollTop = 0;
+  if (detailEl.dataset.lastId !== crack.id) {
+    detailEl.scrollTop = 0;
+    detailEl.dataset.lastId = crack.id;
+  }
 }
 
 // ========== 联动核心逻辑 ==========
 function selectCrack(id) {
+  const ae = document.activeElement;
+  const focusSource = ae && ae.closest && ae.closest("#sidebar .tree-item") ? "sidebar" : null;
+
   state.selectedId = id;
   const crack = CRACKS.find(c => c.id === id);
   if (crack) {
@@ -650,33 +682,48 @@ function selectCrack(id) {
     state.openSubcategories.add(crack.subcategory);
   }
   
-  // 局部刷新，不重绘全部
+  // 局部刷新
   renderSidebar(); // 刷新侧栏的选中高亮
-  renderList();    // 刷新列表的选中高亮
   
-  // 将选中的列表项滚动到可视区域（居中滚动）
-  const activeCard = mainEl.querySelector('.card.active');
-  if (activeCard) activeCard.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  // 重绘后把焦点恢复到新的选中项（如果是键盘操作）
+  if (focusSource === "sidebar") {
+    const activeTree = sidebarEl.querySelector(".tree-item.active");
+    if (activeTree) activeTree.focus({ preventScroll: true });
+  }
 
   renderDetail();  // 刷新右侧详情
+  
+  // 移动端：加上 show-detail 类，覆盖全屏显示详情
+  if (window.matchMedia("(max-width: 1024px)").matches) {
+    document.getElementById("appContainer").classList.add("show-detail");
+    document.getElementById("detailPanel").scrollTop = 0;
+  }
 }
 
 function render() {
   renderSidebar();
-  renderList();
   renderDetail();
+  // 搜索或全局刷新时，如果在移动端，确保退回列表状态
+  if (window.matchMedia("(max-width: 1024px)").matches && !state.selectedId) {
+    document.getElementById("appContainer").classList.remove("show-detail");
+  }
 }
 
 // 绑定风险筛选
-document.querySelectorAll("#riskFilters .risk-btn").forEach(btn => {
+const riskBtns = document.querySelectorAll("#riskFilters .risk-btn");
+riskBtns.forEach(btn => {
+  btn.setAttribute("aria-pressed", btn.classList.contains("active") ? "true" : "false");
+});
+riskBtns.forEach(btn => {
   btn.addEventListener("click", () => {
     state.risk = btn.dataset.risk;
     // 切换筛选时，如果当前选中的不符合筛选条件，则清空选中
     const sel = CRACKS.find(c => c.id === state.selectedId);
     if (sel && !matches(sel)) state.selectedId = null;
-    
-    document.querySelectorAll("#riskFilters .risk-btn").forEach(b => {
+
+    riskBtns.forEach(b => {
       b.classList.toggle("active", b === btn);
+      b.setAttribute("aria-pressed", b === btn ? "true" : "false");
     });
     render();
   });
@@ -692,6 +739,21 @@ searchInput.addEventListener("input", e => {
 
 // 绑定键盘上下键切换
 document.addEventListener("keydown", (e) => {
+  const lb = document.getElementById('lightbox');
+  const lbOpen = lb && lb.style.display !== 'none';
+  if (lbOpen) {
+    if (e.key === 'Escape') { e.preventDefault(); closeLightbox(); return; }
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const closeBtn = document.getElementById('lightbox-close');
+      if (closeBtn) closeBtn.focus();
+      return;
+    }
+    if (['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight', '/'].includes(e.key)) {
+      e.preventDefault();
+    }
+    return;
+  }
   if (e.key === '/' && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
     e.preventDefault();
     searchInput.focus();
@@ -718,23 +780,43 @@ render();
 </script>
 
 <!-- 图片灯箱结构 -->
-<div id="lightbox" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:9999; justify-content:center; align-items:center; cursor:zoom-out;" onclick="this.style.display='none'">
-  <img id="lightbox-img" src="" style="max-width:95%; max-height:95%; object-fit:contain; background:#fff; border-radius:8px; padding:10px;">
+<div id="lightbox" role="dialog" aria-modal="true" aria-label="图片预览" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:9999; justify-content:center; align-items:center; cursor:zoom-out;" onclick="if(event.target===this) closeLightbox()">
+  <button id="lightbox-close" type="button" aria-label="关闭图片预览" style="position:absolute; top:20px; right:24px; width:40px; height:40px; border-radius:50%; border:1px solid #475569; background:#1e293b; color:#f8fafc; font-size:22px; line-height:1; cursor:pointer; z-index:2;">×</button>
+  <img id="lightbox-img" src="" alt="预览大图" style="max-width:95%; max-height:95%; object-fit:contain; background:#fff; border-radius:8px; padding:10px;">
 </div>
 
 <!-- Toast 容器 -->
-<div id="globalToast" class="toast">
+<div id="globalToast" class="toast" role="status" aria-live="polite" aria-atomic="true">
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
   <span id="toastText">复制成功</span>
 </div>
 
 <script>
+let lightboxReturnFocus = null;
 function openLightbox(src) {
   const lb = document.getElementById('lightbox');
   const lbImg = document.getElementById('lightbox-img');
+  lightboxReturnFocus = document.activeElement;
   lbImg.src = src;
   lb.style.display = 'flex';
+  const closeBtn = document.getElementById('lightbox-close');
+  if (closeBtn) closeBtn.focus();
 }
+function closeLightbox() {
+  const lb = document.getElementById('lightbox');
+  if (!lb || lb.style.display === 'none') return;
+  lb.style.display = 'none';
+  document.getElementById('lightbox-img').src = '';
+  if (lightboxReturnFocus && typeof lightboxReturnFocus.focus === 'function') {
+    lightboxReturnFocus.focus();
+  }
+  lightboxReturnFocus = null;
+}
+
+document.getElementById('lightbox-close').addEventListener('click', (e) => {
+  e.stopPropagation();
+  closeLightbox();
+});
 
 // 全局 Toast 提示函数
 function showToast(msg) {

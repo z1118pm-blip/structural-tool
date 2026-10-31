@@ -82,6 +82,8 @@ const SELF_TEST_UI_CONFIG = {
   'pdelta-vs-pdelta': { category: '🌪️ 抗侧力与二阶效应', level: 'L3', action: 'toast', title: 'P-δ 与 P-Δ 的区别', desc: '本工具只计算 P-Δ（结构侧移引起的二阶效应），不计算 P-δ（构件自身挠曲）。<br><br><svg viewBox="0 0 240 120" style="width:100%;height:auto;margin:6px 0;background:#0f172a;border-radius:4px;display:block;"><text x="60" y="12" fill="#94a3b8" font-size="9" text-anchor="middle">P-Δ</text><line x1="20" y1="100" x2="100" y2="100" stroke="#475569" stroke-width="2"/><line x1="20" y1="100" x2="20" y2="30" stroke="#475569" stroke-width="1.5" stroke-dasharray="2,2"/><line x1="100" y1="100" x2="100" y2="30" stroke="#475569" stroke-width="1.5" stroke-dasharray="2,2"/><line x1="20" y1="100" x2="35" y2="30" stroke="#38bdf8" stroke-width="2"/><line x1="100" y1="100" x2="115" y2="30" stroke="#38bdf8" stroke-width="2"/><line x1="35" y1="30" x2="115" y2="30" stroke="#38bdf8" stroke-width="2"/><text x="125" y="40" fill="#f87171" font-size="8">δ_top</text><text x="180" y="12" fill="#94a3b8" font-size="9" text-anchor="middle">P-δ</text><line x1="140" y1="100" x2="220" y2="100" stroke="#475569" stroke-width="2"/><line x1="140" y1="100" x2="140" y2="30" stroke="#475569" stroke-width="1.5" stroke-dasharray="2,2"/><line x1="220" y1="100" x2="220" y2="30" stroke="#475569" stroke-width="1.5" stroke-dasharray="2,2"/><path d="M 140 100 Q 155 65 140 30" stroke="#38bdf8" stroke-width="2" fill="none"/><path d="M 220 100 Q 235 65 220 30" stroke="#38bdf8" stroke-width="2" fill="none"/><line x1="140" y1="30" x2="220" y2="30" stroke="#38bdf8" stroke-width="2"/><text x="160" y="70" fill="#fbbf24" font-size="8">δ_local</text></svg>P-Δ：整体侧移，节点位移放大；P-δ：柱中部挠曲，构件局部放大。' },
   'p-moment': { category: '📐 杆件与截面行为', level: 'L1', action: 'play', title: '集中力弯矩尖角', desc: '单层单跨 · 跨中集中力。扫掠 P₁ (0→200)，观察集中力作用点处弯矩图的"尖角"，以及跨中正弯矩的线性增长。' },
   'temp-axial': { category: '🧱 特殊构件与边界', level: 'L1', action: 'play', title: '均匀升温的轴力', desc: '单层两跨 · 无外荷载。扫掠均匀升温 ΔT (0→50℃)，看超静定框架因膨胀受阻产生的内部轴力。' },
+  'uniform-temp-moment': { category: '🧱 特殊构件与边界', level: 'L2', action: 'play', title: '均匀升温的弯矩', desc: '两层两跨 · 无外荷载。扫掠整体温升 ΔT (0→50℃)，看梁膨胀推动边柱侧移产生的柱端弯矩。均匀升温以轴力为主，弯矩是约束侧移的副产品——切到 N 图对比内力分布。' },
+  'gradient-temp-moment': { category: '🧱 特殊构件与边界', level: 'L1', action: 'play', title: '非均匀升温的弯矩', desc: '单层单跨 · 无外荷载。扫掠结构内外温差 ΔT (0→30℃)，看边柱和顶层边梁的均匀曲率如何产生"两端同号"的固端弯矩——与均布荷载的异号弯矩形成鲜明对比。' },
   'remove-beam-pierce': { category: '🌪️ 抗侧力与二阶效应', level: 'L2', action: 'play', title: '穿层柱模拟', desc: '两层两跨 · 水平力。仅移除第1层左跨梁，左侧边柱形成穿层柱。同时显示弯矩与变形，观察底层侧移放大，以及跃层柱弯矩被其它柱吸收的现象。' },
 
   'beam-inflection-vs-col': { category: '📐 杆件与截面行为', level: 'L2', action: 'play', title: '柱刚度对梁反弯点的影响', desc: '单层单跨 · 竖向均布荷载。扫掠边柱高 hc (300→800)。柱越细，对梁端约束越弱（趋近铰接），反弯点靠近支座；柱越粗，约束越强（趋近固接），反弯点向跨中移动。' },
@@ -147,6 +149,8 @@ const SELF_TEST_TAGS_MAP = {
   'pdelta-vs-pdelta': ['二阶效应'],
   'p-moment': ['内力/反弯点'],
   'temp-axial': ['边界/非荷载'],
+  'uniform-temp-moment': ['边界/非荷载', '内力/反弯点'],
+  'gradient-temp-moment': ['边界/非荷载', '内力/反弯点'],
   'remove-beam-pierce': ['变形/侧移'],
 
   'beam-inflection-vs-col': ['内力/反弯点'],
@@ -462,6 +466,20 @@ const SELF_TEST_CASES = [
     sweep: 'tempAll',
     sweepRange: [0, 50], // 指定扫掠区间
     state: { nBay: 2, nLev: 1, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 400, hc: 400, bb: 250, hb: 500, r: 1, q1: 0, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, P1:0, P2:0, P3:0, pLoadMap:{}, H1: 0, H2: 0, H3: 0, Hmode: 'none', tempAll: 0, tempGrad: 0, betaF: 1, betaJ: 1, forceType: 'N', elFilter: 'all', showVals: true, showIds: false, showPDelta: false, displayMode: 'force', mScale: 10, dScale: 50 }
+  },
+  {
+    id: 'uniform-temp-moment',
+    sweep: 'tempAll',
+    sweepRange: [0, 50],
+    state: { nBay: 2, nLev: 2, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 400, hc: 400, bb: 250, hb: 500, r: 1, q1: 0, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, P1:0, P2:0, P3:0, pLoadMap:{}, H1: 0, H2: 0, H3: 0, Hmode: 'none', tempAll: 0, tempGrad: 0, tempT0: 20, betaF: 1, betaJ: 1, axialMode: 'real', forceType: 'M', elFilter: 'all', showVals: true, showIds: false, showPDelta: false, displayMode: 'force', mScale: 10, dScale: 30 },
+    toast: '均匀升温会让整个框架试图膨胀。超静定约束阻止了自由变形，于是梁柱内部产生了内力。<br><br>重点关注：在这种温度工况下，<b>轴力（N）才是真正的主导内力</b>。点击下方 <b>N</b> 按钮切到轴力图，你会看到整个框架都处于受压（或受拉）状态，内力分布非常饱满。<br><br>而 M 图上看到的柱端弯矩，实际上是框架整体侧移受阻产生的<b>附加次弯矩</b>。比起轴力，它只是约束的副产品。'
+  },
+  {
+    id: 'gradient-temp-moment',
+    sweep: 'tempGrad',
+    sweepRange: [0, 30],
+    state: { nBay: 1, nLev: 1, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 400, hc: 400, bb: 250, hb: 500, r: 1, q1: 0, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, P1:0, P2:0, P3:0, pLoadMap:{}, H1: 0, H2: 0, H3: 0, Hmode: 'none', tempAll: 0, tempGrad: 0, tempT0: 20, betaF: 1, betaJ: 1, axialMode: 'real', forceType: 'M', elFilter: 'all', showVals: true, showIds: false, showPDelta: false, displayMode: 'force', mScale: 8, dScale: 30 },
+    toast: '截面内外温差（ΔT = 室外 − 室内）让边柱和顶层边梁产生<b>均匀曲率</b>。当两端固接时，固端弯矩是<b>同号</b>的——盯住柱顶和柱底，M 图在柱子两侧朝同一个方向，这是"温差弯曲"独有的指纹。<br><br>对比一下：均布荷载的弯矩在梁两端是<b>异号</b>的（一端顺时针、一端逆时针）。两者视觉上一眼可辨。<br><br><b>💡 概念延伸</b>：温差本身<b>不直接产生轴力</b>，它只产生弯曲。但在超静定框架里，弯曲变形会受到节点约束，从而通过变形协调<b>间接诱发</b>出微小的轴力。由于本工况是单跨框架，这种协调约束很弱，产生的轴力极小（N图上看不见），故本工具以弯矩呈现为主。<br><br>注意：内部梁柱和悬挑梁不受截面温差影响（两侧都在室内或室外）。'
   },
   {
     id: 'remove-beam-pierce',

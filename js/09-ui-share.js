@@ -478,7 +478,13 @@ function decodeState(str){
     if(typeof str !== 'string' || str.length > 8000) return null; // 拦截超长恶意链接
     let b64 = str.replace(/-/g, '+').replace(/_/g, '/');
     while(b64.length % 4) b64 += '=';
-    const obj = JSON.parse(atob(b64));
+    const raw = atob(b64);
+    /* 逐字节还原为 UTF-8 字节序列，再用 TextDecoder 解回字符串，
+       与 encodeState 的 encodeURIComponent + 字节映射完全互逆；同时兼容纯 ASCII 老链接。 */
+    const bytes = new Uint8Array(raw.length);
+    for(let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+    const jsonStr = new TextDecoder('utf-8').decode(bytes);
+    const obj = JSON.parse(jsonStr);
     if(!obj || typeof obj !== 'object' || Array.isArray(obj)) return null;
     return obj;
   }catch(e){ return null; }
@@ -538,8 +544,13 @@ S.movingLoad = { enabled: false, lev: 1, bay: 1, P: 0, t: 0.5, playing: false, s
       if(v === 'rect' || v === 'HW') S[k] = v;
     } else if(k === 'beamSecType'){
       if(v === 'rect' || v === 'HN') S[k] = v;
-    } else if(k === 'colHW' || k === 'beamHN'){
-      if(typeof v === 'string' && v.length > 0) S[k] = v;
+    } else if(k === 'colHW'){
+      const validHW = ['HW200x200','HW250x250','HW300x300','HW350x350','HW400x400'];
+      if(typeof v === 'string' && validHW.includes(v)) S[k] = v;
+    } else if(k === 'beamHN'){
+      const validHN = ['HN200x100','HN250x125','HN300x150','HN350x175','HN400x200',
+                       'HN450x200','HN500x200','HN600x200','HN700x300'];
+      if(typeof v === 'string' && validHN.includes(v)) S[k] = v;
     } else if(k === 'colAxis'){
       if(v === 'strong' || v === 'weak') S[k] = v;
     } else if(k === 'forceType'){
@@ -791,10 +802,15 @@ S.movingLoad = { enabled: false, lev: 1, bay: 1, P: 0, t: 0.5, playing: false, s
 
   /* 兼容旧链接：若携带 settleDy/settleCol，自动转换到 supportMap */
   if(obj.settleDy !== undefined && obj.settleCol !== undefined) {
-    const c = String(Math.max(0, parseInt(obj.settleCol) || 0));
-    if(!S.supportMap) S.supportMap = {};
-    if(!S.supportMap[c]) S.supportMap[c] = {};
-    S.supportMap[c].dy = parseFloat(obj.settleDy) || 0;
+    const rawCol = parseInt(obj.settleCol) || 0;
+    const c = String(Math.max(0, Math.min(S.nBay, rawCol)));
+    const dyNum = parseFloat(obj.settleDy);
+    /* 与 supportMap 白名单一致：柱号 0..nBay，|dy| ≤ 200mm，且为有限数 */
+    if(Number.isFinite(dyNum) && Math.abs(dyNum) <= 200){
+      if(!S.supportMap) S.supportMap = {};
+      if(!S.supportMap[c]) S.supportMap[c] = {};
+      S.supportMap[c].dy = dyNum;
+    }
   }
 
   applyTopoState();

@@ -345,6 +345,7 @@ function drawInternal(canvas, model, dprOverride){
       if(filter === 'col'  && el.kind !== 'col')  continue;
       if(filter === 'beam' && el.kind !== 'beam') continue;
       if(filter === 'brace' && el.kind !== 'brace') continue;
+      if(el.kind === 'brace' && type !== 'N') continue;
       ctx.fillStyle = forceStyleOf(type, el.kind).color;
       const v0 = internalAt(res, 0, type), vL = internalAt(res, el.L, type);
       const ni = model.nodes[el.i], nj = model.nodes[el.j];
@@ -353,20 +354,22 @@ function drawInternal(canvas, model, dprOverride){
       const Lu = Math.hypot(dxu, dyu) || 1;
       const ux = dxu/Lu, uy = dyu/Lu;
       if(el.kind === 'brace'){
-        /* X 撑两根斜杆中点完全重合，用 Set 去重避免文字叠在一起。 */
+        /* 失效支撑不显示轴力 */
+        if(model.inactiveBraces && model.inactiveBraces.has(el.braceUid)) continue;
+        const vMid = axialAt(res, el.L / 2);
+        if(Math.abs(vMid) <= NZ) continue;
+        /* 先去值判定，再按「位置 + 轴力数值」去重：
+           同位置但轴力不同的两根 X 撑不再互相覆盖。 */
         const midX = (ix + jx) / 2, midY = (iy + jy) / 2;
-        const posKey = Math.round(midX) + '_' + Math.round(midY);
+        const posKey = Math.round(midX) + '_' + Math.round(midY) + '_' + vMid.toFixed(1);
         if(drawnBraceLabels.has(posKey)) continue;
         drawnBraceLabels.add(posKey);
-        const vMid = axialAt(res, el.L / 2);
-        if(Math.abs(vMid) > NZ){
-          const txt = vMid.toFixed(1);
-          const tw = ctx.measureText(txt).width;
-          ctx.fillStyle = T.bg;
-          ctx.fillRect(midX - tw/2 - 3, midY - 7.5, tw + 6, 15);
-          ctx.fillStyle = forceStyleOf(type, el.kind).color;
-          ctx.fillText(txt, midX, midY);
-        }
+        const txt = vMid.toFixed(1);
+        const tw = ctx.measureText(txt).width;
+        ctx.fillStyle = T.bg;
+        ctx.fillRect(midX - tw/2 - 3, midY - 7.5, tw + 6, 15);
+        ctx.fillStyle = forceStyleOf(type, el.kind).color;
+        ctx.fillText(txt, midX, midY);
         continue;
       }
       if(el.kind === 'col'){
@@ -520,7 +523,15 @@ function drawInternal(canvas, model, dprOverride){
                     }
                   } else {
                     if (M0 * ML < 0) {
-                      zeroXs.push(el.L * Math.abs(M0) / (Math.abs(M0) + Math.abs(ML)));
+                      /* 均布荷载但峰值在杆外时，M(x) 仍是二次函数，
+                         线性插值会给出确定误差。统一用二分。 */
+                      let lo = 0, hi = el.L;
+                      for (let it = 0; it < 40; it++) {
+                        const mid = (lo + hi) / 2;
+                        if (internalAt(res, mid, 'M') * M0 > 0) lo = mid;
+                        else hi = mid;
+                      }
+                      zeroXs.push((lo + hi) / 2);
                     }
                   }
                   

@@ -71,7 +71,7 @@ let currentTabWind = 'dist';
 let currentTabSeis = 'dist';
 let currentWindDirView = 'X';
 
-let tabRafId = null;
+let tabRafIds = { wind: null, seis: null };
 function switchTab(type, view, btn) {
   if (!btn) return;
   if (!lastWindData || !lastSeisData) return; // 首帧防护
@@ -96,8 +96,8 @@ function switchTab(type, view, btn) {
   }
   
   // 用 rAF 合并快速连点，仅负责绘制
-  if (tabRafId) cancelAnimationFrame(tabRafId);
-  tabRafId = requestAnimationFrame(() => {
+  if (tabRafIds[type]) cancelAnimationFrame(tabRafIds[type]);
+  tabRafIds[type] = requestAnimationFrame(() => {
     try {
       if (type === 'wind') {
         const forces = currentWindDirView === 'X' ? lastWindData.X.forces : lastWindData.Y.forces;
@@ -108,7 +108,7 @@ function switchTab(type, view, btn) {
         if (forcesSeis.length) renderLoadChart('svg-seismic', forcesSeis, '#f87171', '地震作用', currentTabSeis);
       }
     } finally {
-      tabRafId = null;
+      tabRafIds[type] = null;
     }
   });
 }
@@ -575,7 +575,7 @@ window.exportWord = function() {
   // 移除 BMP 外字符（emoji 等 surrogate pair）以及常见符号（⚠️/✅ 等），用 u 标志匹配真实码点
     // 仅移除补充符号平面中的 emoji 与变体选择符 FE0F；
   // 保留 \u2600-\u27BF 中的 ★☆☐ 等中文技术文档常用符号
-  cleanContent = cleanContent.replace(/[\u{1F000}-\u{1FFFF}\u{FE0F}]/gu, '');
+  cleanContent = cleanContent.replace(/[\u{1F000}-\u{1FFFF}\u{FE0F}\u26A0\u2705]/gu, '');
   
   const header = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><title>计算书</title><style>body { font-family: 'Microsoft YaHei', 'PingFang SC', SimSun, sans-serif; font-size: 14px; line-height: 1.6; } b { color: #000; } h4 { margin-top: 16px; margin-bottom: 8px; border-bottom: 1px solid #ccc; padding-bottom: 4px; }</style></head><body>`;
   const footer = `</body></html>`;

@@ -75,23 +75,17 @@ function elemDisp(res, x){
     const alI = (el.alphaI != null) ? el.alphaI : (el.alpha || 0);
     const alJ = (el.alphaJ != null) ? el.alphaJ : (el.alpha || 0);
     
-    /* 温度梯度工况：Hermite 三次插值使用 solve 精确给出的 ti/tj 本身
-       就能精确表示二次挠度曲线，不能做 relax 折减（会丢失温度信息，
-       使半刚接梁的温度挠度被系统性压小，betaJ→0.01 处出现视觉跳变）。
-       relax 仅用于均布荷载下"梁端切线 ≠ 弦线"的半刚接过渡。 */
-    const hasTempGrad = Math.abs(el.tempGradEff || 0) > 1e-12;
-    if (!hasTempGrad && (alI > 0 || alJ > 0)) {
-      // 梁端弦线斜率（即如果梁是一根直杆，它应有的刚体倾角）
-      const theta_chord = (vj - vi) / L;
-      
-      if (alI > 0) {
-        const relaxI = 1 / (1 + 4 * alI);
-        ti = theta_chord + (ti - theta_chord) * relaxI;
-      }
-      if (alJ > 0) {
-        const relaxJ = 1 / (1 + 4 * alJ);
-        tj = theta_chord + (tj - theta_chord) * relaxJ;
-      }
+    /* 通过端部弹簧协调关系恢复梁自身端转角：
+       M_i = k_spring_i · (θ_node_i − θ_beam_i)，k_spring_i = EI / (L·αI)
+       ⇒ θ_beam_i = θ_node_i − M_i · αI · L / EI
+       端点弯矩由求解器精确给出（f[2]/f[5]），不再使用经验折减。
+       大柔度（α ≥ 1e3，近似铰接）直接取弦线，避免 0·∞。 */
+    const theta_chord = (vj - vi) / L;
+    if (alI > 0) {
+      ti = (alI >= 1e3) ? theta_chord : (ti - f[2] * alI * L / EI);
+    }
+    if (alJ > 0) {
+      tj = (alJ >= 1e3) ? theta_chord : (tj - f[5] * alJ * L / EI);
     }
   }
 
@@ -107,7 +101,9 @@ function elemDisp(res, x){
   // 对任意边界条件，Hermite(精确端点) + 该特解 = 精确解（齐次解由 Hermite 捕捉，
   // 特解负责非齐次项）。悬挑梁 alphaI=alphaJ=0，端点由求解器精确给出，
   // 因此 H+A 严格等于悬臂梁精确挠度，不是近似。
-  if (w !== 0 && !el.isCant) {
+  if (w !== 0) {
+    /* 悬挑梁同样需要该特解：Hermite（端点精确）+ 该特解 = 真实四次挠度。
+       原 !el.isCant 排除是错误，端点已由求解器精确给出，不会重复叠加。 */
     vly += (w * x*x * (L-x)*(L-x)) / (24 * EI);
   }
   /* 温度梯度特解：截面内外温差使杆产生均匀曲率 κ = α·ΔT/h。

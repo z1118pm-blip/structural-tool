@@ -338,10 +338,9 @@ function parametricGenerator(p) {
 
   const getSupportType = (c) => {
     const entry = supportMapSolver[String(c)];
-    // 【修复】若强制施加了转角，力学上等价于固接，界面应同步显示
-    if (entry && entry.rot != null && Math.abs(entry.rot) > 1e-9) {
-      return "fixed";
-    }
+    /* 强迫转角只应影响 rz 的约束/强迫，不应改变 ux / uy 的约束语义。
+       （原逻辑把 roller + rot 整体升级为 fixed，会暗中增加水平约束。
+       撤销后：ux 仍 free、uy 仍 fixed、rz 通过 prescribed.rz 被强迫。） */
     if (entry && entry.type) {
       if (["fixed", "pin", "roller", "spring"].includes(entry.type)) return entry.type;
     }

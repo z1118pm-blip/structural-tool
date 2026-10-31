@@ -1,4 +1,6 @@
-*{box-sizing:border-box;margin:0;padding:0;outline:none !important;}
+*{box-sizing:border-box;margin:0;padding:0;}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible,a:focus-visible{outline:2px solid #38bdf8;outline-offset:2px;border-radius:3px;}
+input[type=range]:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(56,189,248,0.4);}
 [hidden]{display:none !important;}
 html,body{height:100%}
 body{
@@ -268,6 +270,7 @@ input[type=range]:hover::-webkit-slider-thumb{
 .tagBar{
   position:absolute;top:9px;left:12px;right:12px;
   display:flex;justify-content:space-between;align-items:center;gap:10px;
+  flex-wrap: wrap; row-gap: 8px; /* 允许按钮组换行 */
   pointer-events:none;z-index:10;
 }
 .tagBar .tag{
@@ -275,7 +278,7 @@ input[type=range]:hover::-webkit-slider-thumb{
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   text-shadow: 0 2px 4px rgba(0,0,0,0.8);
 }
-.segMiniGroup{display:flex;gap:10px;pointer-events:auto;flex:0 0 auto; align-items: center;}
+.segMiniGroup{display:flex;gap:10px;pointer-events:auto;flex-wrap:wrap;justify-content:flex-end; align-items: center;}
 .segMiniGroup > .segMini:not(:last-child) { position: relative; }
 .segMiniGroup > .segMini:not(:last-child)::after { 
   content: ''; position: absolute; right: -5px; top: 15%; bottom: 15%; 
@@ -540,6 +543,11 @@ input[type=range]:hover::-webkit-slider-thumb{
 /* 窄屏适配 */
 @media(max-width:1020px){
   body{overflow:auto}
+  /* 给底部状态栏留出 45px 的空间，防止遮挡内容 */
+  #stage { padding-bottom: 45px !important; }
+  /* 窄屏下隐藏状态栏的冗余版权信息，缩小间距防溢出 */
+  #stageStatusBar { gap: 8px; padding: 0 8px; font-size: 9.5px; }
+  #stageStatusBar .ssbMeta { display: none; }
   #app{flex-direction:column;height:auto;min-height:100vh}
   #leftCol{flex:0 0 auto;border-right:none;border-bottom:1px solid #1e293b}
   .tabContent{overflow:visible}
@@ -554,6 +562,15 @@ input[type=range]:hover::-webkit-slider-thumb{
   #chartForce{grid-column:1;grid-row:auto;min-height:340px}
   #chartLoad{grid-column:1;grid-row:auto;min-height:340px}
   #chartDeform{grid-column:1;grid-row:auto;min-height:340px}
+  /* 用与桌面版相同的 specificity 覆盖 grid-row:1/span 2，避免隐式行把 UI 挤乱 */
+  #stage.mode-force #chartForce,
+  #stage.mode-force #chartDeform,
+  #stage.mode-deform #chartForce,
+  #stage.mode-deform #chartDeform { grid-row: auto; }
+  /* 底部 9 列控制条改为 3 组 3 列，避免被 .chart 裁掉 β 控件 */
+  /* 把 40px 改为 0，允许滑块在极窄屏幕下自由压缩，避免撑破容器 */
+  .chartBar .cbRowSplit{ grid-template-columns:auto minmax(0,1fr) auto; gap:4px 6px; }
+  .chartBar { padding: 10px 8px; } /* 减小控制条内边距 */
 }
 
 /* 状态栏 */
@@ -656,6 +673,8 @@ input[type=range]:hover::-webkit-slider-thumb{
 .brandLeft { display: flex; align-items: center; min-width: 0; }
 .brandActions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .brandActionBtn {
+  position: relative;
+  overflow: hidden;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -666,23 +685,52 @@ input[type=range]:hover::-webkit-slider-thumb{
   font-family: inherit;
   font-weight: 600;
   text-decoration: none;
-  color: #94a3b8; /* 文字变灰 */
-  background: #111a2c; /* 与面板统一的深色底 */
-  border: 1px solid rgba(148,163,184,0.15); /* 中性灰边框 */
+  color: #94a3b8;
+  background: #111a2c;
+  border: 1px solid rgba(148,163,184,0.15);
   border-radius: 6px;
-  transition: all 0.2s;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
   cursor: pointer;
   line-height: 1.2;
-  box-shadow: none; /* 去掉内阴影 */
+  box-shadow: none;
 }
+/* 首次加载时的流光扫过动效 (延迟 1 秒，持续 1.5 秒，只执行一次) */
+/* 首次加载时的流光扫过动效 */
+.brandActionBtn::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -150%;
+  width: 60%; height: 100%;
+  /* 使用青色 + 纯白高光，大幅提升亮度 */
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(56,189,248,0.8) 30%, rgba(255,255,255,1) 50%, rgba(56,189,248,0.8) 70%, rgba(255,255,255,0) 100%);
+  transform: skewX(-25deg);
+  pointer-events: none;
+  opacity: 0; /* 默认隐藏 */
+}
+
+/* 重复 3 次，单次总时长 1.2s（扫光占 0.5s，停顿 0.7s 等待下一次） */
+.brandActions > .brandActionBtn:nth-child(1)::before { animation: btnSweep 1.2s ease-in-out 0.2s 3 forwards; }
+.brandActions > .brandActionBtn:nth-child(2)::before { animation: btnSweep 1.2s ease-in-out 0.35s 3 forwards; }
+.brandActions > .brandActionBtn:nth-child(3)::before { animation: btnSweep 1.2s ease-in-out 0.5s 3 forwards; }
+.brandActions > .brandActionBtn:nth-child(4)::before { animation: btnSweep 1.2s ease-in-out 0.65s 3 forwards; }
+
+@keyframes btnSweep {
+  0% { left: -150%; opacity: 0; }
+  5% { opacity: 1; }
+  40% { left: 250%; opacity: 0; } /* 在 40% (约0.5秒) 时扫光完成并消失 */
+  100% { left: 250%; opacity: 0; } /* 剩余 60% 的时间保持隐藏，形成脉冲间隙 */
+}
+
 .brandActionBtn:hover {
-  color: #f8fafc; /* 文字变亮白 */
-  background: rgba(30, 41, 59, 0.8); /* 微微提亮背景 */
-  border-color: rgba(148,163,184,0.3); /* 边框稍微清晰一点 */
+  color: #f8fafc;
+  background: rgba(30, 41, 59, 0.9);
+  border-color: rgba(56, 189, 248, 0.5); /* 边框变成亮蓝 */
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.15), inset 0 0 8px rgba(56,189,248,0.05); /* 科幻微光晕 */
+  transform: translateY(-1px); /* 整个按钮极轻微上浮 */
 }
 .brandActionBtn:hover svg {
-  color: #38bdf8; /* 只有图标在悬停时变蓝，点题即可 */
-  transform: translateY(-1px); /* 悬停时图标轻微上浮，替代发光效果 */
+  color: #38bdf8;
+  transform: translateY(-1px) scale(1.1); /* 图标上浮并放大 */
   transition: transform 0.2s ease, color 0.2s ease;
 }
 /* 赞赏/估算的独立动画已整合进 .brandActionBtn 统一样式 */

@@ -9,7 +9,7 @@
   // 🌟 全站唯一版本号修改处！
   // 以后升级版本，只需修改下面这个字符串，全站标题、UI、JS防缓存全部自动联动。
   // =========================================================
-  window.APP_VERSION = 'v0.1.9.5';
+  window.APP_VERSION = 'v0.2';
 
   // 动态加载核心状态文件（自动带上版本号防缓存）
   document.write(`<script src="js/01-state.js?${window.APP_VERSION}"><\/script>`);
@@ -963,78 +963,120 @@ var _hmt = _hmt || [];
           <button type="button" class="modalTabBtn" data-htab="mh-tab4">界面与自检</button>
         </div>
         <div class="modalBody">
+
           <!-- ====== Tab 1 ====== -->
           <div class="modalTabPane on" id="mh-tab1">
             
-            <!-- 新增：开发目的与前言 -->
-            <div style="background: rgba(251, 191, 36, 0.06); border-left: 3px solid #fbbf24; padding: 14px 18px; border-radius: 0 6px 6px 0; margin-bottom: 18px;">
-              <h3 style="color: #fbbf24; margin: 0 0 8px 0; font-size: 14.5px; border: none; padding: 0;">【致读者：结构工程师的最后主战场】</h3>
-              <p style="font-size: 13px; color: #cbd5e1; line-height: 1.7; margin-bottom: 8px;">随着 AI 技术的狂飙突进，AI 快速完成建模、出图已是可望且可即的现实。在这个时代，结构工程师的核心价值究竟何在？</p>
-              <p style="font-size: 13px; color: #cbd5e1; line-height: 1.7; margin-bottom: 8px;">答案在于：<strong style="color: #f8fafc;">精准判断 AI 生成的结构方案，引导 AI 进行迭代优化，并为最终的结构安全兜底负责。</strong> 这将成为结构工程师不可替代的最后主战场。</p>
-              <p style="font-size: 13px; color: #cbd5e1; line-height: 1.7; margin-bottom: 0;">本工具的初衷，并非替代任何计算软件，而是为了帮你磨砺力学直觉、完善概念设计能力。因为<strong style="color: #38bdf8;">软件可以算得很快，但判断对错与承担责任，永远属于人。</strong></p>
+            <!-- 前言：轻量级引用块 -->
+            <div style="border-left: 3px solid #fbbf24; padding-left: 16px; margin-bottom: 24px;">
+              <h3 style="color: #fbbf24; margin: 0 0 8px 0; font-size: 15px; font-weight: 700; border: none; padding: 0; letter-spacing: 0.5px;">【致读者：结构工程师的最后主战场】</h3>
+              <p style="font-size: 13.5px; color: #cbd5e1; line-height: 1.8; margin-bottom: 10px;">随着 AI 技术的狂飙突进，AI 快速完成建模、出图已是可望且可即的现实。在这个时代，结构工程师的核心价值究竟何在？</p>
+              <p style="font-size: 13.5px; color: #cbd5e1; line-height: 1.8; margin-bottom: 10px;">答案在于：<strong style="color: #f8fafc;">精准判断 AI 生成的结构方案，引导 AI 进行迭代优化，并为最终的结构安全兜底负责。</strong> 这将成为结构工程师不可替代的最后主战场。</p>
+              <p style="font-size: 13.5px; color: #cbd5e1; line-height: 1.8; margin-bottom: 0;">本工具的初衷，并非替代任何计算软件，而是为了帮你磨砺力学直觉、完善概念设计能力。因为<strong style="color: #38bdf8; font-weight: 600;">软件可以算得很快，但判断对错与承担责任，永远属于人。</strong></p>
             </div>
 
-            <div class="note" style="background:rgba(56,189,248,.10);border-left-color:#38bdf8;color:#7dd3fc;margin-bottom:12px">
-              📬 <strong>反馈与建议：</strong>欢迎将盲测中遇到的 Bug 或力学概念改进建议发送至作者邮箱 <a href="mailto:zhao_struct_e@163.com" style="color:#38bdf8;text-decoration:underline;font-weight:600;">Zhao_Struct_E@163.com</a>。
+            <!-- 反馈：极简行内提示 -->
+            <div style="margin-bottom: 28px; color: #94a3b8; font-size: 12.5px; display: flex; align-items: center; gap: 6px;">
+              <span style="font-size: 14px;">📬</span> 
+              <span>反馈与建议：欢迎发送至 <a href="mailto:zhao_struct_e@163.com" style="color: #38bdf8; text-decoration: underline; font-weight: 600;">Zhao_Struct_E@163.com</a></span>
             </div>
-            <h3>一、工具定位与学习路径</h3>
-            <p>本工具是一个纯粹的<strong>力学概念自检工具</strong>。它不是用来替代 YJK / SAP2000 进行出图设计的。本工具跳过了繁琐的规范组合（如 1.3恒+1.5活），去掉了复杂的配筋计算，旨在用最纯粹的线弹性理论，帮你快速验证对平面刚架受力性能的直觉判断。</p>
-            <p style="color: #94a3b8; font-size: 12.5px; margin-top: -4px;"><em>* 注：底层求解器严格基于「矩阵位移法的平面刚架线弹性静力分析」，以确保你看到的每一次变形、每一张弯矩图都符合真实的力学规律。</em></p>
-            <p style="color: #94a3b8; font-size: 12.5px; margin-top: -4px;"><em>* 注：底层求解器严格基于「矩阵位移法的平面刚架线弹性静力分析」，以确保你看到的每一次变形、每一张弯矩图都符合真实的力学规律。</em></p>
-            <p><strong>推荐的学习路径：</strong></p>
-            <ul>
-              <li><strong>第一步：先做实验。</strong>点击「自检」中的卡片（如“⑦ 层刚度变化与变形集中”），观察右侧扫掠动画。</li>
-              <li><strong>第二步：看现象。</strong>注意右侧变形图的层间位移角，看看变形是不是确实集中在软弱层。</li>
-              <li><strong>第三步：看理论。</strong>打开本说明书的「建模与假设」Tab，阅读背后的力学逻辑。</li>
-              <li><strong>第四步：自己动手。</strong>去「模型」和「荷载」Tab 随意修改参数，看看你的修改是否引发了符合你预期的力学变化。</li>
+
+            <h3 style="font-size: 16px; font-weight: 700; color: #f8fafc; margin-bottom: 12px; border-bottom: 1px solid rgba(148,163,184,0.15); padding-bottom: 8px;">一、工具定位与学习路径</h3>
+            <p style="font-size: 13px; color: #cbd5e1; line-height: 1.7;">本工具是一个纯粹的<strong>力学概念自检工具</strong>。它不是用来替代 YJK / SAP2000 进行出图设计的。本工具跳过了繁琐的规范组合，去掉了复杂的配筋计算，旨在用最纯粹的线弹性理论，帮你快速验证对平面刚架受力性能的直觉判断。</p>
+            <p style="color: #64748b; font-size: 12px; margin-top: 4px; margin-bottom: 16px;"><em>* 注：底层求解器严格基于「矩阵位移法的平面刚架线弹性静力分析」，以确保你看到的每一次变形、每一张弯矩图都符合真实的力学规律。</em></p>
+            
+            <p style="font-weight: 600; color: #f8fafc; margin-bottom: 8px;">推荐的学习路径：</p>
+            <ul style="margin: 0 0 24px 0; padding-left: 20px; font-size: 13px; color: #cbd5e1; line-height: 1.8;">
+              <li><strong style="color: #f8fafc;">第一步：先做实验。</strong>点击「自检」中的卡片，观察右侧扫掠动画。</li>
+              <li><strong style="color: #f8fafc;">第二步：看现象。</strong>注意右侧变形图的层间位移角，看看变形是不是确实集中在软弱层。</li>
+              <li><strong style="color: #f8fafc;">第三步：看理论。</strong>打开本说明书的「建模与假设」Tab，阅读背后的力学逻辑。</li>
+              <li><strong style="color: #f8fafc;">第四步：自己动手。</strong>去「模型」和「荷载」Tab 随意修改参数，看看你的修改是否引发了符合你预期的力学变化。</li>
             </ul>
-            <div class="note" style="background:rgba(244,63,94,.10);border-left-color:#f43f5e;color:#fca5a5;margin-bottom:12px">
-              <strong>⚠ 关键声明：</strong>本工具目前处于<strong>持续更新与测试阶段</strong>，算法细节与交互可能随时调整。请将其作为“力学概念自检”的辅助参考，<strong>切勿盲目相信工具的绝对数值</strong>，绝对禁止将计算结果直接用于实际工程设计、施工图审查或工程鉴定。
+            
+            <!-- 关键声明：只加左边红线和淡红背景 -->
+            <div style="background: rgba(244, 63, 94, 0.05); border-left: 3px solid #f43f5e; padding: 12px 16px; border-radius: 0 6px 6px 0; margin-bottom: 28px; font-size: 13px; color: #fca5a5; line-height: 1.7;">
+              <strong style="color: #f43f5e;">⚠ 关键声明：</strong>本工具目前处于<strong>持续更新与测试阶段</strong>，算法细节与交互可能随时调整。请将其作为“力学概念自检”的辅助参考，<strong>切勿盲目相信工具的绝对数值</strong>，绝对禁止将计算结果直接用于实际工程设计、施工图审查或工程鉴定。
             </div>
-            <div class="note" style="background:rgba(168,85,247,.10);border-left-color:#a855f7;color:#d8b4fe;margin-bottom:12px;margin-top:12px;">
-              <strong>✨ 隐藏彩蛋与附加功能：</strong>左侧顶部品牌 Logo 的右侧（📐 和 🎮），还内置了两个实用入口：<br>
-              1️⃣ <strong>📐 量级估算工具</strong>：用于概念阶段快速估算结构的重力荷载、风荷载与地震作用。<br>
-              2️⃣ <strong>🎮 应力释放小游戏</strong>：一个纯粹的解压打砖块游戏，建模范了可以点进去放松一下！
+
+            <!-- 附加工具箱：网格卡片化 -->
+            <div style="margin-bottom: 32px;">
+              <div style="font-size: 14px; font-weight: 600; color: #f8fafc; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                <span style="font-size: 16px;">🛠️</span> 工程师的附加工具箱
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <!-- 卡片 1 -->
+                <div style="background: #0f172a; padding: 14px; border-radius: 8px; border: 1px solid rgba(148,163,184,0.1); transition: border-color 0.2s;" onmouseover="this.style.borderColor='#38bdf8'" onmouseout="this.style.borderColor='rgba(148,163,184,0.1)'">
+                  <div style="font-weight: 600; color: #38bdf8; font-size: 13px; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">📖 裂缝查阅</div>
+                  <div style="font-size: 12px; color: #94a3b8; line-height: 1.5;">快速查阅混凝土结构裂缝形态、成因与宽度限值，辅助现场诊断。</div>
+                </div>
+                <!-- 卡片 2 -->
+                <div style="background: #0f172a; padding: 14px; border-radius: 8px; border: 1px solid rgba(148,163,184,0.1); transition: border-color 0.2s;" onmouseover="this.style.borderColor='#38bdf8'" onmouseout="this.style.borderColor='rgba(148,163,184,0.1)'">
+                  <div style="font-weight: 600; color: #38bdf8; font-size: 13px; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">📐 量级估算</div>
+                  <div style="font-size: 12px; color: #94a3b8; line-height: 1.5;">概念设计利器，快速估算重力、风与地震作用，培养工程直觉。</div>
+                </div>
+                <!-- 卡片 3 -->
+                <div style="background: #0f172a; padding: 14px; border-radius: 8px; border: 1px solid rgba(148,163,184,0.1); transition: border-color 0.2s;" onmouseover="this.style.borderColor='#38bdf8'" onmouseout="this.style.borderColor='rgba(148,163,184,0.1)'">
+                  <div style="font-weight: 600; color: #38bdf8; font-size: 13px; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">💰 养老规划</div>
+                  <div style="font-size: 12px; color: #94a3b8; line-height: 1.5;">跨期资产配置蒙特卡洛仿真，用可靠度方法算算钱袋子（彩蛋）。</div>
+                </div>
+                <!-- 卡片 4 -->
+                <div style="background: #0f172a; padding: 14px; border-radius: 8px; border: 1px solid rgba(148,163,184,0.1); transition: border-color 0.2s;" onmouseover="this.style.borderColor='#38bdf8'" onmouseout="this.style.borderColor='rgba(148,163,184,0.1)'">
+                  <div style="font-weight: 600; color: #38bdf8; font-size: 13px; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">🎮 应力释放</div>
+                  <div style="font-size: 12px; color: #94a3b8; line-height: 1.5;">纯前端的解压打砖块小游戏，画图卡壳时把应力（和屏幕）敲碎。</div>
+                </div>
+              </div>
             </div>
-            <h3>二、关于作者</h3>
-            <div style="background: rgba(244, 63, 94, 0.08); border-left: 3px solid #f43f5e; padding: 12px 16px; border-radius: 0 6px 6px 0; margin-bottom: 16px;">
-              <p style="margin: 0; font-size: 13.5px; color: #fca5a5; font-weight: 600;">🚀 【震撼声明】</p>
-              <p style="margin: 4px 0 0 0; font-size: 13px; color: #cbd5e1; line-height: 1.6;">
-                作者本人完全不会写代码！<br>
-                本工具从底层力学矩阵求解器到前端 UI，均由作者提供专业逻辑与指令，<strong style="color: #fbbf24;">100% 由纯 AI 辅助生成</strong>。这证明了在 AI 时代，结构工程师的“架构力”与“判断力”才是真正的护城河。
-              </p>
+
+            <h3 style="font-size: 16px; font-weight: 700; color: #f8fafc; margin-bottom: 12px; border-bottom: 1px solid rgba(148,163,184,0.15); padding-bottom: 8px;">二、关于作者</h3>
+            
+            <!-- 极简硬核风的开发模式声明 -->
+            <div style="margin-bottom: 24px;">
+              <div style="font-size: 14px; font-weight: 700; color: #f8fafc; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">🤖 开发模式：许愿式编程</div>
+              
+              <p style="font-size: 13px; color: #cbd5e1; line-height: 1.7; margin-bottom: 10px;">这是一个极其真实的“AI 原生”项目：</p>
+              
+              <ul style="margin: 0 0 12px 0; padding-left: 20px; font-size: 13px; color: #cbd5e1; line-height: 1.8;">
+                <li><strong style="color: #f8fafc;">代码量：</strong>0 行（作者完全不懂编程，未写架构文档与代码）。</li>
+                <li><strong style="color: #f8fafc;">工作流：</strong>全靠对话描述需求（许愿）。</li>
+                <li><strong style="color: #f8fafc;">核心贡献：</strong>用结构工程师的直觉判断 AI 算得对不对，指出问题并逼它修复。</li>
+                <li><strong style="color: #f8fafc;">验证机制：</strong>多轮跨 AI 与多窗口的交叉验证。</li>
+              </ul>
+              
+              <p style="font-size: 13px; color: #cbd5e1; line-height: 1.7;">从底层矩阵求解到前端 UI，<strong style="color: #fbbf24; font-weight: 600;">100% 由 AI 生成</strong>。</p>
             </div>
             
-            <div style="background: #0f172a; padding: 14px 18px; border-radius: 6px; border: 1px solid #334155; margin-bottom: 20px;">
-              <p style="margin: 0 0 10px 0; font-weight: 600; color: #38bdf8; font-size: 13px;">作者履历（Zhao | Struct. E.）：</p>
-              <ul style="margin: 0; padding-left: 18px; font-size: 12.5px; color: #cbd5e1; line-height: 1.8;">
+            <!-- 作者履历：时间轴流式排版 -->
+            <div style="margin-bottom: 32px; padding-left: 8px;">
+              <div style="font-weight: 600; color: #38bdf8; font-size: 13px; margin-bottom: 12px;">作者履历（Zhao | Struct. E.）：</div>
+              <ul style="margin: 0; padding-left: 18px; font-size: 12.5px; color: #94a3b8; line-height: 1.9;">
                 <li>13岁至今：空闲时间练习自由搏击。18岁：决定成为丁克。</li>
                 <li>19岁（大一）：大部分时间泡在图书馆看杂书，哲学类偏多，基本不去上课。</li>
                 <li>20岁（大二）：在《魔兽世界》熊猫人版本里度过。暑假自学了高等数学和三大力学。</li>
                 <li>21岁（大三）：正式上课，同时着手备考一级注册结构工程师（专业考试）。</li>
                 <li>22岁（大四）：尝试了多个行业，都没有结果。23岁：通过一注基础考试。</li>
                 <li>24岁：拿到二级注册结构工程师证书。</li>
-                <li><strong style="color: #fbbf24;">27岁：拿到一级注册结构工程师证书。</strong></li>
+                <li><strong style="color: #fbbf24; font-weight: 600;">27岁：拿到一级注册结构工程师证书。</strong></li>
                 <li>28岁：结婚，并开始规划养老。</li>
                 <li>29岁：还清房贷，为父母配置了30万养老年金，给全家配齐了所有保险。</li>
                 <li>30岁前：在《四川建筑》杂志发表5篇论文。</li>
                 <li>31岁：全款购入 MINI Clubman；31岁零2个月，拿到驾照。</li>
                 <li>32岁：知天命。</li>
                 <li>33岁：完成与 AI 的合体，并创建微信公众号：结构工程师的十万个为什么。</li>
-                <li><strong style="color: #38bdf8;">34岁：利用 AI 创建 Structura 工具。</strong></li>
+                <li><strong style="color: #38bdf8; font-weight: 600;">34岁：利用 AI 创建 Structura 工具。</strong></li>
               </ul>
             </div>
 
-            <h3>三、支持作者</h3>
-            <p>如果这个工具帮你理清过某个力学概念，或者让你对 AI 时代的工程师生涯有了新的感悟，可以请作者喝杯咖啡。</p>
-            <div class="tipInline">
-              <img src="m.jpg" alt="打赏码" style="width: 240px !important; height: 240px !important; object-fit: contain; background: #fff; border-radius: 6px; padding: 4px;">
-              <div class="tipText">
-                <p>微信扫码 · 赞赏码</p>
-                <p>金额随意 · 感谢支持</p>
-                <p class="tipSign">—— Zhao | Struct. E.</p>
-              </div>
+            <h3 style="font-size: 16px; font-weight: 700; color: #f8fafc; margin-bottom: 12px; border-bottom: 1px solid rgba(148,163,184,0.15); padding-bottom: 8px;">三、支持作者</h3>
+            <p style="font-size: 13px; color: #cbd5e1; line-height: 1.7; margin-bottom: 16px;">如果这个工具帮你理清过某个力学概念，或者让你对 AI 时代的工程师生涯有了新的感悟，可以请作者喝杯咖啡。</p>
+            
+            <!-- 赞赏卡片：纵向居中，恢复大尺寸 180px 保证扫码成功率 -->
+            <div style="display:flex; flex-direction:column; align-items:center; text-align:center; background:#0f172a; border:1px solid rgba(56,189,248,0.2); border-radius:12px; padding:24px; margin-top:16px; box-shadow:0 8px 24px rgba(0,0,0,0.2);">
+              <img src="m.jpg" alt="打赏码" style="width:180px; height:180px; object-fit:cover; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); margin-bottom:16px;">
+              <p style="margin:0 0 8px 0; font-size:16px; font-weight:700; color:#f8fafc;">请作者喝杯咖啡 ☕️</p>
+              <p style="margin:0 0 12px 0; font-size:13px; color:#94a3b8; line-height:1.6;">微信扫码 · 金额随意 · 感谢支持<br>这是持续更新的动力。</p>
+              <p style="margin:0; font-family:'JetBrains Mono', monospace; font-size:11px; color:#7dd3fc;">—— Zhao | Struct. E.</p>
             </div>
+            
           </div>
 
           <!-- ====== Tab 2 ====== -->
@@ -1052,6 +1094,7 @@ var _hmt = _hmt || [];
               <li>当 <b>β<sub>j</sub> = 1</b> 时，<b>α = 0</b>，转动弹簧完全刚性，梁端弯矩可以完全传递给柱，这是标准的刚接框架；</li>
               <li>当 <b>β<sub>j</sub> &rarr; 0</b> 时，<b>α &rarr; &infin;</b>，梁端的抗弯刚度被完全释放，退化为两端铰接。</li>
               <li><strong>教材级理解</strong>：你可以把 β_j 想象成一个调节旋钮。从 1 调到 0 的过程，就是梁端从“死死焊住”逐渐变成“用一根有弹性的弹簧拉住”的过程。你会发现，随着 β_j 减小，梁端负弯矩急剧下降，而跨中正弯矩剧烈上升。</li>
+              <li><strong>真实工程对应</strong>：在钢结构中外伸式端板螺栓连接、在装配式混凝土中采用灌浆套筒的节点，力学上都属于半刚接。无脑按“绝对刚接”算，会低估跨中弯矩；按“绝对铰接”算，又会导致侧移计算过大。</li>
             </ul>
 
             <h3>三、支撑（二力杆）的特殊处理</h3>
@@ -1064,7 +1107,8 @@ var _hmt = _hmt || [];
             
             <h3>四、刚性楼板与自由度缩并</h3>
             <p>在现浇混凝土楼盖中，楼板的面内刚度极大。如果在水平力下，同一层的柱顶水平位移不一致，楼板会被撕裂。因此，本工具提供「刚性楼板」选项。在求解底层，程序采用了矩阵自由度缩并技术，强制让同层所有柱顶的水平位移相等。这就模拟了真实的刚性隔板效应，此时水平力会自动根据各柱的线刚度进行分配。</p>
-            <h3>二、截面与刚度</h3>
+            
+            <h3>五、截面与刚度</h3>
             <p><strong>【截面类型】</strong>支持“矩形”与“H型钢”两种。H型钢的 A、I 取自国标型钢库（GB/T 11263），计算时自动替换原有矩形公式。</p>
             <ul>
               <li><strong>矩形截面（默认）</strong>：
@@ -1075,7 +1119,6 @@ var _hmt = _hmt || [];
               </li>
               <li><strong>H型钢柱 (HW)</strong>：可切换“强轴在平面内 (Ix)”与“弱轴在平面内 (Iy)”。在二维平面中，这是模拟工字柱不同摆放方向对抗侧刚度影响的绝佳工具。</li>
               <li><strong>H型钢梁 (HN)</strong>：自动读取 HN 系列窄翼缘型钢的竖向惯性矩 Ix。</li>
-            </ul>
               <li><strong>中柱刚度比 r</strong>：中柱的 EI 与 EA 均为边柱的 r 倍。用于演示"柱刚度差异如何影响水平力分配"，界面保持简洁不展开为多组截面参数。</li>
               <li>截面按矩形实心计算，不考虑楼板共同工作、钢筋（纵筋与箍筋）等实际构造。</li>
             </ul>
@@ -1086,7 +1129,8 @@ var _hmt = _hmt || [];
               <li><b>bc/bb 是线性，hc/hb 是三次方</b>：柱 I<sub>c</sub> = b<sub>c</sub>·h<sub>c</sub>³/12，梁 I<sub>b</sub> = b<sub>b</sub>·h<sub>b</sub>³/12。<b>加高比加宽划算得多</b>——这就是为什么柱、梁的截面总是"窄而高"，也是为什么"梁高不能随便砍"是铁律。</li>
               <li><b>同高度 ≠ 同刚度</b>：HN600x200 与 250×600 矩形梁同高，但 I 相差 2~3 倍。型钢梁选型要查表，不能按"高度"估算。</li>
             </ul>
-            <h3>三、边界条件</h3>
+            
+            <h3>六、边界条件</h3>
             <p><strong>柱脚（β<sub>f</sub>）</strong></p>
             <ul>
               <li>平动（水平、竖向）始终约束。</li>
@@ -1114,7 +1158,7 @@ var _hmt = _hmt || [];
               <li>采用标准半刚接梁单元模型，引入端部柔度参数 <code>α = (1−β_j)/(4β_j)</code>，对以下四项进行修正：
                 <table>
                   <tr><th>项</th><th>修正后</th></tr>
-                                    <tr><td>横向刚度 k<sub>vv</sub></td><td>12EI/L<sup>3</sup> &middot; 1/(1+6α)</td></tr>
+                  <tr><td>横向刚度 k<sub>vv</sub></td><td>12EI/L<sup>3</sup> &middot; 1/(1+6α)</td></tr>
                   <tr><td>耦合项 k<sub>vθ</sub></td><td>6EI/L<sup>2</sup> &middot; (1+2α)/(1+8α+12α<sup>2</sup>)</td></tr>
                   <tr><td>转动自项 k<sub>θθ</sub></td><td>4EI/L &middot; (1+3α)/(1+8α+12α<sup>2</sup>)</td></tr>
                   <tr><td>转动互项 k<sub>θθ'</sub></td><td>2EI/L &middot; 1/(1+8α+12α<sup>2</sup>)</td></tr>
@@ -1123,7 +1167,8 @@ var _hmt = _hmt || [];
               </li>
               <li>β<sub>j</sub> = 1（α = 0）退化为标准刚接梁单元；β<sub>j</sub> = 0（α → ∞）退化为两端铰接。</li>
             </ul>
-            <h3>四、荷载</h3>
+            
+            <h3>七、荷载</h3>
             <ul>
               <li><strong>梁均布荷载</strong> q₁、q₂、q₃：作用于跨内梁。支持「统一值」和「按跨指定」两种模式。在「按跨指定」模式下，可对不同跨赋予不同荷载，可轻松实现“荷载不利布置”的对比（如仅中跨加载、隔跨加载）。</li>
               <li><strong>梁集中荷载</strong> P₁、P₂、P₃：作用于跨内梁。默认在跨中，通过「按跨指定」可设置作用点距离左端的距离 a。求解器会在作用点处自动将梁单元拆分为两个子单元，从而在弯矩图上产生精确的“尖角”。</li>
@@ -1145,7 +1190,8 @@ var _hmt = _hmt || [];
               <li><b>与扫掠互斥：</b>播放移动荷载会自动停止扫掠，反之亦然——避免两个动画同时跑导致画面卡顿。</li>
               <li><b>概念用途：</b>配合「截面探针」可观察某截面 M 随荷载位置的变化，这就是<b>影响线</b>的本质；找到 M 的极值位置即对应活荷载的不利布置。</li>
             </ul>
-            <h3>五、支撑系统</h3>
+            
+            <h3>八、支撑系统</h3>
             <p>支撑是「框架-支撑双轨制」的第二条抗侧力路径。与梁柱不同，支撑按<strong>「层 × 跨」网格逐格布置</strong>，每格独立配置形式、材质、截面与是否仅受拉。</p>
             <p><strong>布置形式</strong></p>
             <ul>
@@ -1188,7 +1234,7 @@ var _hmt = _hmt || [];
               <li>支撑与框架节点按理想铰接处理，未考虑节点板、螺栓群、节点域剪切变形。</li>
             </ul>
 
-            <h3>六、梁系移除与穿层柱</h3>
+            <h3>九、梁系移除与穿层柱</h3>
             <p>「模型」Tab 新增了「梁系移除」网格，允许用户抽掉特定楼层的局部梁，用于模拟大堂、挑空区等造成的<strong>穿层柱</strong>工况。</p>
             <ul>
               <li><strong>物理本质</strong>：点击网格上的梁将其移除后，该跨梁的单元将<strong>彻底从刚度矩阵中剔除</strong>，连带其自重和传递水平/竖向荷载的能力一并消失。</li>
@@ -1204,7 +1250,7 @@ var _hmt = _hmt || [];
               <li><strong>与规范的关系</strong>：抗震规范严控竖向刚度突变，正是因为底层抽梁、连续抽梁会形成"软弱层"，变形集中在该层，地震下极易形成楼层机制（整层柱端塑性铰→整体倒塌）。</li>
             </ul>
           </div>
-
+         
           <!-- ====== Tab 3 ====== -->
           <div class="modalTabPane" id="mh-tab3">
             <h3>一、林同炎的线刚度比 ρ</h3>
@@ -1236,14 +1282,16 @@ var _hmt = _hmt || [];
               <li>高斯消元使用部分主元法；对角元 &lt; 1e-14 时判定为奇异并提示。</li>
               <li>反力由 <code>R = K_struct·U − F</code> 计算（K_struct 不含弹簧贡献）。对于弹性柱脚，代码里从 K·U 中扣除弹簧力 k<sub>θ</sub>·θ 后得到弹簧反力矩。</li>
             </ul>
-            <h3>二、内力符号约定</h3>
+            
+            <h3>五、内力符号约定</h3>
             <ul>
               <li><strong>轴力 N</strong>：拉为正，压为负。</li>
               <li><strong>剪力 V</strong>：与单元局部坐标一致，V(x) = dM/dx = f₁ + w·x。</li>
               <li><strong>弯矩 M</strong>：M(x) = −f₂ + f₁·x + w·x²/2。弯矩图绘于受拉侧。</li>
               <li>内力图正方向与单元局部坐标的 y 轴一致（柱竖向、梁横向）。</li>
             </ul>
-            <h3>三、已知近似与局限</h3>
+            
+            <h3>六、已知近似与局限</h3>
             <div class="note">
               以下几点是模型的简化，使用时需注意。用于教学演示足够，但<strong>不能作为设计依据</strong>。
             </div>
@@ -1256,7 +1304,7 @@ var _hmt = _hmt || [];
                   <li><strong>刚性楼板（Hmode = 'rigid'）</strong>：采用自由度缩并技术，强制同层各节点水平位移相等。水平力同样作用于左柱顶，由刚性约束自动按各柱侧移刚度分配。适用于现浇混凝土楼盖。</li>
                 </ul>
               </li>
-              <li style="margin-bottom:5px"><strong>二阶效应为粗估</strong>：不做真正的 P-Δ 迭代（不组装几何刚度矩阵 K<sub>g</sub>），仅用等效单自由度反推 <code>B = 1/(1−ΣN/ΣN<sub>cr</sub>)</code>，详见本节「五、P-Δ 放大系数与侧移刚度的说明」。</li>
+              <li style="margin-bottom:5px"><strong>二阶效应为粗估</strong>：不做真正的 P-Δ 迭代（不组装几何刚度矩阵 K<sub>g</sub>），仅用等效单自由度反推 <code>B = 1/(1−ΣN/ΣN<sub>cr</sub>)</code>，详见本节「九、P-Δ 放大系数与侧移刚度的说明」。</li>
               <li style="margin-bottom:5px"><strong>多跨对称结构的浮点虚假侧移</strong>：单跨无悬挑纯竖向荷载已在求解前用约束消除奇异；多跨对称结构（等跨、等层高、r=1、荷载对称）理论上水平位移为零，但代码未做此约束，浮点噪声可能产生极小侧移。对侧移刚度大的结构影响可忽略；对全铰接或半刚接的柔性框架，可能出现可见的虚假侧移。</li>
               <li style="margin-bottom:5px"><strong>无节点域</strong>：节点处按纯刚接或纯铰接处理，未考虑节点域剪切变形。</li>
               <li style="margin-bottom:5px"><strong>悬挑梁简化</strong>：悬挑梁按标准刚接单元处理，不参与 β<sub>j</sub> 半刚接修正；悬挑端为自由端，未建模实际边梁的弹性约束。</li>
@@ -1269,7 +1317,19 @@ var _hmt = _hmt || [];
               <li style="margin-bottom:5px"><strong>线弹性范围</strong>：计算结果可用于叠加，但不适用于承载能力极限状态验算。</li>
               <li><strong>规范背景</strong>：默认采用中国现行规范体系（GB 50010、GB 50011 等），但<strong>不做规范校核</strong>，仅作为量级参考。</li>
             </ol>
-            <h3>四、支座沉降与强迫位移</h3>
+            
+            <h3>七、反直觉陷阱：工程中容易踩的坑</h3>
+            <p>本工具最大的价值，是把平时在规范条文和教科书里看不见的“联动效应”放大给你看。请特别注意以下几个反直觉现象：</p>
+            <ul>
+              <li><strong>陷阱 1：柱脚越“刚”，侧移反而可能更大？</strong><br>
+              很多新手认为柱脚固接肯定比铰接“结实”。但在某些高宽比极大的细长结构中，如果因为超静定导致巨大的温度应力或沉降次应力，反而会提早屈服。<b>刚接提供的是“抗弯能力”，而不是“抗侧刚度”</b>，用错地方会适得其反。</li>
+              <li><strong>陷阱 2：抽掉梁，不一定会塌。</strong><br>
+              在「刚性楼板」假定下，抽掉某层的某跨梁，该层的侧移并不会像想象中那样“一泻千里”。因为楼板像个大铁板，依然能把水平力硬生生传给其他柱。但这是一种<b>数字幻觉</b>——真实工程中，板的开裂、失稳和穿层柱的计算长度暴增，会引发脆性破坏。工具这里只是在模拟“板没坏”的理想状态。</li>
+              <li><strong>陷阱 3：沉降产生的内力，比直接加载还大。</strong><br>
+              对于超静定刚架，强行拖拽一个支座下落 10mm，产生的梁端弯矩可能相当于直接在上面施加几十吨的重物。这就是为什么地质勘察不准时，结构的“附加内力”会直接压垮构件。</li>
+            </ul>
+
+            <h3>八、支座沉降与强迫位移</h3>
             <p>在「荷载」Tab 的「支座类型与强迫位移」组中，可对每根柱独立指定竖向位移或强迫转角。</p>
             <ul>
               <li><strong>竖向沉降/上抬</strong>：沉降会引起超静定结构内部产生附加内力（类似于拉压杆效应）。输入负值（如 -50mm）可模拟抗浮工况下基础上抬。</li>
@@ -1277,7 +1337,8 @@ var _hmt = _hmt || [];
               <li><strong>与冻结对比</strong>：先关闭强迫位移、点击「冻结」保存基线，再拖动强迫位移滑块，变形图与内力图会以浅灰虚线（基线）与实线（当前）对比，前后差异一目了然。</li>
               <li><strong>局限</strong>：不支持多柱之间的沉降差相互作用（分别单独输入），未考虑土体固结时间效应。</li>
             </ul>
-            <h3>五、P-Δ 放大系数与侧移刚度的说明</h3>
+            
+            <h3>九、P-Δ 放大系数与侧移刚度的说明</h3>
             <p><strong>P-Δ 放大系数 B</strong>（仅在「荷载」Tab 开启 P-Δ 开关后显示）：</p>
             <ul>
               <li>物理含义：<strong>B 值代表真实的二阶效应量级</strong>（B = 1 表示无二阶效应；B = 2 表示现实中侧移和弯矩会放大 1 倍）。<strong>注意：本工具仅用文字在面板上显示放大倍数，不会把它乘回内力图和变形图中</strong>，图中的结果依然是线弹性一阶结果，以确保计算逻辑的纯粹性。</li>
@@ -1294,7 +1355,7 @@ var _hmt = _hmt || [];
               <li>自检场景下，K 的<strong>变化趋势</strong>（拖动 β<sub>f</sub>、r 时 K 怎么变）比绝对值更有意义。</li>
             </ul>
 
-            <h3>六、三个常见概念陷阱</h3>
+            <h3>十、三个常见概念陷阱</h3>
             <p><strong>陷阱 1：刚性楼板"掩盖"支撑轴力</strong><br>
             刚性楼板强制同层柱顶水平位移相等，使各柱侧移看起来"平均"。但<b>支撑的轴力不会因此变小</b>——支撑轴力由杆件自身的轴向变形决定，与柱顶位移无关。所以："侧移小了"≠"支撑受力小了"。验算支撑时必须用真实支撑轴力，不能因为侧移小就放松。</p>
 
@@ -1304,7 +1365,7 @@ var _hmt = _hmt || [];
             <p><strong>陷阱 3：机构不是"计算失败"</strong><br>
             全铰接 + 无支撑 + 水平力 → 刚度矩阵奇异 → 求解器抛错。这不是 bug，是<b>几何可变体系</b>的数学表现。软件能识别"奇异"，但"为什么奇异、哪个方向缺约束"属于人的判断。真正的概念设计，要在建模之前就排除机构：至少一根柱固接/铰接、至少一道支撑、至少一个节点有转动约束。</p>
 
-            <h3>七、工具的能力边界（明确清单）</h3>
+            <h3>十一、工具的能力边界（明确清单）</h3>
             <table>
               <tr><th>能力</th><th>状态</th><th>说明</th></tr>
               <tr><td>线弹性静力分析</td><td>✅ 精确</td><td>矩阵位移法，逐杆单元，高斯消元</td></tr>
@@ -1331,7 +1392,6 @@ var _hmt = _hmt || [];
 
           <!-- ====== Tab 4 ====== -->
           <div class="modalTabPane" id="mh-tab4">
-
             <h3>一、后处理面板的高阶解读</h3>
             
             <p><strong>1. 截面探针（应力分析）</strong><br>
@@ -1347,51 +1407,53 @@ var _hmt = _hmt || [];
 
             <h3>二、关于界面与操作的说明</h3>
             <ul>
-              <li><strong>左侧控制栏</strong>：包含「自检」/「模型」/「荷载」三个 Tab。其中「自检」内置了 70+ 个预设工况（按 5 大主题分类 + Tag 筛选 + 关键词搜索）。「模型」用于配置几何与截面，「荷载」用于配置受力条件。支持快捷键 <code>1</code> / <code>2</code> / <code>3</code> 快速切换。</li>
+              <li><strong>左侧控制栏</strong>：包含「自检」/「模型」/「荷载」三个 Tab。其中「自检」内置了 50+ 个预设工况（按 5 大主题分类 + Tag 筛选 + 关键词搜索）。「模型」用于配置几何与截面，「荷载」用于配置受力条件。支持快捷键 <code>1</code> / <code>2</code> / <code>3</code> 快速切换。</li>
               <li><strong>右侧读数面板</strong>：实时显示截面参数、刚度比、逐层逐跨 ρ 等。其中「体系判定」模块会根据当前的梁柱线刚度比 ρ 与梁端刚度 β_j，自动判定当前的结构体系（如：强柱弱梁、典型刚接框架、铰接排架等）。</li>
               <li><strong>内力图工具条</strong>：<code>M</code> / <code>N</code> / <code>V</code> / <code>R</code> 切换内力类型；<code>冻结</code> 把当前结果存为浅灰虚线基准；<code>📷</code> 导出当前内力图为 PNG。底栏「缩放」滑块只影响显示比例，不改变计算结果。</li>
               <li><strong>参数扫掠</strong>（底栏「▶ 扫掠」）：单参数默认 3s 循环播放（自检卡片为 12s 慢速播放）。录制功能可录制为视频（自动选 mp4 / webm）。</li>
               <li><strong>底部状态栏</strong>：<code>RESIDUAL</code> 显示<strong>相对</strong>平衡残差（越小越准）。<code>STATUS</code> 相对残差 &lt; 1e-8 显示绿色 OK；仅受拉迭代 15 次未收敛时显示 NC·未收敛。</li>
             </ul>
 
-            <h3>二、力学概念自检建议</h3>
+            <h3>三、力学概念自检建议</h3>
             <div class="note" style="margin-bottom:12px">
-              左侧栏「自检」Tab 内置了 <b>70+ 个</b>一键播放的力学场景。场景按【主题】重新分类（📐杆件与截面、🏢整体受力与变形、🌪️抗侧力与二阶、🧱特殊构件与边界、🔥综合演练与概念），并标记了 <b style="color:#38bdf8">L1基础</b> / <b style="color:#fbbf24">L2进阶</b> / <b style="color:#f87171">L3高阶</b> 的难度级别，<b>每个分类内部的卡片均会严格按照 L1 → L2 → L3 自动排序</b>。卡片支持<b>标签筛选</b>与<b>关键词搜索</b>，点击即可自动加载工况、开启扫掠并慢速播放；部分概念类卡片为静态提示。
+              左侧栏「自检」Tab 内置了 <b>50+ 个</b>一键播放的力学场景。场景按【主题】重新分类（📐杆件与截面、🏢整体受力与变形、🌪️抗侧力与二阶、🧱特殊构件与边界、🔥综合演练与概念），并标记了 <b style="color:#38bdf8">L1基础</b> / <b style="color:#fbbf24">L2进阶</b> / <b style="color:#f87171">L3高阶</b> 的难度级别，<b>每个分类内部的卡片均会严格按照 L1 → L2 → L3 自动排序</b>。卡片支持<b>标签筛选</b>与<b>关键词搜索</b>，点击即可自动加载工况、开启扫掠并慢速播放；部分概念类卡片为静态提示。
             </div>
               <div style="margin-left:18px; margin-bottom:12px;">
-            <p><strong>📐 杆件与截面行为</strong></p>
-            <ul style="margin-top:2px; margin-bottom:8px; color:#cbd5e1;">
-              <li>关注单一构件的内力与刚度：梁端弯矩释放、柱脚弯矩释放、悬挑长度平方效应、集中力弯矩尖角等。</li>
-              <li>进阶探索：为什么手算反弯点是 0.33h 软件却是 0.30h、柱刚度对梁反弯点的影响、水平力下的反弯点偏移。</li>
-              <li>概念陷阱：中间支座弯矩 ≠ ql²/12（边柱转动导致中支座负弯矩被放大，通过扫掠 hc 观察其向 833 趋近的渐近过程）。</li>
-            </ul>
+                <p style="color:#38bdf8; font-weight:600; margin-bottom:4px;">💡 建议按 L1 → L2 → L3 顺序食用：</p>
+                <p><strong>📐 杆件与截面行为 (L1~L2)</strong></p>
+                <ul style="margin-top:2px; margin-bottom:12px; color:#cbd5e1;">
+                  <li>观察单一构件的内力响应。如扫掠梁端/柱脚刚度（β），理解“弯矩重分配”的本质。</li>
+                  <li>搞懂“三次方效应”：柱高/梁高增加一点点，刚度为何飙升（I ∝ h³）。</li>
+                  <li>破除应试迷信：为什么软件算出的反弯点永远不是教科书上的 0.33h？（因为真实结构存在微小的轴向变形和侧移）。</li>
+                </ul>
                 
-                <p><strong>🏢 整体受力与变形</strong></p>
-                <ul style="margin-top:2px; margin-bottom:8px; color:#cbd5e1;">
-                  <li>关注结构整体的协同工作与刚度匹配：框架作用传递、层刚度变化与变形集中、不对称侧移、悬挑重力侧移。</li>
-                  <li>高阶探索：竖向荷载的跨层传递与衰减（分层法的本质）、柱脚刚度与倾覆力矩的转化。</li>
-                  <li>概念延伸：底部抽梁会引发整体“踩高跷”式侧移，连续抽梁会导致计算长度翻倍。这类竖向刚度突变，往往比局部薄弱更危险（可在「模型」Tab 中手动使用网格体验）。</li>
+                <p><strong>🏢 整体受力与变形 (L1~L3)</strong></p>
+                <ul style="margin-top:2px; margin-bottom:12px; color:#cbd5e1;">
+                  <li>从单根杆件上升到整栋楼。观察竖向荷载如何“向下传递并衰减”（分层法的物理真相）。</li>
+                  <li>寻找薄弱层：在不对称侧移、悬挑重力侧移中，体会“刚度偏心”引发的扭转与附加侧移。</li>
+                  <li>高阶探索：利用抽梁网格，观察“竖向刚度突变”如何导致变形向某一层集中。</li>
                 </ul>
 
-                <p><strong>🌪️ 抗侧力与二阶效应</strong></p>
-                <ul style="margin-top:2px; margin-bottom:8px; color:#cbd5e1;">
-                  <li>关注抵抗水平荷载的机制：刚性楼板内柱分配、刚性楼板梁约束影响、穿层柱模拟。</li>
-                  <li>高阶探索：P-Δ 二阶效应与层高敏感性、P-δ 与 P-Δ 的区别、底层水平荷载的悬臂效应、反弯点 vs ρ 联动。</li>
+                <p><strong>🌪️ 抗侧力与二阶效应 (L2~L3)</strong></p>
+                <ul style="margin-top:2px; margin-bottom:12px; color:#cbd5e1;">
+                  <li>理解水平力的传递路径：刚性楼板如何像“隔板”一样按刚度自动分配剪力。</li>
+                  <li>高阶探索：在极高轴压比和柔性框架下，观察 P-Δ 效应（重力引起的附加弯矩）如何把结构推向失稳边缘。</li>
+                  <li>概念澄清：本工具只算 P-Δ（楼层整体侧移），不算 P-δ（单根构件自身挠曲）。</li>
                 </ul>
 
-                <p><strong>🧱 特殊构件与边界</strong></p>
-                <ul style="margin-top:2px; margin-bottom:8px; color:#cbd5e1;">
-                  <li>支撑系统：支撑截面积与侧向刚度、仅受拉支撑的单向工作、支撑角度与轴力分配。</li>
-                  <li>非荷载作用与边界：支座沉降的附加内力、支座上移(抗浮)、基础强迫扭转、均匀升温的轴力、单侧温差的反弯点。</li>
+                <p><strong>🧱 特殊构件与边界 (L2~L3)</strong></p>
+                <ul style="margin-top:2px; margin-bottom:12px; color:#cbd5e1;">
+                  <li>支撑系统：理解“仅受拉”支撑在反向推覆下的失效退出，以及最优支撑倾角为何是 35.3°。</li>
+                  <li>非荷载作用：体验沉降、强迫转角、整体升温带来的恐怖次内力（位移法/力法核心考察点）。</li>
                 </ul>
 
-                <p><strong>🔥 综合演练与概念</strong></p>
+                <p><strong>🔥 综合演练与概念 (L1~L2)</strong></p>
                 <ul style="margin-top:2px; margin-bottom:8px; color:#cbd5e1;">
-                  <li>荷载布置与工况叠加：满跨布置基线、中跨/相邻跨加载（不利布置对比）、重力与侧向力叠加。</li>
-                  <li>体系演化与理念：体系刚度匹配与演化、强柱弱梁抗震概念、以及工程师在 AI 时代的最后主战场。</li>
+                  <li>将上述知识点融合：通过“影响线（移动荷载）”、“不利布置对比”体会规范中组合系数的来历。</li>
+                  <li>体系演化与理念：从“强梁弱柱”到“强柱弱梁”，理解抗震设计的终极底线。</li>
                 </ul>
               </div>
-            </div>
+          </div>
         </div>
       </div>
     </div>

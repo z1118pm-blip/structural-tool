@@ -12,7 +12,9 @@
     -webkit-font-smoothing:antialiased;}
   /* 移除旧的 :root 魔法变量，采用完全自适应的 Flex 弹性布局 */
   #wrap{display:flex;flex-direction:column;height:100vh;height:100dvh;width:100%;align-items:center;justify-content:center;
-    padding:8px;gap:8px;overflow:hidden;}
+    padding:max(8px, env(safe-area-inset-top, 0px)) max(8px, env(safe-area-inset-right, 0px))
+            max(8px, env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px));
+    gap:8px;overflow:hidden;}
   #hudBar{display:flex;justify-content:space-between;align-items:center;width:100%;max-width:1100px;flex-shrink:0;
     font-family:"JetBrains Mono","SF Mono","Cascadia Mono","Roboto Mono",Menlo,Consolas,monospace;
     font-size:12px;color:#94a3b8;letter-spacing:.5px;}
@@ -84,7 +86,8 @@
   
   /* ===== 移动端通用适配（横竖屏统一弹性） ===== */
   @media (max-width:1000px) {
-    #wrap{padding:6px;gap:6px;}
+    #wrap{padding:max(6px, env(safe-area-inset-top, 0px)) max(6px, env(safe-area-inset-right, 0px))
+                   max(6px, env(safe-area-inset-bottom, 0px)) max(6px, env(safe-area-inset-left, 0px));gap:6px;}
     #hudBar{font-size:11px;}
     #hudBar .left{gap:8px;}
     #hudBar .right{gap:4px;}
@@ -113,7 +116,8 @@
 
   /* ===== 横屏特别处理（小高度设备） ===== */
   @media (orientation:landscape) and (max-height:560px) {
-    #wrap{padding:4px;gap:4px;}
+    #wrap{padding:max(4px, env(safe-area-inset-top, 0px)) max(4px, env(safe-area-inset-right, 0px))
+                   max(4px, env(safe-area-inset-bottom, 0px)) max(4px, env(safe-area-inset-left, 0px));gap:4px;}
     #hudBar{font-size:10px;}
     #canvasRow{flex-direction:row;gap:8px;}
     #touchBar{flex-direction:row;width:100%;}
@@ -756,7 +760,7 @@
       
       if (ratioChanged) {
         const brickLayout = computeBrickLayout();
-        const newRows = brickLayout.rows;
+        const sLocal = W / 800;
 
         /* 按列分组，每列内按原 gridRow 稳定排序后分配唯一新行号。
            避免多对一压缩映射造成同列砖块重叠（真实碰撞体重叠）。 */
@@ -767,23 +771,37 @@
           byCol[col].push(b);
         }
 
+        /* 关键修复：resize 绝不修改 alive/hp。
+           先求每列最大幸存数量，据此扩大行数并压缩行高/行距，
+           保证所有幸存砖块都有唯一格子，避免旋转屏幕凭空消灭砖块。 */
+        let needRows = 1;
+        for (const colKey of Object.keys(byCol)) {
+          let n = 0;
+          for (const b of byCol[colKey]) if (b.alive) n++;
+          if (n > needRows) needRows = n;
+        }
+        const rows = Math.max(brickLayout.rows, needRows);
+        const availH = Math.max(1, H - brickLayout.marginTop - 150 * sLocal);
+        let rowGap = BRICK_GAP;
+        let rowH = BRICK_H;
+        const unit = availH / rows;
+        if (unit < rowH + rowGap) {
+          rowGap = Math.max(1 * sLocal, unit * 0.28);
+          rowH = Math.max(5 * sLocal, unit - rowGap);
+          if (rowH + rowGap > unit) rowGap = Math.max(0, unit - rowH);
+        }
+
         for (const colKey of Object.keys(byCol)) {
           const col = Number(colKey);
-          const list = byCol[col].sort((a, b) => (a.gridRow || 0) - (b.gridRow || 0));
+          const list = byCol[colKey]
+            .filter((b) => b.alive)
+            .sort((a, b) => (a.gridRow || 0) - (b.gridRow || 0));
 
           list.forEach((b, k) => {
-            /* 新网格容量不足时，多余砖块直接标记死亡：
-               宁可少几块砖，也不能让碰撞体叠在一起。 */
-            if (k >= newRows) {
-              b.alive = false;
-              b.hp = 0;
-              return;
-            }
-
             b.x = BRICK_MARGIN_X + col * (BRICK_W + BRICK_GAP);
-            b.y = brickLayout.marginTop + k * (BRICK_H + BRICK_GAP);
+            b.y = brickLayout.marginTop + k * (rowH + rowGap);
             b.w = BRICK_W;
-            b.h = BRICK_H;
+            b.h = rowH;
             b.row = k;
             b.gridRow = k;
             b.gridCol = col;
@@ -846,7 +864,11 @@
         G.paddle.x = Math.max(half + WALL, Math.min(W - half - WALL, G.paddle.x));
         G.paddle.targetX = Math.max(half + WALL, Math.min(W - half - WALL, G.paddle.targetX));
       }
-      for (const pu of G.powerups) { pu.x *= sx; pu.y *= sy; }
+      for (const pu of G.powerups) {
+        pu.x *= sx; pu.y *= sy;
+        pu.w *= sx; pu.h *= sx;
+        pu.vy *= sx;
+      }
       for (const bu of G.bullets) {
         bu.x *= sx; bu.y *= sy;
         bu.vy *= speedScale;
@@ -865,6 +887,9 @@
     }
     
     prerenderBackground();
+
+    /* 星星按新尺寸重建：否则画面变宽后右侧长期无星、变窄后部分星星跑到画布外 */
+    buildStars();
 
     /* resize 后所有依赖尺寸的渐变/光晕缓存失效，否则砖块、挡板、
        暗角会保留旧尺寸的渐变，出现拉伸错位 */
@@ -1036,7 +1061,8 @@
       availH = H - marginTop - bottomReserve;
       maxRows = Math.floor(availH / rowUnit);
     }
-    return { marginTop: marginTop, rows: Math.max(2, Math.min(14, maxRows)) };
+    /* 空间不足时不要强行保底两行：返回 1 行，让极端矮视口也不把砖块压到挡板上 */
+    return { marginTop: marginTop, rows: Math.max(1, Math.min(14, maxRows)) };
   }
 
   function buildBricks(){
@@ -1211,10 +1237,11 @@
       pool = goods;
     }
     const tpl = pool[Math.floor(Math.random() * pool.length)];
+    const s = W / 800;
     G.powerups.push({
       x: x, y: y,
-      w: 22, h: 22,
-      vy: 95,
+      w: 22 * s, h: 22 * s,
+      vy: 95 * s,
       tpl: tpl,
       phase: Math.random() * Math.PI * 2
     });
@@ -1237,6 +1264,29 @@
     G.powerups = survivors;
   }
 
+  /* 统一球速钳制：所有速度乘除后都必须走这里，避免慢/快效果与 950 硬上限叠加后失控 */
+  function clampBallSpeed(b){
+    if(!b || b.stuck || b.held) return;
+    const sp = Math.hypot(b.vx, b.vy);
+    if(sp < 1e-6) return;
+    if(sp > 950){
+      b.vx *= 950 / sp;
+      b.vy *= 950 / sp;
+    }
+  }
+
+  /* 按“效果施加前的基准速度”恢复，避免对已被钳制的速度直接做逆向除法 */
+  function restoreBallSpeed(b, effectId){
+    if(!b || b.stuck || b.held) return;
+    const sp = Math.hypot(b.vx, b.vy) || 1;
+    let base = b._baseSpeed;
+    if(!base || base <= 0) base = (effectId === 'slowBall') ? sp / 0.65 : sp / 1.4;
+    const target = Math.min(950, base);
+    b.vx *= target / sp;
+    b.vy *= target / sp;
+    b._baseSpeed = 0;
+  }
+
   function applyPowerup(tpl){
     addFloater(G.paddle.x, PADDLE_Y - 40, tpl.label, tpl.color);
     sfxPowerup();
@@ -1252,13 +1302,17 @@
       /* 慢速与加速互斥：先撤销加速的速度倍率，再应用慢速 */
       if(G.effects.fastBall > 0){
         for(const b of [G.ball, ...G.extraBalls]){
-          if(!b.stuck){ b.vx /= 1.4; b.vy /= 1.4; }
+          if(!b.stuck){ b.vx /= 1.4; b.vy /= 1.4; clampBallSpeed(b); }
         }
         G.effects.fastBall = 0;
       }
       if(G.effects.slowBall <= 0){
         for(const b of [G.ball, ...G.extraBalls]){
-          if(!b.stuck){ b.vx *= 0.65; b.vy *= 0.65; }
+          if(!b.stuck){
+            b._baseSpeed = Math.hypot(b.vx, b.vy);
+            b.vx *= 0.65; b.vy *= 0.65;
+            clampBallSpeed(b);
+          }
         }
       }
       G.effects.slowBall = tpl.duration;
@@ -1266,13 +1320,17 @@
       /* 加速与慢速互斥：先撤销慢速的速度倍率，再应用加速 */
       if(G.effects.slowBall > 0){
         for(const b of [G.ball, ...G.extraBalls]){
-          if(!b.stuck){ b.vx /= 0.65; b.vy /= 0.65; }
+          if(!b.stuck){ b.vx /= 0.65; b.vy /= 0.65; clampBallSpeed(b); }
         }
         G.effects.slowBall = 0;
       }
       if(G.effects.fastBall <= 0){
         for(const b of [G.ball, ...G.extraBalls]){
-          if(!b.stuck){ b.vx *= 1.4; b.vy *= 1.4; }
+          if(!b.stuck){
+            b._baseSpeed = Math.hypot(b.vx, b.vy);
+            b.vx *= 1.4; b.vy *= 1.4;
+            clampBallSpeed(b);
+          }
         }
       }
       G.effects.fastBall = tpl.duration;
@@ -1352,7 +1410,7 @@
       if(G.effects.slowBall <= 0){
         G.effects.slowBall = 0;
         for(const b of [G.ball, ...G.extraBalls]){
-          if(!b.stuck){ b.vx /= 0.65; b.vy /= 0.65; }
+          if(!b.stuck) restoreBallSpeed(b, 'slowBall');
         }
       }
     }
@@ -1361,7 +1419,7 @@
       if(G.effects.fastBall <= 0){
         G.effects.fastBall = 0;
         for(const b of [G.ball, ...G.extraBalls]){
-          if(!b.stuck){ b.vx /= 1.4; b.vy /= 1.4; }
+          if(!b.stuck) restoreBallSpeed(b, 'fastBall');
         }
       }
     }
@@ -1524,7 +1582,18 @@
 
     recordPeak();
 
+    /* 击砖提速要立即作用于所有正在飞行的球，而不是只等下次发射才生效 */
+    const _oldMult = G.speedMultiplier;
     G.speedMultiplier = Math.min(MAX_SPEED / BASE_SPEED, G.speedMultiplier + SPEED_INCREASE_RATE);
+    if(G.speedMultiplier > _oldMult){
+      const _ratio = G.speedMultiplier / _oldMult;
+      for(const _b of [G.ball, ...G.extraBalls]){
+        if(!_b || _b.stuck || _b.held) continue;
+        _b.vx *= _ratio; _b.vy *= _ratio;
+        if(_b._baseSpeed) _b._baseSpeed *= _ratio;
+        clampBallSpeed(_b);
+      }
+    }
 
     if(Math.random() < 0.06){
       spawnPowerup(brick.x + brick.w / 2, brick.y + brick.h / 2);
@@ -1541,10 +1610,15 @@
     G.ball.x = W / 2;
     G.ball.y = PADDLE_Y - BALL_R - 2;
     G.ball.vx = 0; G.ball.vy = 0;
+    G.ball._baseSpeed = 0;
     G.ball.stuck = true;
     G.trail = [];
     G.stuckSamples = [];
     G.combo = 0;
+    /* 跨关 / 掉球重置时同步隐藏连击 HUD，避免上一关的 COMBO 残留到下一关 */
+    if(comboHudEl) comboHudEl.classList.remove('show');
+    if(comboNumEl) comboNumEl.textContent = '0';
+    if(G._comboBumpTimer){ clearTimeout(G._comboBumpTimer); G._comboBumpTimer = null; }
     G.hitStop = 0;
     G.extraBalls = [];
     G.powerups = [];
@@ -1587,8 +1661,9 @@
   function launchBall(){
     if(G.overTimer) return;   /* 清关过渡期拒绝输入，防止刷分 */
     if(G.state === 'ready'){
-      let speed = BASE_SPEED * Math.pow(1.10, G.level - 1) * G.speedMultiplier;
-      speed *= (0.95 + Math.random() * 0.10);   // 每关微随机球速
+      let baseSpeed = BASE_SPEED * Math.pow(1.10, G.level - 1) * G.speedMultiplier;
+      baseSpeed *= (0.95 + Math.random() * 0.10);   // 每关微随机球速
+      let speed = baseSpeed;
       
       /* 修复 ready 状态下吃道具导致发射双重加速：
          stuck 时球速为 0，applyPowerup 乘倍率无效，但 launchBall 又乘了一遍。
@@ -1600,6 +1675,8 @@
       const angle = -Math.PI / 2 + (Math.random() - 0.5) * 0.22;
       G.ball.vx = Math.cos(angle) * speed;
       G.ball.vy = Math.sin(angle) * speed;
+      /* 记录未受慢/快倍率影响的基准速度，供效果到期时精确恢复 */
+      G.ball._baseSpeed = Math.min(950, baseSpeed);
       G.ball.stuck = false;
       G.stuckSamples = [];
       G.trail = [];
@@ -1646,11 +1723,13 @@
     updatePaddleWidth();
     b.held = false;
     G.trail = []; // 新增：释放瞬间重置残影，避免从挡板位置拉出一条长线
-    let speed = BASE_SPEED * Math.pow(1.10, G.level - 1) * G.speedMultiplier;
-    speed *= (0.95 + Math.random() * 0.10);
+    let baseSpeed = BASE_SPEED * Math.pow(1.10, G.level - 1) * G.speedMultiplier;
+    baseSpeed *= (0.95 + Math.random() * 0.10);
+    let speed = baseSpeed;
     if(G.effects.slowBall > 0) speed *= 0.65;
     if(G.effects.fastBall > 0) speed *= 1.4;
     speed = Math.min(speed, 950); // 球速硬上限
+    b._baseSpeed = Math.min(950, baseSpeed);
     const half = G.paddle.w / 2;
     /* 用 heldOffset 而非 b.x - G.paddle.x：held 球的位置只在 update 末尾同步，
        释放可能发生在 update 之前（keydown/pointerdown），此时 b.x 是上一帧值，
@@ -1898,6 +1977,7 @@
 
   function stepBall(ball, dt){
     const b = ball;
+    const prevY = b.y;
     b.x += b.vx * dt;
     b.y += b.vy * dt;
 
@@ -1910,8 +1990,10 @@
     const px1 = G.paddle.x - half, px2 = G.paddle.x + half;
     
     // 1. 顶部碰撞（从上往下砸）
-    if(b.vy > 0 && b.y + BALL_R >= PADDLE_Y && b.y - BALL_R <= PADDLE_Y + PADDLE_H){
-      if(b.x >= px1 - BALL_R * 0.5 && b.x <= px2 + BALL_R * 0.5){
+    /* 穿越条件：上一子步球必须完整位于挡板上方，避免从侧面进入时被吸到顶面 */
+    if(b.vy > 0 && prevY + BALL_R <= PADDLE_Y && b.y + BALL_R >= PADDLE_Y && b.y - BALL_R <= PADDLE_Y + PADDLE_H){
+      /* 横向范围扩展为完整 BALL_R，覆盖挡板两侧角部，避免竖直/向外运动的球从角部穿板 */
+      if(b.x >= px1 - BALL_R && b.x <= px2 + BALL_R){
         const speed = Math.hypot(b.vx, b.vy) || (BASE_SPEED * G.speedMultiplier);
         const t = Math.max(-1, Math.min(1, (b.x - G.paddle.x) / half));
         const angle = t * MAX_BOUNCE_ANGLE;
@@ -2058,15 +2140,20 @@
                 br._piercedSet.delete(deadBall);
               }
             }
-            G.ball.x = next.x;
-            G.ball.y = next.y;
-            G.ball.vx = next.vx;
-            G.ball.vy = next.vy;
+            /* 直接替换主球引用，保持对象身份一致：
+               _piercedSet 中记录的 next 与新主球是同一个对象，
+               否则接替后会对同一装甲砖重复伤害。 */
+            G.ball = next;
             G.ball.stuck = false;
             G.ball.held = false;
             G.ball.heldOffset = 0;
             G.trail = [];
           } else {
+            /* 最后一块砖同帧被击碎时，先判定清关，避免多扣一条命 */
+            if(aliveCount() === 0){
+              checkClear();
+              return;
+            }
             loseLife();
             return;
           }
@@ -2140,8 +2227,9 @@
       if(G.laserCooldown <= 0){
         G.laserCooldown = 0.28;
         const pw = G.paddle.w;
-        G.bullets.push({ x: G.paddle.x - pw / 2 + 8, y: PADDLE_Y, vy: -520 });
-        G.bullets.push({ x: G.paddle.x + pw / 2 - 8, y: PADDLE_Y, vy: -520 });
+        const bs = W / 800;
+        G.bullets.push({ x: G.paddle.x - pw / 2 + 8 * bs, y: PADDLE_Y, vy: -520 * bs });
+        G.bullets.push({ x: G.paddle.x + pw / 2 - 8 * bs, y: PADDLE_Y, vy: -520 * bs });
         tone(880, 0.04, 'square', 0.025);
       }
     }
@@ -2868,9 +2956,18 @@
   }
 
   /* ===================== 输入 ===================== */
+  /* 玩法弹窗是否打开：打开期间游戏键盘输入全部屏蔽，只保留弹窗自身的 ESC 关闭 */
+  function isHelpModalOpen(){
+    const el = document.getElementById('modalGameHelp');
+    return !!(el && el.classList.contains('open'));
+  }
+
   window.addEventListener('keydown', e => {
     const k = e.key;
     if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown',' '].includes(k)) e.preventDefault();
+    if(isHelpModalOpen()) return;
+    /* 长按离散控制键会随系统自动重复，导致暂停反复切换 / 关卡连续重建 */
+    if(e.repeat && ['Escape','p','P','r','R',' '].includes(k)) return;
     G.keys[k] = true;
     if(k === 'ArrowLeft' || k === 'ArrowRight' || k === 'a' || k === 'A' || k === 'd' || k === 'D'){
       G.paddle.control = 'keyboard';
@@ -2961,7 +3058,11 @@
   const modalHelp = document.getElementById('modalGameHelp');
   const btnHelpClose = document.getElementById('btnGameHelpClose');
   if (btnHelp && modalHelp) {
-    btnHelp.addEventListener('click', () => modalHelp.classList.add('open'));
+    btnHelp.addEventListener('click', () => {
+      /* 打开玩法弹窗时自动暂停，避免球在后台继续跑 */
+      if(G.state === 'playing') setState('paused');
+      modalHelp.classList.add('open');
+    });
     btnHelpClose.addEventListener('click', () => modalHelp.classList.remove('open'));
     modalHelp.addEventListener('click', (e) => {
       if (e.target === modalHelp) modalHelp.classList.remove('open');
@@ -2969,6 +3070,8 @@
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && modalHelp.classList.contains('open')) {
         modalHelp.classList.remove('open');
+        /* 阻止冒泡，避免同一次 ESC 关闭弹窗后又触发游戏的暂停/恢复 */
+        e.stopPropagation();
       }
     });
   }
@@ -2998,19 +3101,21 @@
   }
 
   window.addEventListener('blur', () => {
-    /* 失焦只清按键状态，不再自动暂停。
-       鼠标模式下游玩时，QQ/微信弹窗等意外失焦不再打断游戏；
-       暂停/退出统一由 ESC 触发。 */
+    /* 失焦只清按键状态；切后台的暂停逻辑统一由 visibilitychange 接管 */
     G.keys = {};
   });
   document.addEventListener('visibilitychange', () => {
-    /* 页面隐藏时 rAF 自然停止，切回来继续；不再自动暂停。
+    /* 页面隐藏时 rAF 自然停止；这里显式暂停游戏与 BGM，与页面说明保持一致。
        清空按键状态，防止切标签页时 keyup 丢失导致卡键。 */
     if(document.hidden) {
       G.keys = {};
+      if(G.state === 'playing') setState('paused');
+      pauseBgm();
     } else {
       /* 修复切回页面画布未重新计算：强制触发一次 resize */
       resizeCanvas();
+      /* 返回后游戏保持暂停，仅在音乐开关开启时恢复 BGM */
+      if(G.musicOn && currentBgm) startBgm(false);
     }
   });
 
@@ -3046,7 +3151,7 @@
       if(G.soundOn){ 
         ensureAudio(); 
         const origVol = G.volume;
-        if(G.volume === 0) G.volume = 35; // 如果音量是0，临时借用默认音量发声作为反馈
+        /* 音量为 0 时由 tone() 直接 return，保持静音，不再临时改音量 */
         tone(660, 0.08, 'sine', 0.05); 
         G.volume = origVol; // 恢复
       }

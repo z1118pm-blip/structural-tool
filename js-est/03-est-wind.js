@@ -42,8 +42,8 @@ function calcWind() {
       Vw += Fi;
       rows.push({ i, z, muz, wk_i, Fi });
     }
-    // 10 m 高度参考风压（含体型系数 μs；βz 按 30m 以下取 1.0）
-    const wk_ref = mus * getMuz(EST.terrain, 10) * EST.w0;
+    // 10 m 高度参考风压（含体型系数 μs；βz 与逐层主模型同口径，避免两套数值）
+    const wk_ref = bz * mus * getMuz(EST.terrain, 10) * EST.w0;
     
     const html = `
       <b>1. 迎风面与计算高度</b><br>
@@ -57,7 +57,7 @@ function calcWind() {
       风振系数 βz：按总高 ${H.toFixed(1)}m 取 ${bz.toFixed(2)}（≤30m 取 1.0，否则线性放大至 1.8 封顶）<br>
       wk(z) = βz × μs × μz × w0 = ${bz.toFixed(2)} × ${mus} × μz × ${EST.w0}<br>
       迎风面宽度：${dirName}向取 ${B_width.toFixed(1)} m，每层受风面积 = ${B_width.toFixed(1)} × ${EST.h.toFixed(1)} = ${(B_width * EST.h).toFixed(1)} m²<br>
-      10 m 高度参考风压 wk(10m) = <b>${wk_ref.toFixed(3)} kN/m²</b>（βz 按 10m 处取 1.0）<br><br>
+      10 m 高度参考风压 wk(10m) = <b>${wk_ref.toFixed(3)} kN/m²</b>（βz 与主模型同口径取 ${bz.toFixed(2)}）<br><br>
 
       <b>4. 逐层风荷载计算表</b><br>
       <table style="border-collapse:collapse; width:100%; font-size:12px; margin:6px 0;">

@@ -221,9 +221,10 @@ function localEqLoad(el, p){
                  αI=αJ→∞（两端铰接）→ 系数→0
                严格解需按 Monforton-Wu 修正形函数积分，此式在已知极限下正确，
                有限 αI≠αJ 情形需数值回归。 */
-            const DT = (1 + 2*alI) * (1 + 2*alJ);
-            pFeTI = baseT * (1 + 3*alJ) / DT;
-            pFeTJ = baseT * (1 + 3*alI) / DT;
+            /* 与 localK() 保持同一 Monforton-Wu 分母，避免刚度与固端力公式不一致 */
+            const Dg = (1 + 4*alI)*(1 + 4*alJ) - 4*alI*alJ;
+            pFeTI = baseT * (1 + 6*alJ) / Dg;
+            pFeTJ = baseT * (1 + 6*alI) / Dg;
           }
         }
       } else {
@@ -253,10 +254,8 @@ function localEqLoad(el, p){
   const vTempJ = (pFeTI - pFeTJ) / L;
   Vi -= vTempJ;
   Vj += vTempJ;
-  /* 半刚接不等柔度时 pFeI + pFeJ ≠ 0，补充端剪力使力系严格平衡 */
-  const vFW = (pFeI + pFeJ) / L;
-  Vi -= vFW;
-  Vj += vFW;
+  /* 注意：Vi/Vj 已由上面的不等柔度公式给出，无需再叠加 vFW。
+     （原 vFW 修正会破坏 M_i + M_j + L·V_j = wL²/2 的力矩平衡，已移除。） */
   return [pFeN, Vi, pFeI - pFeTI, -pFeN, Vj, pFeJ + pFeTJ];
 }
 function globalEqLoad(el, p){
@@ -320,9 +319,9 @@ function solve(model, opts = {}) {
   };
 
   const els = model.elements.map(el => {
-    const sec = el.section || {};
-    const EA = (sec.E || 0) * (sec.A || 0) * (sec.axialBoost || 1);
-    const EI = (sec.E || 0) * (sec.I || 0);
+    const section = el.section || {};
+    const EA = (section.E || 0) * (section.A || 0) * (section.axialBoost || 1);
+    const EI = (section.E || 0) * (section.I || 0);
     const loads = el.loads || [];
     const udl = loads.find(l => l.type === 'udl');
     const w = udl ? Number(udl.w) || 0 : 0;

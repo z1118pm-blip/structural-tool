@@ -86,12 +86,21 @@ function calcSeismic(Geq) {
     for (let i = 1; i <= EST.nLev; i++) forces.push(FEk * i / sumH);
     let sumFi = 0;
     for (let i = 0; i < forces.length; i++) sumFi += forces[i];
-    const limit = MASONRY_LIMIT[EST.intensity];
+    // 中震键（如 7-mid）在 MASONRY_LIMIT 里无对应项，统一剥掉 -mid 后查基础烈度限值
+    const baseIntensity = EST.intensity.replace('-mid', '');
+    // 兼容 '7-mid' -> '7-0.10'，'8-mid' -> '8-0.20'，因为 MASONRY_LIMIT 的键名带小数点
+    let limitKey = baseIntensity;
+    if (baseIntensity === '7') limitKey = '7-0.10';
+    if (baseIntensity === '8') limitKey = '8-0.20';
+    const limit = MASONRY_LIMIT[limitKey] || MASONRY_LIMIT[baseIntensity];
+    const warnings = [];
     if (isMid) {
-      warning = '⚠️ 砌体结构通常不采用中震性能化设计，结果仅供概念参考。';
-    } else if (limit && (EST.nLev > limit.n || H > limit.h)) {
-      warning = `⚠️ 砌体结构 ${intensityText} 限值：≤${limit.n}层、≤${limit.h}m。当前 ${EST.nLev}层 / ${H.toFixed(1)}m 已超限，结果仅供量级参考。`;
+      warnings.push('⚠️ 砌体结构通常不采用中震性能化设计，结果仅供概念参考。');
     }
+    if (limit && (EST.nLev > limit.n || H > limit.h)) {
+      warnings.push(`⚠️ 砌体结构 ${intensityText} 限值：≤${limit.n}层、≤${limit.h}m。当前 ${EST.nLev}层 / ${H.toFixed(1)}m 已超限，结果仅供量级参考。`);
+    }
+    if (warnings.length) warning = warnings.join('<br>');
     const html = `
       <b>1. 砌体结构地震作用（底部剪力法）</b><br>
       ${intensityText}，αmax 取 <b>${alpha_max}</b><br>
@@ -163,7 +172,12 @@ function calcSeismic(Geq) {
   let deltaN = 0;
   const T1v = T_calc || T1 || 0;
   if (T1v > 1.4 * Tg && Tg > 0) {
-    deltaN = Math.min(0.15, 0.08 * T1v + 0.07);
+    // GB50011-2010 表 5.2.1：δn 按 Tg 三档计算，不再统一封顶 0.15
+    let deltaNBase;
+    if (Tg <= 0.35)      deltaNBase = 0.08 * T1v + 0.07;
+    else if (Tg <= 0.55) deltaNBase = 0.08 * T1v + 0.01;
+    else                 deltaNBase = 0.08 * T1v - 0.02;
+    deltaN = Math.max(0, deltaNBase);
     deltaFn = deltaN * FEk;
   }
   const baseFi = Math.max(0, FEk - deltaFn);
@@ -212,7 +226,7 @@ function calcSeismic(Geq) {
     <b>5. 顶部附加地震作用 ΔFn 判定</b><br>
     T_calc = ${T_calc.toFixed(3)} s，Tg = ${Tg.toFixed(2)} s，1.4Tg = ${(1.4 * Tg).toFixed(2)} s<br>
     ${T1v > 1.4 * Tg && Tg > 0
-      ? `T_calc > 1.4Tg，需计入顶部附加力：δn = min(0.15, 0.08T_calc + 0.07) = min(0.15, ${(0.08 * T1v + 0.07).toFixed(3)}) = <b>${deltaN.toFixed(3)}</b><br>ΔFn = δn × FEk = ${deltaN.toFixed(3)} × ${FEk.toFixed(1)} = <b>${deltaFn.toFixed(1)} kN</b>`
+      ? `T_calc > 1.4Tg，需计入顶部附加力：按 GB50011 表 5.2.1 依 Tg 分档，Tg = ${Tg.toFixed(2)} s 属${Tg <= 0.35 ? '第一档(≤0.35，δn=0.08T+0.07)' : Tg <= 0.55 ? '第二档(0.35~0.55，δn=0.08T+0.01)' : '第三档(>0.55，δn=0.08T-0.02)'}，δn = <b>${deltaN.toFixed(3)}</b><br>ΔFn = δn × FEk = ${deltaN.toFixed(3)} × ${FEk.toFixed(1)} = <b>${deltaFn.toFixed(1)} kN</b>`
       : `T_calc ≤ 1.4Tg（或 Tg 无效），不计顶部附加力，ΔFn = 0`}<br><br>
 
     <b>6. 逐层地震作用分配（倒三角，GB50011 5.2.1）</b><br>
