@@ -364,9 +364,11 @@ function setSweepLocked(locked){
     const el = document.getElementById(id);
     if(el) el.disabled = locked;
   }
-  // 游戏入口是 <a>，无 disabled 属性，用类切换视觉禁用
+  // 游戏入口 / 破坏机理库入口是 <a>，无 disabled 属性，用类切换视觉禁用
   const gameBtn = document.getElementById('gameSideBtn');
   if(gameBtn) gameBtn.classList.toggle('is-locked', locked);
+  const failBtn = document.getElementById('failureSideBtn');
+  if(failBtn) failBtn.classList.toggle('is-locked', locked);
   // 右侧 chartBar 内所有 slider（拖动会触发 sweepStop 中断录制）
   document.querySelectorAll('#stage input[type=range]').forEach(el => {
     el.disabled = locked;

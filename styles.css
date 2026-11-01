@@ -671,17 +671,17 @@ input[type=range]:hover::-webkit-slider-thumb{
 .brandText { flex: 1; min-width: 0; }
 .brandRow { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .brandLeft { display: flex; align-items: center; min-width: 0; }
-.brandActions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.brandActions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
 .brandActionBtn {
   position: relative;
   overflow: hidden;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 3px;
   flex: 1;
-  padding: 7px 4px;
-  font-size: 11px;
+  padding: 6px 2px;
+  font-size: 10px;
   font-family: inherit;
   font-weight: 600;
   text-decoration: none;
@@ -713,6 +713,7 @@ input[type=range]:hover::-webkit-slider-thumb{
 .brandActions > .brandActionBtn:nth-child(2)::before { animation: btnSweep 1.2s ease-in-out 0.35s 3 forwards; }
 .brandActions > .brandActionBtn:nth-child(3)::before { animation: btnSweep 1.2s ease-in-out 0.5s 3 forwards; }
 .brandActions > .brandActionBtn:nth-child(4)::before { animation: btnSweep 1.2s ease-in-out 0.65s 3 forwards; }
+.brandActions > .brandActionBtn:nth-child(5)::before { animation: btnSweep 1.2s ease-in-out 0.8s 3 forwards; }
 
 @keyframes btnSweep {
   0% { left: -150%; opacity: 0; }
@@ -735,8 +736,8 @@ input[type=range]:hover::-webkit-slider-thumb{
 }
 /* 赞赏/估算的独立动画已整合进 .brandActionBtn 统一样式 */
 
-/* 游戏按钮禁用状态 */
-#gameSideBtn.is-locked { opacity: 0.3; pointer-events: none; cursor: not-allowed; }
+/* 品牌区入口按钮禁用状态（游戏 / 破坏机理库 等） */
+.brandActionBtn.is-locked { opacity: 0.3; pointer-events: none; cursor: not-allowed; }
 .brandName { font-size: 19px; font-weight: 600; color: #f1f5f9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .brandVer { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; color: #7dd3fc; padding: 2px 8px; border-radius: 999px; border: 1px solid rgba(56,189,248,.45); background: rgba(56,189,248,.08); }
 .brandRule { height: 1px; width: 56px; margin: 5px 0 4px; background: linear-gradient(90deg, rgba(56,189,248,.85), rgba(56,189,248,0)); border-radius: 1px; }
