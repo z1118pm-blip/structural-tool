@@ -70,6 +70,8 @@ const SELF_TEST_UI_CONFIG = {
   'settlement': { category: '🧱 特殊构件与边界', level: 'L1', action: 'play', title: '支座沉降的附加内力', desc: '两层两跨 · 无外荷载、无水平力。扫掠左柱沉降 (0→100mm)，看超静定结构在"什么都没加"的情况下，M 图从零逐渐出现、反力重新分配、结构整体倾斜。' },
   'cant-L2': { category: '📐 杆件与截面行为', level: 'L1', action: 'play', title: '悬挑长度平方效应', desc: '单层单跨+悬挑 · 均布荷载。扫掠悬挑长度 L_c (0.5→4)，看悬挑根部弯矩呈平方级增长（M ∝ L_c²），以及悬挑端挠度呈四次方级剧增（Δ ∝ L_c⁴）。' },
   'col-h3': { category: '📐 杆件与截面行为', level: 'L1', action: 'play', title: '柱截面三次方效应', desc: '单层单跨 · 水平力。扫掠柱高 h_c (300→800)，专注看侧移随 h_c 增大而急剧减小（I_c ∝ h_c³）。' },
+  'story-h-vert-moment': { category: '📐 杆件与截面行为', level: 'L1', action: 'play', title: '竖向荷载下层高变化与弯矩重分配', desc: '单层单跨 · 满跨均布。扫掠一层的层高 h₁ (2.5→7 m)。层高越大，柱线刚度 EI_c/h₁ 越低，对梁端的转动约束越弱，梁端负弯矩如何减小、跨中正弯矩如何增大——节点弯矩向"简支"极限靠拢。' },
+  'story-h-horz-moment': { category: '📐 杆件与截面行为', level: 'L1', action: 'play', title: '水平荷载下层高变化与反弯点移动', desc: '单层单跨 · 水平力。扫掠一层的层高 h₁ (2.5→7 m)。层高越大，柱线刚度越小，梁柱线刚度比 ρ 增大使得梁对柱约束相对变强，观察柱反弯点如何随层高增加而逐步降低并趋于柱中点。' },
   'anti-rho': { category: '🌪️ 抗侧力与二阶效应', level: 'L2', action: 'play', title: '反弯点 vs 刚度比联动', desc: '两层两跨 · 纯水平力。扫掠梁高 h_b (400→900)，注意看「反弯点 vs 刚度比」小图。梁高增加使梁线刚度上升，各柱反弯点逐渐向跨中（x/h=0.5）靠拢。' },
   'brace-dir-L': { category: '🧱 特殊构件与边界', level: 'L2', action: 'compare', title: '单撑的方向不对称性', desc: '单层单跨 · 水平力向右 · 仅受拉。对比 ╱ 撑（基线，受拉正常工作）与 ╲ 撑（当前，受压直接退出）。体会柔性单撑体系“只能单向抗侧”的致命弱点。' },
   'brace-rigid-vs-tension': { category: '🧱 特殊构件与边界', level: 'L2', action: 'compare', title: '刚性撑 vs 柔性仅受拉撑', desc: '单层单跨 · 水平力向右 · ╲ 撑受压。对比普通刚性撑（紫虚线，受压照常抗侧）与仅受拉柔性撑（实线，受压退出罢工）。体会支撑设计中的“屈曲校核”与“仅受拉”的本质区别。' },
@@ -85,6 +87,7 @@ const SELF_TEST_UI_CONFIG = {
   'uniform-temp-moment': { category: '🧱 特殊构件与边界', level: 'L2', action: 'play', title: '均匀升温的弯矩', desc: '两层两跨 · 无外荷载。扫掠整体温升 ΔT (0→50℃)，看梁膨胀推动边柱侧移产生的柱端弯矩。均匀升温以轴力为主，弯矩是约束侧移的副产品——切到 N 图对比内力分布。' },
   'gradient-temp-moment': { category: '🧱 特殊构件与边界', level: 'L1', action: 'play', title: '非均匀升温的弯矩', desc: '单层单跨 · 无外荷载。扫掠结构内外温差 ΔT (0→30℃)，看边柱和顶层边梁的均匀曲率如何产生"两端同号"的固端弯矩——与均布荷载的异号弯矩形成鲜明对比。' },
   'remove-beam-pierce': { category: '🌪️ 抗侧力与二阶效应', level: 'L2', action: 'play', title: '穿层柱模拟', desc: '两层两跨 · 水平力。仅移除第1层左跨梁，左侧边柱形成穿层柱。同时显示弯矩与变形，观察底层侧移放大，以及跃层柱弯矩被其它柱吸收的现象。' },
+
 
   'beam-inflection-vs-col': { category: '📐 杆件与截面行为', level: 'L2', action: 'play', title: '柱刚度对梁反弯点的影响', desc: '单层单跨 · 竖向均布荷载。扫掠边柱高 hc (300→800)。柱越细，对梁端约束越弱（趋近铰接），反弯点靠近支座；柱越粗，约束越强（趋近固接），反弯点向跨中移动。' },
   'inflection-point-theory': { category: '📐 杆件与截面行为', level: 'L2', action: 'play', title: '水平力下的反弯点偏移', desc: '单层单跨 · 纯水平力。扫掠梁高 hb (400→900)，观察柱反弯点 x/h 的演变。理论精确解为 y/h = (1+3k)/(1+6k)。梁越刚，反弯点向 0.5h 靠拢。' },
@@ -137,6 +140,8 @@ const SELF_TEST_TAGS_MAP = {
   'settlement': ['边界/非荷载'],
   'cant-L2': ['变形/侧移'],
   'col-h3': ['变形/侧移'],
+  'story-h-vert-moment': ['内力/反弯点', '变形/侧移'],
+  'story-h-horz-moment': ['内力/反弯点', '变形/侧移'],
   'anti-rho': ['内力/反弯点', '变形/侧移'],
   'brace-dir-L': ['支撑系统'],
   'brace-rigid-vs-tension': ['支撑系统'],
@@ -152,6 +157,7 @@ const SELF_TEST_TAGS_MAP = {
   'uniform-temp-moment': ['边界/非荷载', '内力/反弯点'],
   'gradient-temp-moment': ['边界/非荷载', '内力/反弯点'],
   'remove-beam-pierce': ['变形/侧移'],
+
 
   'beam-inflection-vs-col': ['内力/反弯点'],
   'inflection-point-theory': ['内力/反弯点'],
@@ -338,6 +344,20 @@ const SELF_TEST_CASES = [
     state: { nBay: 1, nLev: 1, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 4, h2: 4, h3: 4, Lc: 1.5, bc: 400, hc: 300, bb: 250, hb: 500, r: 1, q1: 0, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 50, H2: 0, H3: 0, Hmode: 'none', betaF: 1, betaJ: 1, forceType: 'M', elFilter: 'all', showVals: true, showIds: false, showPDelta: false, displayMode: 'deform', mScale: 7, dScale: 80 }
   },
   {
+    id: 'story-h-vert-moment',
+    sweep: 'h1',
+    sweepRange: [2.5, 7],
+    state: { nBay: 1, nLev: 1, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 2.5, h2: 4, h3: 4, Lc: 1.5, bc: 400, hc: 400, bb: 250, hb: 500, r: 1, q1: 30, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 0, H2: 0, H3: 0, Hmode: 'none', betaF: 1, betaJ: 1, forceType: 'M', elFilter: 'all', showVals: true, showIds: false, showPDelta: false, displayMode: 'force', mScale: 4, dScale: 50 },
+    toast: '💡 竖向荷载恒定 q₁ = 30 kN/m，扫掠一层的层高 h₁（2.5 → 7 m）。<br><br>关键观察：<br>• <b>h₁ ↑ → 柱线刚度 EI_c/h₁ 下降（注意是线性的 1/h₁，不是三次方）→ 梁柱线刚度比 ρ 增大 → 柱对梁端的转动约束减弱</b><br>• 梁端负弯矩随之减小，跨中正弯矩相应增大——节点弯矩分布向"简支梁"极限靠拢<br>• 反之 h₁ = 2.5 m 时柱相对更刚，节点更接近固接（梁端负弯矩趋近 qL²/12），跨中正弯矩趋近 qL²/24<br><br>对照右侧「ρ = (EI_b/L)/(EI_c/h₁)」读数可以看到 ρ 随 h₁ 增大一路抬升。<br><br>⚠️ 注意：层高对 ρ 的影响是<b>线性</b>的（1/h₁），比"柱截面高 h_c 的三次方效应"温和得多，弯矩幅值变化幅度不会像扫掠 h_c 那么剧烈，需要盯住<b>梁端数值与跨中数值的相对关系</b>来判断。'
+  },
+  {
+    id: 'story-h-horz-moment',
+    sweep: 'h1',
+    sweepRange: [2.5, 7],
+    state: { nBay: 1, nLev: 1, hasCant: false, L1: 6, L2: 6, L3: 6, h1: 2.5, h2: 4, h3: 4, Lc: 1.5, bc: 400, hc: 400, bb: 250, hb: 500, r: 1, q1: 0, q2: 0, q3: 0, qc1: 0, qc2: 0, qc3: 0, H1: 50, H2: 0, H3: 0, Hmode: 'none', betaF: 1, betaJ: 1, forceType: 'M', elFilter: 'all', showVals: true, showIds: false, showPDelta: false, displayMode: 'force', mScale: 5, dScale: 50 },
+    toast: '💡 水平力恒定 H₁ = 50 kN，扫掠一层的层高 h₁（2.5 → 7 m）。<br><br>👉 <b>盯住弯矩图上的反弯点（弯距为零的零点）！</b><br><br>关键力学逻辑：<br>• 层高 h₁ ↑ → 柱的线刚度 (i_c = EI_c / h₁) ↓ → 梁柱线刚度比 ρ 相对变大<br>• ρ 变大意味着梁对柱顶的转动约束变得更强<br>• 因此，柱的反弯点会<b>随层高增加而不断降低</b>，越来越向柱中点 (x/h = 0.5) 靠拢<br><br>理论精确解为：y/h = (1+3ρ)/(1+6ρ)。你可以同步观察右侧的「反弯点 x/h vs ρ」小图，看 h₁ 增加时点是如何平滑向 0.5 靠拢的。这张卡专为打破“层高只是增加侧移”的刻板印象而设计。'
+  },
+  {
     id: 'bc-linear-effect',
     sweep: 'bc',
     sweepRange: [300, 800],
@@ -499,6 +519,7 @@ const SELF_TEST_CASES = [
     },
     toast: '注意看：底层左跨梁被移除，左侧边柱形成“穿层柱”。在变形图中，底层侧移显著放大；在弯矩图中，你会发现尽管这根柱子底层受弯，但其顶部的弯矩会通过第二层梁传递并重新分配给右侧的完整框架，这就是“跃层柱弯矩被其它柱吸收”的直观体现。'
   },
+
 
   {
     id: 'beam-inflection-vs-col',
