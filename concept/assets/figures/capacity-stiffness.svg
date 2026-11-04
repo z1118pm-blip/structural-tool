@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 650" role="img" aria-labelledby="title desc">
+  <title id="title">抗倾覆力矩、刚度与支承布置</title>
+  <desc id="desc">左图为底部固定的整体悬臂模型，水平合力作用于三分之二高度处，变形后顶部偏移而基底不动；抗倾覆比较倾覆力矩与输入的抗倾覆力矩比较值，侧移观察顶点位移。右图为带柱高的立面受力示意，不是支承平面图；绿色箭头表示整体弯曲引起的柱轴力增量方向，按受拉为正，右侧正增量受拉、左侧负增量受压，拉压增量形成逆时针抵抗力矩。</desc>
+  <defs>
+    <marker id="r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5 0 10Z" fill="#a34c3f"/></marker>
+    <marker id="g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5 0 10Z" fill="#537567"/></marker>
+    <marker id="d" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 5L10 0 10 10Z" fill="#6f726b"/></marker>
+  </defs>
+  <rect width="1200" height="650" fill="#f5f3ef"/>
+  <g font-family="PingFang SC,Microsoft YaHei,Noto Sans CJK SC,sans-serif" fill="#292a26">
+    <text x="55" y="58" font-size="22" font-weight="700">同一荷载，分别看抗倾覆与变形</text>
+    <text x="55" y="87" font-size="14" fill="#62645e">整体悬臂模型 · 基底固定 · 变形仅为趋势示意</text>
+    <path d="M110 480V170H290V480Z" fill="#e8e5de" stroke="#292a26" stroke-width="2"/>
+    <g stroke="#888980" stroke-width="1"><path d="M110 232H290M110 294H290M110 356H290M110 418H290"/></g>
+    <path d="M110 480Q125 340 170 170H350Q305 340 290 480Z" fill="#a34c3f" fill-opacity=".07" stroke="#a34c3f" stroke-width="2" stroke-dasharray="7 6"/>
+    <path d="M95 480V510H305V480" fill="#dfdcd4" stroke="#292a26" stroke-width="2"/>
+    <path d="M70 510H330" stroke="#292a26" stroke-width="2"/>
+    <path d="M42 273H101" stroke="#a34c3f" stroke-width="3" marker-end="url(#r)"/>
+    <text x="43" y="253" font-size="15" fill="#a34c3f">水平合力 V</text>
+    <path d="M308 170V480M300 170H316M300 480H316" stroke="#6f726b" fill="none"/>
+    <text x="324" y="330" font-size="14" fill="#62645e">H</text>
+    <path d="M298 273H320" stroke="#6f726b" stroke-dasharray="4 4"/>
+    <text x="327" y="265" font-size="13" fill="#62645e">H̄ = 2H/3</text>
+    <path d="M200 145V128M260 145V128" stroke="#6f726b" fill="none"/>
+    <path d="M200 137H260" stroke="#6f726b" fill="none" marker-start="url(#d)" marker-end="url(#d)"/>
+    <text x="230" y="121" text-anchor="middle" font-size="14">Δ</text>
+    <path d="M105 540H45" stroke="#537567" stroke-width="3" marker-end="url(#g)"/>
+    <text x="45" y="565" font-size="14" fill="#537567">基底剪力</text>
+    <text x="200" y="596" text-anchor="middle" font-size="17" font-weight="700">抗倾覆：比较 M 与 MR</text>
+    <text x="200" y="622" text-anchor="middle" font-size="14" fill="#62645e">侧移：读取顶点位移 Δ，两项分别判断</text>
+    <path d="M700 120V610" stroke="#c4c2ba"/>
+    <text x="750" y="58" font-size="22" font-weight="700">材料离中和轴越远，抗弯越有效</text>
+    <text x="750" y="87" font-size="14" fill="#62645e">四根等面积柱 · 总面积相同 · 仅改变内柱位置</text>
+    <path d="M950 135V450" stroke="#8b8c84" stroke-dasharray="7 6"/>
+    <text x="962" y="211" font-size="13" fill="#62645e">中和轴</text>
+    <g fill="#292a26"><rect x="805" y="230" width="24" height="220"/><rect x="913" y="230" width="24" height="220"/><rect x="963" y="230" width="24" height="220"/><rect x="1071" y="230" width="24" height="220"/></g>
+    <path d="M770 450H1130" fill="none" stroke="#292a26" stroke-width="2"/>
+    <path d="M817 195V165M1083 195V165" fill="none" stroke="#6f726b"/>
+    <path d="M817 178H1083" fill="none" stroke="#6f726b" marker-start="url(#d)" marker-end="url(#d)"/>
+    <text x="950" y="153" text-anchor="middle" font-size="15">受力方向宽度 B</text>
+    <path d="M728 280H789" stroke="#a34c3f" stroke-width="3" marker-end="url(#r)"/>
+    <text x="728" y="260" font-size="14" fill="#a34c3f">水平作用</text>
+    <path d="M790 335V415" fill="none" stroke="#537567" stroke-width="3" marker-end="url(#g)"/>
+    <path d="M895 350V400" fill="none" stroke="#537567" stroke-width="3" marker-end="url(#g)"/>
+    <path d="M1005 400V350" fill="none" stroke="#537567" stroke-width="3" marker-end="url(#g)"/>
+    <path d="M1110 415V335" fill="none" stroke="#537567" stroke-width="3" marker-end="url(#g)"/>
+    <text x="790" y="322" text-anchor="middle" font-size="13" fill="#537567">−ΔN</text>
+    <text x="1110" y="322" text-anchor="middle" font-size="13" fill="#537567">+ΔN</text>
+    <text x="950" y="477" text-anchor="middle" font-size="13" fill="#537567">立面示意 · 受拉为正：右 +ΔN 受拉，左 −ΔN 受压</text>
+    <path d="M820 500C880 555 1020 555 1080 500" fill="none" stroke="#537567" stroke-width="3" marker-end="url(#g)"/>
+    <text x="950" y="568" text-anchor="middle" font-size="14" fill="#537567">拉压增量形成逆时针抵抗力矩</text>
+    <text x="950" y="600" text-anchor="middle" font-size="14" fill="#62645e">实际柱轴力还需与重力压力等效应叠加</text>
+    <text x="950" y="630" text-anchor="middle" font-size="14" fill="#537567">I = ΣAi xi²　·　η = I / Iref</text>
+  </g>
+</svg>

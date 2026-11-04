@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="通过竖向荷载偏心与水平作用偏心实验，理解建筑形式和支承体系的对称与非对称。">
+  <title>对称与非对称｜结构概念</title>
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../css/style.css">
+  <script src="../js/main.js" defer></script>
+</head>
+<body>
+  <div class="reading-progress" aria-hidden="true"><span></span></div>
+  <header class="site-header"><div class="shell header-inner"><a class="brand" href="../index.html" aria-label="结构概念学习首页"><span>结构概念<small>STRUCTURAL CONCEPTS</small></span></a><nav class="top-nav" aria-label="主导航"><a href="../index.html">学习首页</a><div class="course-menu" data-course-menu data-root="../"></div><a href="#concept">核心概念</a><a href="#lab">交互实验</a></nav></div></header>
+
+  <main id="symmetryLesson">
+    <section class="lesson-hero shell">
+      <div class="lesson-heading"><p class="chapter-tag">SYMMETRY · ECCENTRICITY LAB</p><h1>对称与非对称</h1><p class="hero-lead">建筑轮廓对称，只解决了几何问题；真正的受力对称，还要求重力与支承合力共线、水平作用与抗力中心对齐。偏心一旦存在，整体就会多出弯矩或扭矩。</p></div>
+      <dl class="lesson-meta"><dt>竖向偏心</dt><dd>重力弯矩与反力重分配</dd><dt>水平偏心</dt><dd>整体扭转与抗侧力需求</dd><dt>复杂形体</dt><dd>拆分整体单元，检查接合面</dd></dl>
+    </section>
+
+    <section class="lesson-section" id="concept" aria-labelledby="concept-title"><div class="shell">
+      <div class="section-heading"><p class="section-label">核心概念 / 01</p><div><h2 id="concept-title">看两条作用线，而不只看外轮廓</h2><p>非对称可能来自建筑质量分布，也可能来自支承体系布置，还可能两者同时存在。先把合力和抗力分别找出来，才能判断整体会弯还是会扭。</p></div></div>
+      <figure class="source-figure original-figure"><img src="../assets/figures/symmetry-asymmetry.svg" alt="对称共线、竖向荷载偏心和水平作用偏心三种整体受力图"><figcaption class="figure-swipe-hint">左右滑动查看全图</figcaption></figure>
+      <div class="concept-grid concept-text-grid">
+        <article class="concept-item"><h3>重力偏心使两侧支承不等力</h3><p>重力合力不通过支承中心时，会形成 Mv = Wev。靠近合力一侧的反力增大，另一侧减小；偏心足够大时甚至可能出现受拉需求。</p></article>
+        <article class="concept-item"><h3>水平偏心使平动叠加扭转</h3><p>地震惯性力可简化为通过质量中心，风荷载合力则通过其作用中心，二者不能混称。本页以地震作用为例：作用线与刚度中心的抗力线错开时，除基底剪力外还产生 T = He<sub>x</sub>。</p></article>
+        <article class="concept-item"><h3>复杂方案可以拆成整体单元</h3><p>把塔楼、裙房等部分分别作为整体分析，再检查单元之间以及各层接合面的力流。拆分不是忽略整体性，而是明确谁支承谁。</p></article>
+      </div>
+      <div class="key-note"><strong>非对称不是必然不合理，未被识别的偏心才危险</strong><p>竖向偏心可能与某一方向的水平作用相互抵消，也可能在反方向叠加。由于风与地震作用方向会变化，方案阶段应检查不利组合，而非只观察单一工况。</p></div>
+    </div></section>
+
+    <section class="lesson-section" id="lab" aria-labelledby="lab-title"><div class="shell">
+      <div class="section-heading"><p class="section-label">交互实验 / 02</p><div><h2 id="lab-title">让质量中心与抗力中心错开，观察新增的力矩</h2><p>红色表示作用，绿色表示支承反力与刚度中心。两个实验分别采用双支承立面和双抗侧力线平面简化模型。</p></div></div>
+      <div class="lab-shell">
+        <div class="demo-tabs two-tabs" role="tablist" aria-label="对称与非对称实验">
+          <button class="demo-tab" id="tab-vertical" role="tab" aria-selected="true" aria-controls="verticalPanel" data-demo="vertical"><span>VERTICAL</span>竖向荷载偏心</button>
+          <button class="demo-tab" id="tab-plan" role="tab" aria-selected="false" aria-controls="planPanel" data-demo="plan" tabindex="-1"><span>PLAN</span>水平作用与扭转</button>
+        </div>
+
+        <section class="demo-panel is-active" id="verticalPanel" role="tabpanel" aria-labelledby="tab-vertical">
+          <div class="parameter-rack vertical-rack" aria-label="竖向偏心参数">
+            <div class="range-control"><label for="verticalWidth">支承间距 B <output id="verticalWidthOutput">24 m</output></label><input id="verticalWidth" type="range" min="12" max="36" value="24" step="2"></div>
+            <div class="range-control"><label for="verticalWeight">总重力 W <output id="verticalWeightOutput">48,000 kN</output></label><input id="verticalWeight" type="range" min="12000" max="90000" value="48000" step="3000"></div>
+            <div class="range-control"><label for="verticalEccentricity">重力偏心 ev <output id="verticalEccentricityOutput">2.0 m</output></label><input id="verticalEccentricity" type="range" min="0" max="12" value="2" step="0.5"></div>
+            <button class="control-button" id="resetVertical">复位</button>
+          </div>
+          <div class="demo-layout"><div class="diagram-stage"><span class="diagram-caption">双支承模型 / 重力作用线与支承中心可以独立比较</span><svg id="verticalDiagram" class="aspect-figure" viewBox="0 0 760 580" role="img" aria-label="重力偏心和两侧支承反力分配动态图"></svg></div>
+            <div class="demo-controls"><h3>支承反力为什么会一大一小？</h3><p>右侧为重力偏心方向。反力必须同时满足竖向力平衡和对支承中心的力矩平衡。</p>
+              <div class="metric-row"><div class="metric"><span>重力弯矩 Mv</span><strong id="verticalMoment">0 kN·m</strong></div><div class="metric"><span>偏心比 ev/B</span><strong id="verticalRatio">0.000</strong></div></div>
+              <div class="metric-row"><div class="metric"><span>左支承反力 RL</span><strong id="leftReaction">0 kN</strong></div><div class="metric"><span>右支承反力 RR</span><strong id="rightReaction">0 kN</strong></div></div>
+              <div class="status-line" id="verticalStatus" aria-live="polite"></div>
+              <div class="formula-box formula-explainer">
+                <span class="formula-kicker">由竖向力平衡和对支承中心取矩求得</span>
+                <div class="formula-lines" aria-label="竖向荷载偏心计算公式">
+                  <p>M<sub>v</sub> = We<sub>v</sub></p>
+                  <p>R<sub>L</sub> = W / 2 − M<sub>v</sub> / B</p>
+                  <p>R<sub>R</sub> = W / 2 + M<sub>v</sub> / B</p>
+                </div>
+                <p class="formula-source"><strong>关系来源：</strong>静力平衡 ΣV = 0、ΣM = 0。两支承位于支承中心两侧 ±B/2，重力作用线向右偏移 e<sub>v</sub> 时，右支承反力增大、左支承反力减小。</p>
+                <details class="parameter-definitions"><summary>查看符号、单位与正负号</summary><dl>
+                  <div><dt>W</dt><dd>建筑竖向重力合力，kN。</dd></div>
+                  <div><dt>e<sub>v</sub></dt><dd>重力作用线相对支承中心向右的偏心距，m。</dd></div>
+                  <div><dt>B</dt><dd>左右两支承的间距，m。</dd></div>
+                  <div><dt>M<sub>v</sub></dt><dd>重力对支承中心的力矩，kN·m，与水平作用倾覆力矩不是同一荷载效应。</dd></div>
+                  <div><dt>R<sub>L</sub>、R<sub>R</sub></dt><dd>左、右支承竖向反力，kN；正值表示向上支承，负值表示需要抗拔。</dd></div>
+                  <div><dt>边界状态</dt><dd>R<sub>L</sub> = 0 表示左支承恰好脱开；R<sub>L</sub> &lt; 0 时，若支承只能受压，原模型不能继续维持平衡。</dd></div>
+                </dl></details>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="demo-panel" id="planPanel" role="tabpanel" aria-labelledby="tab-plan" hidden>
+          <div class="parameter-rack plan-rack" aria-label="水平偏心参数">
+            <div class="range-control"><label for="planWidth">抗侧力线间距 B <output id="planWidthOutput">24 m</output></label><input id="planWidth" type="range" min="12" max="36" value="24" step="2"></div>
+            <div class="range-control"><label for="planShear">水平合力 H <output id="planShearOutput">2,400 kN</output></label><input id="planShear" type="range" min="0" max="8000" value="2400" step="200"></div>
+            <div class="range-control"><label for="massOffset">质量中心 xM <output id="massOffsetOutput">3.0 m</output></label><input id="massOffset" type="range" min="-6" max="6" value="3" step="0.5"></div>
+            <div class="range-control"><label for="rightStiffness">右侧刚度占比 <output id="rightStiffnessOutput">65%</output></label><input id="rightStiffness" type="range" min="20" max="80" value="65" step="5"></div>
+            <button class="control-button" id="resetPlan">复位</button>
+          </div>
+          <div class="demo-layout"><div class="diagram-stage"><span class="diagram-caption">刚性楼面平面 / CR 由两侧抗侧力线刚度加权确定</span><svg id="planDiagram" class="aspect-figure" viewBox="0 0 760 580" role="img" aria-label="质量中心、刚度中心和水平扭矩动态图"></svg></div>
+            <div class="demo-controls"><h3>外形没变，刚度中心却在移动</h3><p>本实验以地震惯性力为例，H 通过质量中心 C<sub>M</sub>，抗力合力通过刚度中心 C<sub>R</sub>。调整右侧刚度占比，C<sub>R</sub> 会偏向更强的一侧；两条平行力线错开便形成整体扭矩。</p>
+              <div class="metric-row"><div class="metric"><span>刚度中心 xR</span><strong id="stiffnessCenter">0.0 m</strong></div><div class="metric"><span>水平偏心 ex</span><strong id="planEccentricity">0.0 m</strong></div></div>
+              <div class="metric-row"><div class="metric"><span>整体扭矩 T</span><strong id="planTorque">0 kN·m</strong></div><div class="metric"><span>相对偏心 |ex|/B</span><strong id="planRatio">0.000</strong></div></div>
+              <div class="status-line" id="planStatus" aria-live="polite"></div>
+              <div class="formula-box formula-explainer">
+                <span class="formula-kicker">先求刚度中心，再由平行力偶求扭矩</span>
+                <div class="formula-lines" aria-label="水平作用偏心计算公式">
+                  <p>x<sub>R</sub> = <span class="fraction"><span>k<sub>L</sub>(−B/2) + k<sub>R</sub>(B/2)</span><span>k<sub>L</sub> + k<sub>R</sub></span></span> = (2s − 1)B / 2</p>
+                  <p>e<sub>x</sub> = x<sub>M</sub> − x<sub>R</sub></p>
+                  <p>T = H · e<sub>x</sub></p>
+                </div>
+                <p class="formula-source"><strong>关系来源：</strong>x<sub>R</sub> 是两侧抗侧力线刚度的加权中心；e<sub>x</sub> 是 H 与抗力合力 R 两条平行作用线之间的垂直距离；T 由力偶关系求得。假定楼面为刚性，仅考虑图示单方向平动与扭转。</p>
+                <details class="parameter-definitions"><summary>查看符号、单位与方向约定</summary><dl>
+                  <div><dt>k<sub>L</sub>、k<sub>R</sub></dt><dd>左、右抗侧力线的侧向刚度；页面以其总和的百分比表示。</dd></div>
+                  <div><dt>s</dt><dd>右侧刚度占比，s = k<sub>R</sub>/(k<sub>L</sub> + k<sub>R</sub>)，无量纲，不是构件数量占比。</dd></div>
+                  <div><dt>B</dt><dd>两条抗侧力线的间距，m；位置坐标从平面几何中心向右为正。</dd></div>
+                  <div><dt>x<sub>M</sub>、x<sub>R</sub></dt><dd>质量中心与刚度中心的横坐标，m。</dd></div>
+                  <div><dt>e<sub>x</sub></dt><dd>质量中心相对刚度中心的水平偏心，m；本页 H 向下时，e<sub>x</sub> &gt; 0 对应顺时针扭矩。</dd></div>
+                  <div><dt>H、R</dt><dd>水平地震作用合力及其抗力合力，kN；二者大小相等、方向相反。</dd></div>
+                  <div><dt>T</dt><dd>整体扭矩，kN·m；正负号必须与上述力和坐标方向一起理解。</dd></div>
+                  <div><dt>模型边界</dt><dd>实际建筑还需考虑多构件刚度、楼板变形、双向作用、偶然偏心和荷载组合。</dd></div>
+                </dl></details>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+      <p class="model-note">模型说明：反力与刚度中心仅用于说明整体平衡和几何关系；实际建筑还需考虑多构件刚度、楼板变形、双向作用、偶然偏心及各类荷载组合。</p>
+    </div></section>
+
+    <div class="shell lesson-end"><div class="end-links"><a href="./chapter2-section4.html">← 回顾承载力与刚度</a><a href="../index.html">返回学习首页</a></div><p>学习完成：对称的判断对象是荷载与抗力；竖向偏心产生弯矩，水平偏心产生扭矩。</p></div>
+  </main>
+  <footer class="site-footer"><div class="shell"><p>结构概念 · 交互教学</p><p>质量中心 · 支承中心 · 刚度中心 · 整体偏心</p></div></footer>
+</body>
+</html>

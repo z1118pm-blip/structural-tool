@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="以矩形规则建筑为对象，通过矢量图和参数实验估算风荷载、地震作用、基底剪力与倾覆力矩。">
+  <title>风荷载与地震作用估算｜结构概念</title>
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../css/style.css">
+  <script src="../js/main.js" defer></script>
+</head>
+<body>
+  <div class="reading-progress" aria-hidden="true"><span></span></div>
+  <header class="site-header">
+    <div class="shell header-inner">
+      <a class="brand" href="../index.html" aria-label="结构概念学习首页"><span>结构概念<small>STRUCTURAL CONCEPTS</small></span></a>
+      <nav class="top-nav" aria-label="主导航"><a href="../index.html">学习首页</a><div class="course-menu" data-course-menu data-root="../"></div><a href="#concept">核心概念</a><a href="#lab">交互实验</a></nav>
+    </div>
+  </header>
+
+  <main id="lateralLesson">
+    <section class="lesson-hero shell">
+      <div class="lesson-heading">
+        <p class="chapter-tag">LATERAL ACTIONS · ESTIMATION LAB</p>
+        <h1>风荷载与<br>地震作用估算</h1>
+        <p class="hero-lead">风从建筑外部推来，地震作用则来自建筑自身质量的惯性。把矩形规则建筑简化为逐层受力的整体，就能在方案阶段估计水平力如何沿高度分布，以及基础需要抵抗多大的剪力和倾覆力矩。</p>
+      </div>
+      <dl class="lesson-meta"><dt>研究对象</dt><dd>矩形规则建筑</dd><dt>估算目标</dt><dd>楼层力 · 基底剪力 · 倾覆力矩</dd><dt>模型边界</dt><dd>方案阶段教学，不代替规范设计</dd></dl>
+    </section>
+
+    <section class="lesson-section" id="concept" aria-labelledby="concept-title">
+      <div class="shell">
+        <div class="section-heading"><p class="section-label">核心概念 / 01</p><div><h2 id="concept-title">同为水平作用，来源并不相同</h2><p>先分清力从哪里来，再决定怎样估算。风看受风表面，地震看楼层质量；两者最后都汇入整体抗侧力体系。</p></div></div>
+        <figure class="source-figure original-figure"><img src="../assets/figures/lateral-actions.svg" alt="矩形建筑的风荷载与地震作用对比图"><figcaption class="figure-swipe-hint">左右滑动查看全图</figcaption></figure>
+        <div class="concept-grid concept-text-grid">
+          <article class="concept-item"><h3>风荷载：风压乘以受风面积</h3><p>把建筑各层迎风面作为受荷区域。该层风压越大、迎风面积越大，分配到该层的水平力就越大。</p></article>
+          <article class="concept-item"><h3>地震作用：质量运动产生惯性</h3><p>地面运动时，楼层质量因惯性产生水平作用。总剪力确定后，还需按各层重量和高度进行分配。</p></article>
+          <article class="concept-item"><h3>整体结果：剪力与倾覆力矩</h3><p>各层水平力之和形成基底剪力；各层力对基底取矩之和形成倾覆力矩，两者共同控制抗侧体系的概念布置。</p></article>
+        </div>
+        <div class="key-note"><strong>估算不是把建筑“算完”</strong><p>这里的任务是建立荷载量级与分布概念。实际设计还需根据场地、风环境、结构动力特性和现行规范确定参数，并检查构件与节点。</p></div>
+      </div>
+    </section>
+
+    <section class="lesson-section" id="lab" aria-labelledby="lab-title">
+      <div class="shell">
+        <div class="section-heading"><p class="section-label">交互实验 / 02</p><div><h2 id="lab-title">从楼层作用看到整体响应</h2><p>拖动参数，观察矩形建筑各层水平力箭头和计算结果同步变化。红色表示外部作用或惯性作用，绿色表示基底抗力。</p></div></div>
+        <div class="lab-shell">
+          <div class="lateral-parameters" aria-label="两种水平作用共用的实验参数">
+            <section class="parameter-group shared-parameters" aria-labelledby="shared-parameters-title">
+              <div class="parameter-group-heading"><div><span>SHARED GEOMETRY</span><h3 id="shared-parameters-title">共享建筑几何</h3></div><button class="control-button" id="resetLateral" type="button">全部复位</button></div>
+              <p>层数与层高只在此处设置，风、地震及对比图始终使用同一建筑。</p>
+              <div class="range-control"><label for="sharedFloors">建筑层数 n <output id="sharedFloorsOutput">10 层</output></label><input id="sharedFloors" type="range" min="3" max="20" value="10" step="1"></div>
+              <div class="range-control"><label for="sharedStorey">层高 h <output id="sharedStoreyOutput">3.6 m</output></label><input id="sharedStorey" type="range" min="2.8" max="5" value="3.6" step="0.2"></div>
+            </section>
+            <section class="parameter-group" aria-labelledby="wind-parameters-title">
+              <div class="parameter-group-heading"><div><span>WIND PARAMETERS</span><h3 id="wind-parameters-title">风荷载参数</h3></div></div>
+              <p>只改变风的作用强度与受风面积，不改变地震参数。</p>
+              <div class="range-control"><label for="windWidth">迎风面宽度 B <output id="windWidthOutput">30 m</output></label><input id="windWidth" type="range" min="15" max="60" value="30" step="5"></div>
+              <div class="range-control"><label for="windPressure">基本风压 w<sub>0</sub> <output id="windPressureOutput">0.50 kN/m²</output></label><input id="windPressure" type="range" min="0.3" max="0.9" value="0.5" step="0.05"></div>
+            </section>
+            <section class="parameter-group" aria-labelledby="quake-parameters-title">
+              <div class="parameter-group-heading"><div><span>SEISMIC PARAMETERS</span><h3 id="quake-parameters-title">地震作用参数</h3></div></div>
+              <p>只改变楼层质量与总剪力水平，不改变风荷载参数。</p>
+              <div class="range-control"><label for="floorWeight">每层重量 G<sub>i</sub> <output id="floorWeightOutput">8,000 kN</output></label><input id="floorWeight" type="range" min="2000" max="15000" value="8000" step="500"></div>
+              <div class="range-control"><label for="quakeAlpha">地震影响系数 α <output id="quakeAlphaOutput">0.080</output></label><input id="quakeAlpha" type="range" min="0.02" max="0.2" value="0.08" step="0.005"></div>
+            </section>
+          </div>
+          <div class="demo-tabs three-tabs" role="tablist" aria-label="水平作用估算实验">
+            <button class="demo-tab" id="tab-wind" role="tab" aria-selected="true" aria-controls="windPanel" data-demo="wind"><span>WIND</span>风荷载估算</button>
+            <button class="demo-tab" id="tab-seismic" role="tab" aria-selected="false" aria-controls="seismicPanel" data-demo="seismic" tabindex="-1"><span>EARTHQUAKE</span>地震作用估算</button>
+            <button class="demo-tab" id="tab-compare" role="tab" aria-selected="false" aria-controls="comparePanel" data-demo="compare" tabindex="-1"><span>COMPARE</span>两种作用对比</button>
+          </div>
+
+          <section class="demo-panel is-active" id="windPanel" role="tabpanel" aria-labelledby="tab-wind">
+            <div class="demo-layout">
+              <div class="diagram-stage"><span class="diagram-caption">风荷载 / 各层迎风面承担风压</span><svg id="windDiagram" class="lateral-figure" viewBox="0 0 720 560" role="img" aria-label="矩形建筑各层风荷载与基底抗力动态图"></svg></div>
+              <div class="demo-controls">
+                <h3>风压如何变成楼层力？</h3><p>体型系数 μ<sub>s</sub> 固定取 1.3。为突出沿高度变化的趋势，本实验另设 μ<sub>z,i</sub> = 0.6 + 0.4H<sub>i</sub>/H；该高度系数只是教学假定，不是规范查表值。</p>
+                <div class="metric-row"><div class="metric"><span>基底剪力 V<sub>w</sub></span><strong id="windShear">0 kN</strong></div><div class="metric"><span>倾覆力矩 M<sub>w</sub></span><strong id="windMoment">0 kN·m</strong></div></div>
+                <div class="status-line" id="windStatus" aria-live="polite"></div>
+                <div class="formula-box formula-explainer">
+                  <span class="formula-kicker">逐层计算，再对全部楼层求和</span>
+                  <div class="formula-lines" aria-label="风荷载计算公式">
+                    <p>F<sub>w,i</sub> = w<sub>0</sub> μ<sub>z,i</sub> μ<sub>s</sub> B h</p>
+                    <p>V<sub>w</sub> = <span class="summation"><sup>n</sup><span>∑</span><sub>i = 1</sub></span> F<sub>w,i</sub></p>
+                    <p>M<sub>w</sub> = <span class="summation"><sup>n</sup><span>∑</span><sub>i = 1</sub></span> F<sub>w,i</sub>H<sub>i</sub></p>
+                  </div>
+                  <p class="formula-source"><strong>关系来源：</strong>风压转化为楼层力的基本关系参照《建筑结构荷载规范》GB 50009 的风荷载表达；基底剪力与倾覆力矩由静力平衡求得。本页的楼层集中方式和高度系数作了教学简化。</p>
+                  <details class="parameter-definitions"><summary>查看符号与参数含义</summary><dl>
+                    <div><dt>F<sub>w,i</sub></dt><dd>第 i 层承担的风荷载，kN。</dd></div>
+                    <div><dt>w<sub>0</sub></dt><dd>基本风压，kN/m²，由上方风荷载参数设置。</dd></div>
+                    <div><dt>μ<sub>z,i</sub></dt><dd>第 i 层的风压高度变化系数，本实验采用上述简化式。</dd></div>
+                    <div><dt>μ<sub>s</sub></dt><dd>风荷载体型系数，本实验固定为 1.3。</dd></div>
+                    <div><dt>B、h</dt><dd>分别为迎风面宽度和层高，m；每层受风面积为 B × h。</dd></div>
+                    <div><dt>H<sub>i</sub>、H</dt><dd>第 i 层标高与建筑总高度，m；H<sub>i</sub> = i × h，H = n × h。</dd></div>
+                    <div><dt>V<sub>w</sub>、M<sub>w</sub></dt><dd>风荷载产生的基底剪力（kN）和基底倾覆力矩（kN·m）。</dd></div>
+                  </dl></details>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="demo-panel" id="seismicPanel" role="tabpanel" aria-labelledby="tab-seismic" hidden>
+            <div class="demo-layout">
+              <div class="diagram-stage"><span class="diagram-caption">地震作用 / 楼层重量与高度共同决定分配</span><svg id="seismicDiagram" class="lateral-figure" viewBox="0 0 720 560" role="img" aria-label="矩形建筑各层地震作用与基底抗力动态图"></svg></div>
+              <div class="demo-controls">
+                <h3>惯性力如何分配到各层？</h3><p>各层采用相同重量 G<sub>i</sub>，以底部固定、水平惯性力逐层作用于楼层的简化模型估算。先求总剪力，再按“楼层重量 × 楼层高度”分配。</p>
+                <div class="metric-row"><div class="metric"><span>基底剪力 V<sub>E</sub></span><strong id="quakeShear">0 kN</strong></div><div class="metric"><span>倾覆力矩 M<sub>E</sub></span><strong id="quakeMoment">0 kN·m</strong></div></div>
+                <div class="status-line" id="quakeStatus" aria-live="polite"></div>
+                <div class="formula-box formula-explainer">
+                  <span class="formula-kicker">先估总剪力，再分配到各层</span>
+                  <div class="formula-lines" aria-label="地震作用计算公式">
+                    <p>V<sub>E</sub> = α <span class="summation"><sup>n</sup><span>∑</span><sub>i = 1</sub></span> G<sub>i</sub></p>
+                    <p>F<sub>i</sub> = V<sub>E</sub> · <span class="fraction"><span>G<sub>i</sub>H<sub>i</sub></span><span><span class="summation"><sup>n</sup><span>∑</span><sub>j = 1</sub></span> G<sub>j</sub>H<sub>j</sub></span></span></p>
+                    <p>M<sub>E</sub> = <span class="summation"><sup>n</sup><span>∑</span><sub>i = 1</sub></span> F<sub>i</sub>H<sub>i</sub></p>
+                  </div>
+                  <p class="formula-source"><strong>关系来源：</strong>总剪力与逐层分配参照《建筑抗震设计规范》GB 50011 底部剪力法的基本思路；倾覆力矩由静力平衡求得。本页省略规范中的修正项与适用条件，仅用于规则模型的概念教学。</p>
+                  <details class="parameter-definitions"><summary>查看符号与参数含义</summary><dl>
+                    <div><dt>V<sub>E</sub></dt><dd>地震作用产生的基底剪力，kN。</dd></div>
+                    <div><dt>α</dt><dd>地震影响系数，无量纲，由上方地震作用参数设置。</dd></div>
+                    <div><dt>G<sub>i</sub>、G<sub>j</sub></dt><dd>第 i 层或第 j 层的重力荷载代表值，kN；本实验各层取相同值。</dd></div>
+                    <div><dt>H<sub>i</sub>、H<sub>j</sub></dt><dd>第 i 层或第 j 层距基底的高度，m。</dd></div>
+                    <div><dt>F<sub>i</sub></dt><dd>分配到第 i 层的水平地震作用，kN。</dd></div>
+                    <div><dt>M<sub>E</sub></dt><dd>各层地震作用对基底取矩之和，即基底倾覆力矩，kN·m。</dd></div>
+                    <div><dt>i、j、n</dt><dd>i 为当前计算层，j 为求和时的楼层序号，n 为总层数。</dd></div>
+                  </dl></details>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="demo-panel" id="comparePanel" role="tabpanel" aria-labelledby="tab-compare" hidden>
+            <div class="demo-layout">
+              <div class="diagram-stage"><span class="diagram-caption">并列读图 / 箭头长度按各自实验的最大楼层力归一化</span><svg id="compareDiagram" class="lateral-figure" viewBox="0 0 720 560" role="img" aria-label="同一矩形建筑的风荷载与地震作用分布对比"></svg></div>
+              <div class="demo-controls">
+                <h3>比较分布，不只看总量</h3><p>两幅图使用完全相同的层数 n 和层高 h，并分别读取页签上方独立设置的风荷载、地震作用参数。即使基底剪力接近，合力高度和倾覆力矩也可能不同。</p>
+                <dl class="comparison-data"><div><dt>风荷载基底剪力</dt><dd id="compareWindShear">0 kN</dd></div><div><dt>地震作用基底剪力</dt><dd id="compareQuakeShear">0 kN</dd></div><div><dt>风荷载合力高度</dt><dd id="compareWindHeight">0 m</dd></div><div><dt>地震作用合力高度</dt><dd id="compareQuakeHeight">0 m</dd></div></dl>
+                <div class="status-line" id="compareStatus" aria-live="polite"></div>
+                <div class="formula-box formula-explainer"><span class="formula-kicker">由静力等效求合力作用高度</span><div class="formula-lines"><p>H̄ = <span class="fraction"><span><span class="summation"><sup>n</sup><span>∑</span><sub>i = 1</sub></span> F<sub>i</sub>H<sub>i</sub></span><span><span class="summation"><sup>n</sup><span>∑</span><sub>i = 1</sub></span> F<sub>i</sub></span></span> = M / V</p></div><p class="formula-source"><strong>符号含义：</strong>H̄ 为各层水平力合力的作用高度；F<sub>i</sub> 为第 i 层水平力；H<sub>i</sub> 为该层距基底的高度；M、V 分别为对应作用的基底倾覆力矩与基底剪力。</p></div>
+              </div>
+            </div>
+          </section>
+        </div>
+        <p class="model-note">模型说明：风实验仅演示风压、迎风面积与高度变化的关系；地震实验采用等效水平力分配。所有系数均为可调教学参数，不能直接用于实际工程施工图设计。本节按逐层力计算合力高度：默认风荷载 H̄/H ≈ 0.59024；等层重地震模型的 H̄/H 随层数改变。下一节的 0.50／0.65／0.70 是另一组预设简化算例，不与本节参数自动同步。</p>
+      </div>
+    </section>
+
+    <div class="shell lesson-end"><div class="end-links"><a href="../index.html">← 返回学习首页</a><a href="./chapter2-section1.html">回顾整体受力与平衡</a><a href="./chapter2-section3.html">继续：高宽比与倾覆 →</a></div><p>学习完成：风从受风面积出发，地震从建筑质量出发，两者最终都转化为整体剪力与倾覆力矩。</p></div>
+  </main>
+  <footer class="site-footer"><div class="shell"><p>结构概念 · 交互教学</p><p>矩形规则建筑 · 水平作用概念估算</p></div></footer>
+</body>
+</html>

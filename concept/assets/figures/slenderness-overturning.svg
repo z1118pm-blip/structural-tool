@@ -1,0 +1,51 @@
+<svg class="tech-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 520" role="img" aria-labelledby="title desc">
+  <title id="title">高宽比对整体倾覆的影响</title>
+  <desc id="desc">重量和水平合力相同的两个矩形建筑，高窄建筑的倾覆力矩更大、基底反力偏心更明显，宽矮建筑更有利。</desc>
+  <defs>
+    <marker id="red" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0L9 4.5 0 9Z" fill="#a34c3f"/></marker>
+    <marker id="green" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0L9 4.5 0 9Z" fill="#537567"/></marker>
+    <marker id="black" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4 0 8Z" fill="#373632"/></marker>
+    <pattern id="soil" width="18" height="12" patternUnits="userSpaceOnUse"><path d="M0 12L18 0M-5 5L5-5M13 17L23 7" stroke="#aaa59c"/></pattern>
+  </defs>
+  <rect width="1200" height="520" fill="#f5f3ef"/>
+  <text x="150" y="52" font-size="20" font-weight="700">高而窄：倾覆效应更敏感</text>
+  <text x="720" y="52" font-size="20" font-weight="700">宽而矮：抗倾覆力臂更大</text>
+  <text x="150" y="80" class="small-text">相同 W、V 与合力相对高度</text>
+  <text x="720" y="80" class="small-text">相同 W、V 与合力相对高度</text>
+
+  <g>
+    <path d="M330 410V110H450V410Z" fill="#e8e4dc" stroke="#373632" stroke-width="2"/>
+    <path d="M318 410H462V430H318Z" fill="#d1ccc3" stroke="#373632" stroke-width="2"/>
+    <path d="M290 410H318V478H290ZM462 410H490V478H462Z" fill="url(#soil)"/>
+    <path d="M290 410H318M462 410H490" stroke="#373632" stroke-width="2"/>
+    <path d="M145 215H318" fill="none" stroke="#a34c3f" stroke-width="4" marker-end="url(#red)"/>
+    <text x="145" y="196" fill="#a34c3f" font-weight="700">水平合力 V</text>
+    <path d="M390 190V290" fill="none" stroke="#373632" stroke-width="3" marker-end="url(#black)"/>
+    <text x="405" y="245">W</text>
+    <path d="M443 488V440" fill="none" stroke="#537567" stroke-width="4" marker-end="url(#green)"/>
+    <text x="458" y="474" fill="#537567" font-weight="700">R</text>
+    <path d="M390 503H443" class="dimension"/>
+    <text x="398" y="519" class="small-text">e 较大</text>
+    <path d="M505 110V410M496 110H514M496 410H514" class="dimension"/>
+    <text x="522" y="265">H</text>
+    <text x="335" y="103" class="small-text">高宽比 H/B 较大</text>
+  </g>
+
+  <g>
+    <path d="M810 410V235H1050V410Z" fill="#e8e4dc" stroke="#373632" stroke-width="2"/>
+    <path d="M792 410H1068V430H792Z" fill="#d1ccc3" stroke="#373632" stroke-width="2"/>
+    <path d="M770 410H792V478H770ZM1068 410H1090V478H1068Z" fill="url(#soil)"/>
+    <path d="M770 410H792M1068 410H1090" stroke="#373632" stroke-width="2"/>
+    <path d="M625 296.25H798" fill="none" stroke="#a34c3f" stroke-width="4" marker-end="url(#red)"/>
+    <text x="625" y="277.25" fill="#a34c3f" font-weight="700">水平合力 V</text>
+    <path d="M930 285V355" fill="none" stroke="#373632" stroke-width="3" marker-end="url(#black)"/>
+    <text x="945" y="325">W</text>
+    <path d="M952 488V440" fill="none" stroke="#537567" stroke-width="4" marker-end="url(#green)"/>
+    <text x="967" y="474" fill="#537567" font-weight="700">R</text>
+    <path d="M930 503H952" class="dimension"/>
+    <text x="916" y="519" class="small-text">e 较小</text>
+    <path d="M1085 235V410M1076 235H1094M1076 410H1094" class="dimension"/>
+    <text x="1100" y="325">H</text>
+    <text x="866" y="222" class="small-text">高宽比 H/B 较小</text>
+  </g>
+</svg>

@@ -1,0 +1,54 @@
+<svg class="tech-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 520" role="img" aria-labelledby="title desc">
+  <title id="title">矩形建筑的风荷载与地震作用</title>
+  <desc id="desc">左侧风压作用于建筑迎风面，右侧地震惯性力作用于各楼层，两者均由基础抗力平衡。</desc>
+  <defs>
+    <marker id="redArrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0L9 4.5 0 9Z" fill="#a34c3f"/></marker>
+    <marker id="greenArrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0L9 4.5 0 9Z" fill="#537567"/></marker>
+    <pattern id="soil" width="18" height="12" patternUnits="userSpaceOnUse"><path d="M0 12L18 0M-5 5L5-5M13 17L23 7" stroke="#aaa59c" stroke-width="1"/></pattern>
+  </defs>
+  <rect width="1200" height="520" fill="#f5f3ef"/>
+  <text x="80" y="55" font-size="20" font-weight="700">风：作用于受风表面</text>
+  <text x="660" y="55" font-size="20" font-weight="700">地震：产生于建筑质量</text>
+  <text x="80" y="82" class="small-text">沿高度变化的风压 × 各层迎风面积</text>
+  <text x="660" y="82" class="small-text">楼层重量 × 所在高度决定分配比例</text>
+
+  <g id="windConcept">
+    <path d="M250 410V150H480V410Z" fill="#e8e4dc" stroke="#373632" stroke-width="2"/>
+    <path d="M250 410H480V432H250Z" fill="#d1ccc3" stroke="#373632" stroke-width="2"/>
+    <path d="M220 410H250V478H220ZM480 410H510V478H480Z" fill="url(#soil)"/>
+    <path d="M220 410H250M480 410H510" stroke="#373632" stroke-width="2"/>
+    <g stroke="#777168" stroke-width="1">
+      <path d="M250 193H480M250 236H480M250 279H480M250 322H480M250 365H480"/>
+    </g>
+    <g fill="none" stroke="#a34c3f" stroke-width="3" marker-end="url(#redArrow)">
+      <path d="M45 150H232"/><path d="M70 193H232"/><path d="M95 236H232"/><path d="M120 279H232"/><path d="M145 322H232"/><path d="M170 365H232"/>
+    </g>
+    <text x="90" y="137" fill="#a34c3f" font-weight="700">风压 q(z)</text>
+    <path d="M242 452H165" fill="none" stroke="#537567" stroke-width="4" marker-end="url(#greenArrow)"/>
+    <text x="145" y="492" fill="#537567" font-weight="700">基底剪力 Vw</text>
+    <path d="M515 150V410M506 150H524M506 410H524" class="dimension"/>
+    <text x="530" y="285">建筑高度 H</text>
+    <text x="365" y="400" class="small-text" text-anchor="middle">基础</text>
+  </g>
+
+  <g id="quakeConcept">
+    <path d="M760 410V150H990V410Z" fill="#e8e4dc" stroke="#373632" stroke-width="2"/>
+    <path d="M760 410H990V432H760Z" fill="#d1ccc3" stroke="#373632" stroke-width="2"/>
+    <path d="M730 410H760V478H730ZM990 410H1020V478H990Z" fill="url(#soil)"/>
+    <path d="M730 410H760M990 410H1020" stroke="#373632" stroke-width="2"/>
+    <g stroke="#777168" stroke-width="2">
+      <path d="M760 193H990M760 236H990M760 279H990M760 322H990M760 365H990"/>
+    </g>
+    <g fill="none" stroke="#a34c3f" stroke-width="3" marker-end="url(#redArrow)">
+      <path d="M875 150H1125"/><path d="M875 193H1100"/><path d="M875 236H1080"/><path d="M875 279H1060"/><path d="M875 322H1040"/><path d="M875 365H1020"/>
+    </g>
+    <g fill="#373632">
+      <circle cx="875" cy="150" r="5"/><circle cx="875" cy="193" r="5"/><circle cx="875" cy="236" r="5"/><circle cx="875" cy="279" r="5"/><circle cx="875" cy="322" r="5"/><circle cx="875" cy="365" r="5"/>
+    </g>
+    <text x="1030" y="137" fill="#a34c3f" font-weight="700">楼层惯性力 Fi</text>
+    <path d="M760 452H685" fill="none" stroke="#537567" stroke-width="4" marker-end="url(#greenArrow)"/>
+    <text x="640" y="492" fill="#537567" font-weight="700">基底剪力 VE</text>
+    <path d="M815 118V83M875 118V83M935 118V83" class="dimension dash"/>
+    <text x="810" y="112" class="small-text">质量集中在各楼层</text>
+  </g>
+</svg>

@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="40 20 590 820" role="img" aria-labelledby="loadTitle loadDesc">
+<title id="loadTitle">建筑重量通过基础传入地基</title><desc id="loadDesc">建筑、基础和地基采用对齐的相同平面轮廓分层展开，红色重力向下，绿色地基反力向上。</desc>
+<defs>
+  <marker id="loadArrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0 9 4.5 0 9Z" fill="#b45336"/></marker>
+  <marker id="loadReactionArrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0 9 4.5 0 9Z" fill="#3f6c62"/></marker>
+  <pattern id="soilHatch" width="14" height="14" patternUnits="userSpaceOnUse" patternTransform="rotate(35)"><line x1="0" y1="0" x2="0" y2="14" stroke="#c7c5bc" stroke-width="1.4"/></pattern>
+</defs>
+<rect width="900" height="850" fill="#fdfcf9"/>
+<g font-family="PingFang SC,Microsoft YaHei,sans-serif" fill="#242522"><text x="55" y="48" font-size="24" font-weight="700">传力路径：建筑 → 基础 → 地基</text><text x="55" y="78" font-size="16" fill="#6f726b">同一平面轮廓分层展开，只为看清接触界面；实际三者上下相接。</text></g>
+<g stroke="#242522" stroke-width="2.3" stroke-linejoin="round">
+  <path d="M120 140 280 95 365 125 205 172Z" fill="#fdfcf9"/>
+  <path d="M120 140 205 172 205 270 120 238Z" fill="#e6e4dc"/>
+  <path d="M205 172 365 125 365 223 205 270Z" fill="#f7f5ef"/>
+  <path d="M205 205 365 158M205 238 365 191M120 172 205 205M120 205 205 238" fill="none" stroke="#a9aaa3" stroke-width="1.5"/>
+  <path d="M120 375 280 330 365 360 205 407Z" fill="#d5d4cc"/>
+  <path d="M120 375v35l85 32 160-47v-35l-160 47Z" fill="#e6e4dc"/>
+  <path d="M95 595 255 550 390 592 205 644Z" fill="#f2f0e9"/>
+  <path d="M95 595v85l110 49 185-52v-85l-185 52Z" fill="url(#soilHatch)" stroke="#a9aaa3"/>
+</g>
+<g fill="none" stroke-width="3.2">
+  <g class="gravity-down" stroke="#b45336" marker-end="url(#loadArrow)"><path d="M145 285v55"/><path d="M225 300v55"/><path d="M300 280v55"/><path d="M350 260v55"/></g>
+  <g class="gravity-down" stroke="#b45336" marker-end="url(#loadArrow)"><path d="M145 455v55"/><path d="M225 480v55"/><path d="M300 460v55"/><path d="M350 440v55"/></g>
+  <g class="gravity-up" stroke="#3f6c62" marker-end="url(#loadReactionArrow)"><path d="M130 690v-75"/><path d="M225 725v-75"/><path d="M315 700v-75"/><path d="M370 675v-75"/></g>
+</g>
+<g fill="none" stroke="#8b8d85" stroke-width="1.5"><path d="M365 160h150"/><path d="M365 380h115"/><path d="M390 620h90"/></g>
+<g font-family="PingFang SC,Microsoft YaHei,sans-serif">
+  <g fill="#242522" font-size="20" font-weight="700"><text x="530" y="150">建筑整体</text><text x="495" y="370">基础</text><text x="495" y="610">地基</text></g>
+  <g fill="#6f726b" font-size="16"><text x="530" y="180">汇集各层重量</text><text x="495" y="400">承接并传递荷载</text><text x="495" y="640">提供向上支承反力</text></g>
+  <text x="70" y="820" font-size="17" fill="#b45336">向下：重力 W</text><text x="260" y="820" font-size="17" fill="#3f6c62">向上：地基反力 R</text><text x="480" y="820" font-size="17" fill="#242522">整体平衡：R＝W</text>
+</g>
+</svg>

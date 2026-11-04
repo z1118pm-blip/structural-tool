@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="结构概念交互课程：通过高清矢量图和参数实验理解建筑结构的荷载与抗力。">
+  <title>结构概念</title>
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./css/style.css">
+  <script src="./js/main.js" defer></script>
+</head>
+<body>
+  <div class="reading-progress" aria-hidden="true"><span></span></div>
+  <header class="site-header">
+    <div class="shell header-inner">
+      <a class="brand" href="./index.html" aria-label="结构概念学习首页"><span>结构概念<small>STRUCTURAL CONCEPTS</small></span></a>
+      <nav class="top-nav" aria-label="主导航"><a aria-current="page" href="./index.html">学习首页</a><div class="course-menu" data-course-menu data-root="./"></div></nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="home-hero shell">
+      <div class="home-title">
+        <p class="chapter-tag">INTERACTIVE STRUCTURAL LAB</p>
+        <h1>先看见整体，<br>再计算构件。</h1>
+        <p class="hero-lead">把建筑形式看作一个完整受力体，用荷载—抗力关系检验空间构想。无需先深入节点与配筋，也能判断方案是否站得住。</p>
+        <a class="primary-button" href="./chapters/chapter2-section1.html">开始学习<span aria-hidden="true">→</span></a>
+      </div>
+    </section>
+
+    <section class="home-map shell" aria-labelledby="map-title">
+      <div class="section-intro"><p class="section-label">大章节 / 01</p><h2 id="map-title">八个视角，建立一个整体模型</h2><p class="chapter-group-lead">从支承、荷载、抗倾覆、刚度与对称性，建立建筑整体受力的基本判断框架。</p></div>
+      <div class="map-list">
+        <a href="./chapters/chapter2-section1.html#concept"><span>01</span><strong>整体的三项要求</strong><p>有刚度并固定于地面；质量由地面支承；抵抗风与地震作用。</p><b aria-hidden="true">↗</b></a>
+        <a href="./chapters/chapter2-section1.html#lab" data-open-demo="footprint"><span>02</span><strong>支承平面与荷载分配</strong><p>用受荷面积快速估算柱荷载，比较不同支承布置。</p><b aria-hidden="true">↗</b></a>
+        <a href="./chapters/chapter2-section1.html#lab" data-open-demo="overturning"><span>03</span><strong>抗倾覆与偏心</strong><p>水平力形成倾覆力矩，地基反力通过偏移来平衡。</p><b aria-hidden="true">↗</b></a>
+        <a href="./chapters/chapter2-section1.html#lab" data-open-demo="torsion"><span>04</span><strong>水平力偏心引发的扭转</strong><p>作用力与抗力不重合时，整体还需抵抗扭矩。</p><b aria-hidden="true">↗</b></a>
+        <a href="./chapters/chapter2-section2.html"><span>05</span><strong>风荷载与地震作用估算</strong><p>以矩形规则建筑为对象，估算楼层水平力、基底剪力与倾覆力矩。</p><b aria-hidden="true">↗</b></a>
+        <a href="./chapters/chapter2-section3.html"><span>06</span><strong>高宽比与倾覆</strong><p>用 H/B 与 e/B 判断整体几何敏感性、反力偏心和基底接触状态。</p><b aria-hidden="true">↗</b></a>
+        <a href="./chapters/chapter2-section4.html"><span>07</span><strong>承载力与刚度</strong><p>分别检查抗破坏与限变形，比较支承平面中材料位置的整体效率。</p><b aria-hidden="true">↗</b></a>
+        <a href="./chapters/chapter2-section5.html"><span>08</span><strong>对称与非对称</strong><p>从荷载与抗力中心出发，识别重力弯矩、水平扭转和复杂单元接合。</p><b aria-hidden="true">↗</b></a>
+      </div>
+    </section>
+
+    <section class="home-map home-map-secondary shell" aria-labelledby="systems-map-title">
+      <div class="section-intro"><p class="section-label">大章节 / 02</p><h2 id="systems-map-title">整体性及主要分体系的相互关系</h2><p class="chapter-group-lead">从整体传力出发，继续理解空间部件、结构分体系与构件之间如何共同工作。</p></div>
+      <div class="map-list">
+        <a href="./chapters/chapter3-section2.html"><span>09</span><strong>总体系分析的整体与局部</strong><p>沿总体系、分体系、构件逐层分析，并用接合面的力与位移反馈整体方案。</p><b aria-hidden="true">↗</b></a>
+      </div>
+    </section>
+  </main>
+  <footer class="site-footer"><div class="shell"><p>结构概念 · 交互教学</p><p>动画仅用于表达建筑整体运动，数值仅用于方案阶段教学。</p></div></footer>
+</body>
+</html>

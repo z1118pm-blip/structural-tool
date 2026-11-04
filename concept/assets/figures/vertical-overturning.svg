@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 620" role="img" aria-labelledby="verticalTitle verticalDesc">
+<title id="verticalTitle">竖向悬挑也可能引起整体倾覆</title><desc id="verticalDesc">上部悬挑建筑的总重力通过总重心竖直向下，重力作用线越出支承边缘，基底反力虽与重力等值反向，仍不能消除倾覆力矩。</desc>
+<defs>
+  <marker id="verticalLoadArrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0 9 4.5 0 9Z" fill="#b45336"/></marker>
+  <marker id="verticalReactionArrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0 9 4.5 0 9Z" fill="#3f6c62"/></marker>
+  <marker id="verticalDimArrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse"><path d="M0 0 8 4 0 8Z" fill="#6f726b"/></marker>
+  <pattern id="verticalSoil" width="12" height="12" patternUnits="userSpaceOnUse" patternTransform="rotate(35)"><line x1="0" y1="0" x2="0" y2="12" stroke="#c7c5bc" stroke-width="1.4"/></pattern>
+</defs>
+<rect width="1100" height="620" fill="#fdfcf9"/>
+<g font-family="PingFang SC,Microsoft YaHei,sans-serif"><text x="60" y="48" font-size="25" font-weight="700" fill="#242522">没有水平力，也要检查整体倾覆</text><text x="60" y="80" font-size="17" fill="#6f726b">上部悬挑会移动总重心；这里用整体重力与基底反力检查平衡。</text></g>
+<g stroke="#242522" stroke-width="2.5" stroke-linejoin="round">
+  <path d="M160 170H710V270H290V430H160Z" fill="#f7f5ef"/>
+  <path d="M160 220H710M160 270H710M160 320H290M160 370H290" fill="none" stroke="#a9aaa3" stroke-width="1.5"/>
+  <path d="M110 430H390V465H110Z" fill="#d5d4cc"/>
+  <path d="M70 465H450V525H70Z" fill="url(#verticalSoil)" stroke="#a9aaa3"/>
+</g>
+<circle cx="427" cy="256" r="7" fill="#b45336"/>
+<path d="M427 270V355" fill="none" stroke="#b45336" stroke-width="3.4" marker-end="url(#verticalLoadArrow)"/>
+<path d="M390 540V475" fill="none" stroke="#3f6c62" stroke-width="3.4" marker-end="url(#verticalReactionArrow)"/>
+<circle cx="390" cy="430" r="7" fill="#242522"/>
+<g font-family="PingFang SC,Microsoft YaHei,sans-serif" font-size="21"><text x="440" y="245" fill="#b45336">G</text><text x="440" y="315" fill="#b45336">W</text><text x="365" y="570" fill="#3f6c62">R</text><text x="310" y="420" fill="#242522">支承边缘 O</text></g>
+<g fill="none" stroke="#6f726b" stroke-width="1.8" stroke-dasharray="6 5"><path d="M427 360V550M390 435V550"/></g>
+<path d="M390 550H427" fill="none" stroke="#6f726b" stroke-width="1.6" marker-start="url(#verticalDimArrow)" marker-end="url(#verticalDimArrow)"/>
+<text x="404" y="590" font-family="PingFang SC,Microsoft YaHei,sans-serif" font-size="20" fill="#242522">e</text>
+<g font-family="PingFang SC,Microsoft YaHei,sans-serif">
+  <text x="770" y="190" font-size="22" font-weight="700" fill="#b45336">倾覆力矩 M＝W×e</text>
+  <text x="770" y="245" font-size="21" font-weight="700" fill="#3f6c62">R＝W</text>
+  <text x="770" y="280" font-size="17" fill="#6f726b">竖向力平衡，但力矩未平衡</text>
+  <text x="770" y="350" font-size="19" fill="#242522">总重力作用线越出支承边缘，</text>
+  <text x="770" y="382" font-size="19" fill="#242522">仅靠基底压力无法维持整体平衡。</text>
+  <text x="770" y="445" font-size="17" fill="#6f726b">需要额外锚固抗力，或调整形体与支承。</text>
+  <text x="770" y="490" font-size="17" fill="#6f726b">若总重心仍在支承范围内，整体未必倾覆，</text>
+  <text x="770" y="522" font-size="17" fill="#6f726b">但仍需检查悬挑根部、连接与局部受弯。</text>
+</g>
+</svg>

@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" role="img" aria-labelledby="title desc">
+  <title id="title">对称与非对称的受力差别</title><desc id="desc">左图表示对称荷载与支承共线，中图表示竖向荷载偏心，右图表示水平合力与刚度中心不重合形成扭转。</desc>
+  <defs><marker id="r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5 0 10Z" fill="#a34c3f"/></marker><marker id="g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5 0 10Z" fill="#537567"/></marker><marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5 0 10Z" fill="#292a26"/></marker><marker id="d" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 5L10 0 10 10Z" fill="#6f726b"/></marker></defs>
+  <rect width="1200" height="700" fill="#f5f3ef"/>
+  <g font-family="PingFang SC,Microsoft YaHei,Noto Sans CJK SC,sans-serif" fill="#292a26">
+    <text x="55" y="55" font-size="22" font-weight="700">对称的关键，不是看起来对称</text><text x="55" y="84" font-size="14" fill="#62645e">要比较重力与支承、水平作用与抗力的作用线</text>
+    <g stroke="#292a26" fill="#e8e5de" stroke-width="2"><rect x="105" y="175" width="180" height="250"/><rect x="470" y="175" width="180" height="250"/></g>
+    <g stroke="#292a26" fill="none" stroke-width="2"><path d="M80 425H310M445 425H690"/><path d="M95 425V450H295V425M460 425V450H660V425" fill="#dfdcd4"/></g>
+    <path d="M195 130V470" stroke="#8b8c84" stroke-dasharray="7 6"/>
+    <g stroke="#a34c3f" stroke-width="3" marker-end="url(#r)"><path d="M195 215V320"/></g><text x="209" y="255" font-size="16" fill="#a34c3f">W</text>
+    <g stroke="#537567" fill="none" stroke-width="3" marker-end="url(#g)"><path d="M195 510V460"/><path d="M470 495V460"/><path d="M650 525V460"/></g>
+    <text x="195" y="550" text-anchor="middle" font-size="18" font-weight="700">共线：无整体重力弯矩</text><text x="195" y="580" text-anchor="middle" font-size="14" fill="#62645e">W 与支承合力位于同一轴线</text>
+    <path d="M555 130V470" stroke="#8b8c84" stroke-dasharray="7 6"/><path d="M590 215V320" stroke="#a34c3f" stroke-width="3" marker-end="url(#r)"/><text x="604" y="255" font-size="16" fill="#a34c3f">W</text>
+    <path d="M555 485H590" stroke="#6f726b" marker-start="url(#d)" marker-end="url(#d)"/><text x="573" y="478" text-anchor="middle" font-size="14">ev</text>
+    <text x="560" y="550" text-anchor="middle" font-size="18" font-weight="700">竖向偏心：反力重新分配</text><text x="560" y="580" text-anchor="middle" font-size="14" fill="#62645e">Mv = W·ev，两侧支承不再等力</text>
+    <path d="M740 115V610" stroke="#c4c2ba"/>
+    <text x="790" y="140" font-size="18" font-weight="700">平面内的水平偏心</text>
+    <rect x="830" y="205" width="280" height="245" fill="#e8e5de" stroke="#292a26" stroke-width="2"/>
+    <path d="M970 175V475M800 327H1140" stroke="#aaa9a1" stroke-dasharray="7 6"/>
+    <circle cx="1025" cy="285" r="8" fill="#a34c3f"/><text x="1038" y="278" font-size="15" fill="#a34c3f">质量中心 CM</text>
+    <circle cx="945" cy="365" r="8" fill="#537567"/><text x="855" y="393" font-size="15" fill="#537567">刚度中心 CR</text>
+    <path d="M1025 210V278" stroke="#a34c3f" stroke-width="3" marker-end="url(#r)"/><text x="1038" y="222" font-size="15" fill="#a34c3f">H</text>
+    <path d="M945 470V405" stroke="#537567" stroke-width="3" marker-end="url(#g)"/><text x="958" y="459" font-size="15" fill="#537567">R</text>
+    <path d="M1025 327H945" stroke="#6f726b" marker-start="url(#d)" marker-end="url(#d)"/><text x="985" y="316" text-anchor="middle" font-size="14">ex</text>
+    <path d="M870 415C800 390 790 285 860 245" fill="none" stroke="#a34c3f" stroke-width="3" marker-end="url(#r)"/><text x="780" y="330" font-size="15" fill="#a34c3f">T = H·ex</text>
+    <text x="970" y="550" text-anchor="middle" font-size="18" font-weight="700">水平偏心：产生整体扭转</text><text x="970" y="580" text-anchor="middle" font-size="14" fill="#62645e">即使外轮廓规则，抗侧力构件偏置也会扭转</text>
+    <text x="600" y="650" text-anchor="middle" font-size="15" fill="#62645e">判断顺序：找荷载合力 → 找支承或抗力中心 → 量两条作用线之间的偏心距</text>
+  </g>
+</svg>

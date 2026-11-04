@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="通过抗倾覆力矩比较、弹性侧移与支承平面实验，理解建筑整体承载能力、刚度和材料布置效率。">
+  <title>承载力与刚度｜结构概念</title>
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../css/style.css">
+  <script src="../js/main.js" defer></script>
+</head>
+<body>
+  <div class="reading-progress" aria-hidden="true"><span></span></div>
+  <header class="site-header"><div class="shell header-inner"><a class="brand" href="../index.html" aria-label="结构概念学习首页"><span>结构概念<small>STRUCTURAL CONCEPTS</small></span></a><nav class="top-nav" aria-label="主导航"><a href="../index.html">学习首页</a><div class="course-menu" data-course-menu data-root="../"></div><a href="#concept">核心概念</a><a href="#lab">交互实验</a></nav></div></header>
+
+  <main id="capacityLesson">
+    <section class="lesson-hero shell">
+      <div class="lesson-heading"><p class="chapter-tag">CAPACITY · STIFFNESS LAB</p><h1>承载力与刚度</h1><p class="hero-lead">“没有破坏”并不等于“可以正常使用”。承载力保证整体能够抵抗荷载，刚度则限制荷载引起的变形。方案阶段要把这两道门槛分开判断，再检查材料是否布置在真正有效的位置。</p></div>
+      <dl class="lesson-meta"><dt>承载能力</dt><dd>抵抗破坏与失效的能力</dd><dt>刚度</dt><dd>抵抗变形的能力，k = V/Δ</dd><dt>整体效率</dt><dd>材料性质 × 数量 × 几何布置</dd></dl>
+    </section>
+
+    <section class="lesson-section" id="concept" aria-labelledby="concept-title"><div class="shell">
+      <div class="section-heading"><p class="section-label">核心概念 / 01</p><div><h2 id="concept-title">先保证站得住，再控制怎么动</h2><p>把建筑简化为支承在弹性体系上的整体，可以直观看到：竖向荷载引起轴向压缩，水平作用引起弯曲与侧移，动力作用还会放大整体运动。</p></div></div>
+      <figure class="source-figure original-figure"><img src="../assets/figures/capacity-stiffness.svg" alt="承载力不足、刚度不足和材料外移提高效率的对比图"><figcaption class="figure-swipe-hint">左右滑动查看全图</figcaption></figure>
+      <div class="concept-grid concept-text-grid">
+        <article class="concept-item"><h3>强度与变形是两项独立要求</h3><p>构件或体系即使尚未达到破坏状态，过大的压缩、侧移或振动仍可能影响使用。因此不能仅用承载力验算代替刚度判断。</p></article>
+        <article class="concept-item"><h3>轴向刚度看 EA，抗弯刚度看 EI</h3><p>弹性模量 E 反映材料特性；面积 A 与惯性矩 I 反映材料数量和几何分布。提高材料等级与调整体形，是两条不同路径。</p></article>
+        <article class="concept-item"><h3>远离中和轴的材料更高效</h3><p>整体弯曲时，一侧伸长、另一侧缩短。外柱或外墙既能提供较大的轴力增量，也拥有更长的抗弯力臂，贡献通常远大于中部材料。</p></article>
+      </div>
+      <div class="key-note"><strong>增加材料，不一定改善布置效率</strong><p>同样多的材料集中在中和轴附近，整体抗弯贡献有限。先调整支承宽度和柱墙位置，再比较材料用量，往往比简单加大截面更有效。</p></div>
+    </div></section>
+
+    <section class="lesson-section" id="lab" aria-labelledby="lab-title"><div class="shell">
+      <div class="section-heading"><p class="section-label">交互实验 / 02</p><div><h2 id="lab-title">分别比较抗倾覆力矩与弹性侧移，再看布置效率</h2><p>红色表示水平作用与需求，绿色表示抗力。实验采用线弹性、等效悬臂的整体简化模型，位移为概念估算；M/M<sub>R</sub> 仅是整体承载能力中的抗倾覆力矩比较，不是完整承载力验算。</p></div></div>
+      <div class="lab-shell">
+        <div class="demo-tabs two-tabs" role="tablist" aria-label="承载力与刚度实验">
+          <button class="demo-tab" id="tab-response" role="tab" aria-selected="true" aria-controls="responsePanel" data-demo="response"><span>RESPONSE</span>抗倾覆与弹性侧移</button>
+          <button class="demo-tab" id="tab-efficiency" role="tab" aria-selected="false" aria-controls="efficiencyPanel" data-demo="efficiency" tabindex="-1"><span>EFFICIENCY</span>支承平面效率</button>
+        </div>
+
+        <section class="demo-panel is-active" id="responsePanel" role="tabpanel" aria-labelledby="tab-response">
+          <div class="parameter-rack response-rack" aria-label="整体响应参数">
+            <div class="range-control"><label for="capacityHeight">建筑高度 H <output id="capacityHeightOutput">60 m</output></label><input id="capacityHeight" type="range" min="24" max="100" value="60" step="4"></div>
+            <div class="range-control"><label for="capacityShear">水平合力 V <output id="capacityShearOutput">3,000 kN</output></label><input id="capacityShear" type="range" min="500" max="10000" value="3000" step="250"></div>
+            <div class="range-control"><label for="capacityModulus">弹性模量 E <output id="capacityModulusOutput">30 GPa</output></label><input id="capacityModulus" type="range" min="20" max="210" value="30" step="10"></div>
+            <div class="range-control"><label for="capacityInertia">整体等效 Ieq <output id="capacityInertiaOutput">12,000 m⁴</output></label><input id="capacityInertia" type="range" min="1000" max="40000" value="12000" step="1000"></div>
+            <div class="range-control"><label for="momentCapacity">抗倾覆比较值 MR <output id="momentCapacityOutput">160,000 kN·m</output></label><input id="momentCapacity" type="range" min="30000" max="400000" value="160000" step="10000"></div>
+            <button class="control-button" id="resetCapacity">全部复位</button>
+          </div>
+          <div class="parameter-notes"><p class="model-note"><strong>I<sub>eq</sub> 是什么？</strong>把真实的柱、墙、支撑及其连接共同组成的抗侧力体系，等效为一根沿高度均匀弯曲的悬臂梁后，用来代表整体抗弯变形能力的参数。它不是单根构件的截面惯性矩，也不是建筑固定不变的固有属性；会随所采用的等效模型、受力方向、连接与开裂状态等改变。本页的 12,000 m⁴ 是可调教学输入值，并非由建筑尺寸自动计算；在同一倒三角形荷载模型下，也可由顶点位移反算 I<sub>eq</sub> = 11VH³/(60EΔ)。侧向位移直接反映的是整体 EI<sub>eq</sub> 乘积，仅凭一个位移不能把 E 与 I<sub>eq</sub> 唯一拆分；页面保留二者独立调整，是为了分别观察参数影响，实际分解还需已知材料模量、几何布置或其他独立试验条件。若 Δ 来自包含剪切变形等因素的总位移，反算所得应称为“有效整体刚度参数”，不能解释为只代表纯弯曲截面性质。</p>
+          <p class="model-note"><strong>M<sub>R</sub> 是独立教学输入：</strong>不由建筑重力或支承宽度自动计算。实际抗倾覆能力还取决于重力、抗拔、锚固和基础条件；本页只比较 M 与所输入的 M<sub>R</sub>。</p></div>
+          <div class="demo-layout"><div class="diagram-stage"><span class="diagram-caption">整体悬臂模型 / 变形已放大显示，数值按弹性公式计算</span><svg id="capacityDiagram" class="aspect-figure" viewBox="0 0 760 580" role="img" aria-label="建筑水平作用、变形与基底剪力动态图"></svg></div>
+            <div class="demo-controls"><h3>同一次作用，读两个结果</h3><p>水平作用采用基底为零、顶部最大的倒三角形分布，其合力位于 H̄ = 2H/3。倾覆力矩需求 M 与 M<sub>R</sub> 比较；顶点位移 Δ 只与教学参考值 H/550 对照，不作为实际工程验收结论。</p>
+              <div class="metric-row"><div class="metric"><span>倾覆力矩需求 M</span><strong id="capacityMoment">0 kN·m</strong></div><div class="metric"><span>抗倾覆力矩比 M/M<sub>R</sub></span><strong id="capacityUtilisation">0.00</strong></div></div>
+              <div class="metric-row"><div class="metric"><span>顶点位移 Δ</span><strong id="capacityDrift">0 mm</strong></div><div class="metric"><span>位移角 Δ/H</span><strong id="capacityDriftRatio">1/0</strong></div></div>
+              <div class="dual-status"><div class="status-line" id="strengthStatus" aria-live="polite"></div><div class="status-line" id="stiffnessStatus" aria-live="polite"></div></div>
+              <div class="formula-box formula-explainer">
+                <span class="formula-kicker">同一倒三角形荷载下的静力与弹性变形关系</span>
+                <div class="formula-lines" aria-label="抗倾覆力矩、弹性侧移与等效侧向刚度计算公式">
+                  <p>M = <span class="fraction"><span>2VH</span><span>3</span></span></p>
+                  <p>Δ = <span class="fraction"><span>11VH<sup>3</sup></span><span>60EI<sub>eq</sub></span></span></p>
+                  <p>k = V / Δ = <span class="fraction"><span>60EI<sub>eq</sub></span><span>11H<sup>3</sup></span></span></p>
+                </div>
+                <p class="formula-source"><strong>关系来源：</strong>M 由倒三角形分布荷载的合力位置 2H/3 与静力矩求得；Δ 和 k 来自欧拉—伯努利悬臂梁的弯曲变形关系。假定线弹性、等效 EI<sub>eq</sub> 沿高度不变、基底固定，忽略剪切变形和二阶效应。刚度 k = V/Δ 表示产生单位顶点位移所需的水平合力；其倒数 Δ/V 才是柔度。</p>
+                <details class="parameter-definitions"><summary>查看符号与参数含义</summary><dl>
+                  <div><dt>V</dt><dd>全部楼层水平作用的合力，kN。</dd></div>
+                  <div><dt>H、H̄</dt><dd>建筑高度与水平合力距基底的高度，m；本模型 H̄ = 2H/3。</dd></div>
+                  <div><dt>M</dt><dd>水平作用对基底的倾覆力矩需求，kN·m。</dd></div>
+                  <div><dt>M<sub>R</sub></dt><dd>人为输入的抗倾覆力矩比较值，kN·m，并非由本模型自动求得，也不代表完整体系承载力。</dd></div>
+                  <div><dt>E</dt><dd>等效弹性模量，GPa；计算时换算为 E × 10<sup>6</sup> kN/m²。</dd></div>
+                  <div><dt>I<sub>eq</sub></dt><dd>整体等效抗弯惯性矩，m<sup>4</sup>；将真实抗侧力体系等效为均匀悬臂梁后的整体抗弯参数。</dd></div>
+                  <div><dt>Δ</dt><dd>悬臂模型顶点的水平位移，计算结果为 m，页面显示为 mm。</dd></div>
+                  <div><dt>k</dt><dd>以顶点合力与顶点位移之比定义的等效侧向刚度，kN/m。</dd></div>
+                </dl></details>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="demo-panel" id="efficiencyPanel" role="tabpanel" aria-labelledby="tab-efficiency" hidden>
+          <div class="parameter-rack efficiency-rack" aria-label="支承布置参数">
+            <div class="range-control"><label for="efficiencyWidth">外柱间距 B <output id="efficiencyWidthOutput">24 m</output></label><input id="efficiencyWidth" type="range" min="12" max="40" value="24" step="2"></div>
+            <div class="range-control"><label for="innerPosition">内柱位置 rB <output id="innerPositionOutput">4.0 m</output></label><input id="innerPosition" type="range" min="0" max="0.45" value="0.1667" step="0.0167"></div>
+            <div class="range-control"><label for="totalArea">柱总面积 ΣA <output id="totalAreaOutput">8.0 m²</output></label><input id="totalArea" type="range" min="4" max="20" value="8" step="1"></div>
+            <button class="control-button" id="resetEfficiency">复位</button>
+          </div>
+          <div class="parameter-notes single"><p class="model-note">上页四柱图为带柱高的立面受力示意，并非严格的支承平面图。绿色箭头表示整体弯曲引起的柱轴力增量方向，不是柱总轴力，也不是地基支承总反力；按受拉为正，右侧 +ΔN 为受拉增量，左侧 −ΔN 为受压增量。</p></div>
+          <div class="demo-layout"><div class="diagram-stage"><span class="diagram-caption">四根等面积柱立面 / 忽略局部惯性矩，比较整体轴向变形贡献</span><svg id="efficiencyDiagram" class="aspect-figure" viewBox="0 0 760 580" role="img" aria-label="四柱立面、内柱位置与整体抗弯效率动态图"></svg></div>
+            <div class="demo-controls"><h3>内柱移向中部，效率怎样变化？</h3><p>四根柱面积相同，外柱固定在 ±B/2。这里选用“同面积全外置参照”：把相同柱总面积全部集中到 ±B/2 两侧，得到参照值 I<sub>ref</sub>。它只用于统一比较本模型的几何贡献，不代表实际工程的最佳方案。</p>
+              <div class="metric-row"><div class="metric"><span>当前布置整体惯性矩 I</span><strong id="layoutInertia">0 m⁴</strong></div><div class="metric"><span>惯性矩比 η = I/I<sub>ref</sub></span><strong id="layoutEfficiency">0%</strong></div></div>
+              <div class="metric-row"><div class="metric"><span>同面积全外置参照 I<sub>ref</sub></span><strong id="idealInertia">0 m⁴</strong></div><div class="metric"><span>同 E 时抗弯刚度比</span><strong id="relativeStiffness">0.00</strong></div></div>
+              <div class="status-line" id="efficiencyStatus" aria-live="polite"></div>
+              <div class="formula-box formula-explainer">
+                <span class="formula-kicker">由柱的轴向变形贡献比较整体抗弯布置</span>
+                <div class="formula-lines" aria-label="四柱布置效率计算公式">
+                  <p>I = <span class="summation"><sup>4</sup><span>∑</span><sub>i = 1</sub></span> A<sub>i</sub>x<sub>i</sub><sup>2</sup></p>
+                  <p>I<sub>ref</sub> = AB<sup>2</sup> / 4</p>
+                  <p>η = I / I<sub>ref</sub> = 0.5 + 2r<sup>2</sup></p>
+                </div>
+                <p class="formula-source"><strong>关系来源：</strong>I 由各柱轴向刚度对整体弯曲的贡献求得，对应组合截面中忽略柱自身局部惯性矩后的面积二次矩；η 是本页定义的相对布置效率。四柱等面积，外柱位于 ±B/2，内柱位于 ±rB，经代数整理得到 0.5 + 2r²。</p>
+                <details class="parameter-definitions"><summary>查看符号、单位与适用条件</summary><dl>
+                  <div><dt>A</dt><dd>四根柱的截面总面积，m²；每根柱面积为 A/4。</dd></div>
+                  <div><dt>A<sub>i</sub>、x<sub>i</sub></dt><dd>第 i 根柱的截面面积（m²）及其到中和轴的有符号距离（m）。</dd></div>
+                  <div><dt>I</dt><dd>四根柱对整体抗弯惯性矩的贡献，m<sup>4</sup>。</dd></div>
+                  <div><dt>I<sub>ref</sub></dt><dd>同面积全外置参照的整体惯性矩：相同总面积全部集中于 ±B/2 两侧，m<sup>4</sup>；仅作比较基准。</dd></div>
+                  <div><dt>B</dt><dd>两根外柱的间距，m。</dd></div>
+                  <div><dt>r、rB</dt><dd>r 为无量纲内柱位置系数；rB 为内柱到中和轴的距离，m。</dd></div>
+                  <div><dt>η</dt><dd>当前 I 与同面积全外置参照 I<sub>ref</sub> 之比，无量纲；相同 E 时也等于抗弯刚度比。</dd></div>
+                  <div><dt>与 I<sub>eq</sub> 的关系</dt><dd>本实验的 I 是四柱平面内、忽略局部惯性矩后的面积二次矩；I<sub>eq</sub> 则是完整体系等效为悬臂梁后的参数，可能还包含墙、支撑、连梁、剪切变形等影响，不能直接把这个四柱 I 当作 I<sub>eq</sub>。</dd></div>
+                  <div><dt>模型边界</dt><dd>平截面假定、各柱 E 相同，忽略柱自身局部惯性矩；η 不代表材料用量、承载力、延性或完整柱网效率。</dd></div>
+                </dl></details>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+      <p class="model-note">模型说明：H/550 仅作为位移数值的教学参照，不对应特定结构类型的规范限值；整体顶点位移也不等于层间位移角。效率实验只比较材料位置对整体抗弯刚度的贡献，不代表完整柱网设计。</p>
+    </div></section>
+
+    <div class="shell lesson-end"><div class="end-links"><a href="./chapter2-section3.html">← 回顾高宽比与倾覆</a><a href="../index.html">学习首页</a><a href="./chapter2-section5.html">继续：对称与非对称 →</a></div><p>学习完成：承载力控制破坏风险，刚度控制变形；材料的位置决定其整体抗弯效率。</p></div>
+  </main>
+  <footer class="site-footer"><div class="shell"><p>结构概念 · 交互教学</p><p>承载力 · 轴向与抗弯刚度 · 支承布置效率</p></div></footer>
+</body>
+</html>

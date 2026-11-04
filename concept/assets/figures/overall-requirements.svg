@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 500" role="img" aria-labelledby="overallTitle overallDesc">
+<title id="overallTitle">建筑作为整体必须满足三项基本要求</title><desc id="overallDesc">建筑底面与基础顶面完全重合，基础与地基相接；重力从半高处的重心竖直向下；风作用与基底抗力平行反向。</desc>
+<defs>
+  <marker id="overallArrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0 9 4.5 0 9Z" fill="#b45336"/></marker>
+  <marker id="overallReactionArrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0 9 4.5 0 9Z" fill="#3f6c62"/></marker>
+  <pattern id="groundHatch" width="12" height="12" patternUnits="userSpaceOnUse" patternTransform="rotate(35)"><line x1="0" y1="0" x2="0" y2="12" stroke="#c7c5bc" stroke-width="1.5"/></pattern>
+</defs>
+<rect width="1500" height="500" fill="#fdfcf9"/>
+<g font-family="PingFang SC,Microsoft YaHei,sans-serif" fill="#242522" font-size="21" font-weight="700">
+  <text x="70" y="42">01　几何稳定，并与地面可靠连接</text><text x="570" y="42">02　重量由地面支承</text><text x="1070" y="42">03　抵抗风荷载或地震作用</text>
+</g>
+<g stroke="#242522" stroke-width="2.3" stroke-linejoin="round">
+  <g id="fixed">
+    <path d="M45 360 235 435 445 345 255 275Z" fill="url(#groundHatch)" stroke="#a9aaa3"/>
+    <path d="M100 300 200 340 365 290 265 250Z" fill="#d5d4cc"/>
+    <path d="M100 300v30l100 40 165-50v-30l-165 50Z" fill="#e6e4dc"/>
+    <path d="M100 100 265 50 365 90 200 140Z" fill="#fdfcf9"/>
+    <path d="M100 100 200 140 200 340 100 300Z" fill="#e6e4dc"/>
+    <path d="M200 140 365 90 365 290 200 340Z" fill="#f7f5ef"/>
+    <path d="M200 210 365 160M200 270 365 220M100 170 200 210M100 230 200 270" fill="none" stroke="#a9aaa3" stroke-width="1.5"/>
+  </g>
+  <g id="mass" transform="translate(500 0)">
+    <path d="M45 360 235 435 445 345 255 275Z" fill="url(#groundHatch)" stroke="#a9aaa3"/>
+    <path d="M100 300 200 340 365 290 265 250Z" fill="#d5d4cc"/>
+    <path d="M100 300v30l100 40 165-50v-30l-165 50Z" fill="#e6e4dc"/>
+    <path d="M100 100 265 50 365 90 200 140Z" fill="#fdfcf9"/>
+    <path d="M100 100 200 140 200 340 100 300Z" fill="#e6e4dc"/>
+    <path d="M200 140 365 90 365 290 200 340Z" fill="#f7f5ef"/>
+    <path d="M200 210 365 160M200 270 365 220M100 170 200 210M100 230 200 270" fill="none" stroke="#a9aaa3" stroke-width="1.5"/>
+    <circle cx="232.5" cy="195" r="7" fill="#b45336" stroke="none"/>
+    <path d="M232.5 210v75" fill="none" stroke="#b45336" stroke-width="3.5" marker-end="url(#overallArrow)"/>
+    <path d="M232.5 420v-80" fill="none" stroke="#3f6c62" stroke-width="3.5" marker-end="url(#overallReactionArrow)"/>
+  </g>
+  <g id="environment" transform="translate(1000 0)">
+    <path d="M45 360 235 435 445 345 255 275Z" fill="url(#groundHatch)" stroke="#a9aaa3"/>
+    <path d="M100 300 200 340 365 290 265 250Z" fill="#d5d4cc"/>
+    <path d="M100 300v30l100 40 165-50v-30l-165 50Z" fill="#e6e4dc"/>
+    <path d="M100 100 265 50 365 90 200 140Z" fill="#fdfcf9"/>
+    <path d="M100 100 200 140 200 340 100 300Z" fill="#e6e4dc"/>
+    <path d="M200 140 365 90 365 290 200 340Z" fill="#f7f5ef"/>
+    <path d="M200 210 365 160M200 270 365 220M100 170 200 210M100 230 200 270" fill="none" stroke="#a9aaa3" stroke-width="1.5"/>
+    <g class="wind-svg" fill="none" stroke="#b45336" stroke-width="3.5" marker-end="url(#overallArrow)"><path d="M50 205 130 181"/></g>
+    <path class="eq-svg" d="M350 330 270 354" fill="none" stroke="#3f6c62" stroke-width="3.5" marker-end="url(#overallReactionArrow)"/>
+  </g>
+</g>
+<g font-family="PingFang SC,Microsoft YaHei,sans-serif" font-size="18">
+  <g fill="#3f6c62"><text x="355" y="400">基础与地基相接</text><text x="747" y="435">R</text><text x="1355" y="370">基底抗力 R</text></g>
+  <g fill="#b45336"><text x="744" y="185">G</text><text x="747" y="250">W</text><g text-anchor="end"><text x="1080" y="160">风荷载或地震作用 H</text><text x="1080" y="185">箭头仅示作用方向</text></g></g>
+</g>
+<g font-family="PingFang SC,Microsoft YaHei,sans-serif" font-size="17" fill="#6f726b" text-anchor="middle"><text x="250" y="475">建筑与基础直接相接，基础落于地基</text><text x="750" y="475">均匀建筑重心约在半高处，W 通过重心</text><text x="1250" y="475">H 与 R 平行反向，ΣH＝0</text></g>
+</svg>
