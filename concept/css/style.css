@@ -540,31 +540,56 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
 .solid-axioms span { color: var(--accent); font: 700 22px var(--font-read); }
 .solid-axioms h3 { margin: 12px 0 8px; font: 700 25px var(--font-read); }
 .solid-axioms p { color: var(--ink-soft); font: 15px/1.75 var(--font-read); }
+.solid-outline { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; padding: 28px 0; border-block: 1px solid var(--line); }
+.solid-outline a { display: grid; gap: 5px; align-content: start; min-width: 0; padding: 0 4px; }
+.solid-outline span { color: var(--accent); font: 11px var(--font-mono); letter-spacing: .04em; }
+.solid-outline strong { font: 700 17px/1.5 var(--font-read); }
+.solid-outline small { color: var(--ink-soft); font-size: 12px; line-height: 1.6; }
+.solid-outline a:hover strong { color: var(--accent); }
+.solid-chapter[id] { scroll-margin-top: 96px; }
 .solid-chapter { margin-top: 88px; }
 .solid-chapter-head { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(0, 2fr); gap: 12px 48px; margin-bottom: 36px; padding-top: 24px; border-top: 1px solid var(--ink); }
 .solid-chapter-head > p { grid-row: 1 / 3; margin: 4px 0 0; color: var(--accent); font: 700 12px var(--font-mono); letter-spacing: .08em; }
 .solid-chapter-head h2 { margin: 0; font: 700 32px/1.35 var(--font-read); }
 .solid-chapter-head > p:last-child { margin: 0; max-width: 70ch; color: var(--ink-soft); font-family: var(--font-read); }
-.solid-figure-grid { display: grid; gap: 28px; }
-.solid-figure-grid.three-up { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.solid-figure-grid { display: grid; gap: 40px; }
+.solid-figure-grid.stacked { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 40px 48px; }
 .solid-figure-grid.two-up { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 40px 48px; }
+#fig3-12, #fig3-13 { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1000px) minmax(280px, 1fr); gap: 48px; align-items: start; }
+#fig3-12 > figure, #fig3-13 > figure { grid-column: 1; grid-row: 1 / span 3; }
+#fig3-12 > p, #fig3-13 > p { grid-column: 2; }
+#fig3-14 { max-width: 1100px; margin-inline: auto; }
 .solid-figure-card.reference-figure { grid-column: 1 / -1; }
-.solid-figure-card.reference-figure figure { overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
 .solid-figure-card.reference-figure svg { min-width: 1080px; }
 .solid-figure-card { min-width: 0; }
-.solid-figure-card figure, .solid-wide-figure figure { margin: 0 0 20px; border-block: 1px solid var(--line); background: oklch(0.975 0.004 95); }
-.solid-figure-card svg, .solid-wide-figure svg { display: block; width: 100%; height: auto; }
-.solid-figure-card figcaption, .solid-wide-figure figcaption { padding: 12px 4px; border-top: 1px solid var(--line); color: var(--ink-soft); font-size: 13px; line-height: 1.6; }
+.solid-figure-card figure, .solid-wide-figure figure { margin: 0 0 20px; border-block: 1px solid var(--line); background: oklch(0.975 0.004 95); overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
+.solid-figure-card svg, .solid-wide-figure svg { display: block; width: 100%; height: auto; max-width: none; margin-inline: auto; }
+#fig3-3 > figure > svg { width: 540px; }
+#fig3-4 > figure > svg { width: 650px; }
+#fig3-8 > figure > svg { width: 550px; }
+#fig3-5 > figure > svg, #fig3-9 > figure > svg { width: 650px; }
+#fig3-6 > figure > svg { width: 620px; }
+#fig3-7 > figure > svg { width: 1360px; }
+#fig310drawing { width: 900px; }
+#fig311drawing { width: 1400px; }
+#fig312drawing, #fig313drawing { width: 1000px; }
+#fig314Combined { width: 1040px; }
+.solid-formula-panel { width: 100%; margin: 8px 0 24px; padding: 28px; border-block: 1px solid var(--ink); background: var(--paper); }
+.solid-formula-panel h3 { margin-bottom: 20px; font: 700 24px/1.4 var(--font-read); }
+.solid-formula-panel p { color: var(--ink-soft); font: 15px/1.8 var(--font-read); }
+.solid-formula-panel p + p { margin-top: 12px; }
+.solid-formula-panel .formula-line { padding: 10px 16px; background: var(--paper-deep); color: var(--ink); font: 600 16px/1.8 var(--font-mono); overflow-wrap: anywhere; }
+.solid-figure-card figcaption, .solid-wide-figure figcaption { padding: 12px 4px; border-top: 1px solid var(--line); color: var(--ink-soft); font-size: 14px; line-height: 1.6; }
 .solid-figure-card figcaption strong, .solid-wide-figure figcaption strong { color: var(--ink); margin-right: 8px; }
 .solid-figure-card > p, .solid-wide-figure > div > p:not(.section-label) { color: var(--ink-soft); font: 15px/1.8 var(--font-read); }
 .solid-figure-card > p + p { margin-top: 12px; }
 .solid-figure-card .figure-link { padding-top: 12px; border-top: 1px dotted var(--line); font-size: 14px; }
-.solid-wide-figure { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, .9fr); gap: 56px; align-items: center; margin-top: 48px; padding-top: 32px; border-top: 1px solid var(--line); }
+.solid-wide-figure { display: grid; grid-template-columns: minmax(300px, 1fr) minmax(0, 2fr); gap: 48px; align-items: start; margin-top: 48px; padding-top: 32px; border-top: 1px solid var(--line); }
 .solid-wide-figure h3 { margin: 12px 0 18px; font: 700 28px var(--font-read); }
 .solid-figure-card svg text, .solid-wide-figure svg text, .solid-lab-figure text { fill: var(--ink); font: 15px var(--font-ui); }
-.solid-figure-card svg .diagram-title, .solid-wide-figure svg .diagram-title { font-size: 16px; font-weight: 700; }
+.solid-figure-card svg .diagram-title, .solid-wide-figure svg .diagram-title { font-size: 17px; font-weight: 700; }
 .solid-figure-card svg .small-text, .solid-wide-figure svg .small-text { fill: var(--ink-soft); font-size: 13px; }
-.solid-figure-card svg .formula-text, .solid-wide-figure svg .formula-text { font: 700 14px var(--font-mono); }
+.solid-figure-card svg .formula-text, .solid-wide-figure svg .formula-text { font: 700 15px var(--font-mono); }
 .solid-figure-card svg .reference-line, .solid-wide-figure svg .reference-line { fill: none; stroke: var(--ink-soft); stroke-width: 1.2; stroke-dasharray: 6 5; }
 .solid-figure-card svg .hatch-stroke, .solid-wide-figure svg .hatch-stroke { fill: none; stroke: var(--ink-soft); stroke-width: .8; }
 .solid-figure-card svg .action-line, .solid-wide-figure svg .action-line, .solid-figure-card svg .opening-line, .solid-wide-figure svg .opening-line { fill: none; stroke: var(--accent); stroke-width: 2.6; }
@@ -609,6 +634,7 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
 .solid-lab-figure .action-text { fill: var(--accent); font-weight: 700; }
 .solid-lab-figure .resistance-text { fill: var(--diagram); font-weight: 700; }
 .solid-lab-figure .value { font: 700 14px var(--font-mono); }
+.solid-lab-figure .equation-sign { font: 700 28px var(--font-ui); }
 .solid-lab-figure .small { fill: var(--ink-soft); font-size: 12px; }
 .solid-lab-figure .outline { fill: var(--paper-deep); stroke: var(--ink); stroke-width: 1.8; }
 .solid-lab-figure .guide { fill: none; stroke: var(--ink-soft); stroke-width: 1.1; }
@@ -621,10 +647,13 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
 @media (max-width: 1200px) {
   .solid-action-rack { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .solid-action-rack .segmented-control { grid-column: 1 / -1; }
+  #fig3-12, #fig3-13 { display: block; max-width: 1000px; margin-inline: auto; }
 }
 @media (max-width: 1000px) {
-  .solid-figure-grid.three-up { grid-template-columns: 1fr 1fr; }
-  .solid-figure-grid.three-up article:last-child { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+  .solid-figure-grid.stacked .solid-figure-card { display: block; max-width: 720px; margin-inline: auto; }
+  .solid-figure-grid.stacked, .solid-figure-grid.two-up { grid-template-columns: 1fr; }
+  .solid-wide-figure { grid-template-columns: 1fr; gap: 24px; }
+  .solid-wide-figure figure { width: 100%; max-width: 900px; margin-inline: auto; }
   .solid-stress-rack, .solid-section-rack { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 @media (max-width: 720px) {
@@ -632,18 +661,21 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
   .solid-axioms { grid-template-columns: 1fr; margin-bottom: 72px; }
   .solid-axioms article, .solid-axioms article + article { padding: 22px 0; border-left: 0; }
   .solid-axioms article + article { border-top: 1px solid var(--line); }
+  .solid-outline { grid-template-columns: 1fr 1fr; gap: 24px 20px; padding: 22px 0; }
+  .solid-outline strong { font-size: 15px; }
   .solid-chapter { margin-top: 64px; }
   .solid-chapter-head { grid-template-columns: 1fr; gap: 12px; }
   .solid-chapter-head > p { grid-row: auto; }
   .solid-chapter-head h2 { font-size: 27px; }
-  .solid-figure-grid.three-up, .solid-figure-grid.two-up { grid-template-columns: 1fr; gap: 40px; }
-  .solid-figure-grid.three-up article:last-child { grid-column: auto; display: block; }
+  .solid-figure-grid.stacked, .solid-figure-grid.two-up { grid-template-columns: 1fr; gap: 40px; }
+  .solid-figure-grid.stacked .solid-figure-card { max-width: none; }
   .solid-figure-card figure, .solid-wide-figure figure { overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
   .solid-figure-card figure::before, .solid-wide-figure figure::before { content: "左右滑动查看完整教学图"; position: sticky; left: 0; display: block; width: max-content; padding: 6px 10px; color: var(--ink-soft); font-size: 12px; background: var(--paper); }
-  .solid-figure-card svg, .solid-wide-figure svg { min-width: 600px; }
+  .solid-figure-card svg, .solid-wide-figure svg { min-width: 680px; }
   #solidLesson .solid-lab-figure { min-width: 680px; min-height: 0; }
-  .solid-wide-figure { grid-template-columns: 1fr; gap: 24px; }
   .solid-action-rack, .solid-stress-rack, .solid-section-rack { grid-template-columns: 1fr; }
+  .solid-formula-panel { padding: 22px 18px; }
+  .solid-formula-panel h3 { font-size: 22px; }
   .segmented-control button { padding-inline: 6px; }
   #solidLesson .end-links { flex-direction: column; gap: 12px; }
 }

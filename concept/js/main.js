@@ -1239,18 +1239,19 @@
     const z = Math.min(Number($('solidCut').value), h);
     const t = z / h;
     let V, M, resultant, base;
-    if (loadType === 'point') { V = H; M = H * z; resultant = h; base = H * h; }
+    if (loadType === 'point') { V = H; M = H * (h - z); resultant = h; base = H * h; }
     else if (loadType === 'uniform') { V = H * (1 - t); M = H * h * (1 - t) ** 2 / 2; resultant = h / 2; base = H * h / 2; }
     else { V = H * (1 - t ** 2); M = H * (2 * h / 3 - z + z ** 3 / (3 * h ** 2)); resultant = 2 * h / 3; base = 2 * H * h / 3; }
     return { H, h, z, t, V, M, resultant, base };
   }
   function drawActions(d) {
     const svg = $('actionsDiagram'); svg.replaceChildren();
-    marker(svg, 'solidAction', '#a34c3f'); marker(svg, 'solidResistance', '#537567');
+    marker(svg, 'solidAction', '#a34c3f');
     const top = 70, base = 420, xs = [155, 390, 625], cut = base - d.t * (base - top);
     center(svg, 390, 30, '作用分布　→　截面剪力　→　倾覆力矩', 'value');
     xs.forEach((x, i) => {
-      line(svg, x, top, x, base, 'guide'); line(svg, x - 90, base, x + 90, base, 'ground-line');
+      line(svg, x, top, x, base, 'guide');
+      if (i === 0) line(svg, x - 90, base, x + 90, base, 'ground-line');
       center(svg, x, 465, ['水平作用', '剪力 V(z)', '弯矩 M(z)'][i], 'value');
     });
     if (d.H > 0) {
@@ -1276,20 +1277,23 @@
         shearCurve += `${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`;
       }
       add(svg, 'path', { d: `${shearCurve}L390 ${top}L390 ${base}Z`, class: 'compression' });
-      if (vScale > 0) arrow(svg, 390, cut, 390 + 115 * vScale, cut, 'resistance', 'solidResistance');
+      if (vScale > 0) line(svg, 390, cut, 390 + 115 * vScale, cut, 'resistance');
     }
+    line(svg, 390, base, 505, base, 'diagram-line');
     const mScale = d.base ? Math.abs(d.M / d.base) : 0;
     let curve = '';
     for (let i = 0; i <= 30; i += 1) {
       const t = i / 30, z = t * d.h;
       let m;
-      if (loadType === 'point') m = d.H * z;
+      if (loadType === 'point') m = d.H * (d.h - z);
       else if (loadType === 'uniform') m = d.H * d.h * (1 - t) ** 2 / 2;
       else m = d.H * (2 * d.h / 3 - z + z ** 3 / (3 * d.h ** 2));
       const x = 625 + (d.base ? 120 * m / d.base : 0), y = base - t * (base - top);
       curve += `${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`;
     }
+    if (d.H > 0) add(svg, 'path', { d: `${curve}L625 ${base}Z`, class: 'compression' });
     add(svg, 'path', { d: curve, fill: 'none', stroke: '#537567', 'stroke-width': 3 });
+    line(svg, 625, base, 745, base, 'diagram-line');
     if (mScale > 0) line(svg, 625, cut, 625 + 120 * mScale, cut, 'resistance');
     center(svg, 390, 495, `V = ${num(d.V)} kN　·　M = ${num(d.M)} kN·m`, 'value');
   }
@@ -1320,41 +1324,84 @@
   }
   function drawStress(d) {
     const svg = $('stressDiagram'); svg.replaceChildren();
-    marker(svg, 'stressAction', '#a34c3f'); marker(svg, 'stressResistance', '#537567');
-    const left = 220, right = 460, zero = 340, top = 75, bottom = 400, mid = (top + bottom) / 2;
-    add(svg, 'rect', { x: left, y: top, width: right - left, height: bottom - top, class: 'outline' });
-    line(svg, left - 25, mid, right + 25, mid, 'guide dash');
-    line(svg, zero, top, zero, bottom, 'guide');
-    center(svg, 340, 445, '共同零轴：右缘在上、左缘在下，应力沿截面高度 d 分布', 'small');
-    const actualMax = Math.max(Math.abs(d.left), Math.abs(d.right));
-    if (d.linearValid && actualMax > 1e-9) {
-      const scale = 145 / actualMax;
-      const xLeft = zero + d.left * scale, xRight = zero + d.right * scale;
-      const segment = (y1, y2, x1, x2, stress) => {
-        if (Math.abs(stress) < 1e-9) return;
-        add(svg, 'path', { d: `M${zero} ${y1}L${x1} ${y1}L${x2} ${y2}L${zero} ${y2}Z`, class: stress > 0 ? 'tension' : 'compression' });
-      };
-      if (d.left * d.right < 0) {
-        const yZero = top - d.right * (bottom - top) / (d.left - d.right);
-        segment(top, yZero, xRight, zero, d.right);
-        segment(yZero, bottom, zero, xLeft, d.left);
-      } else segment(top, bottom, xRight, xLeft, Math.abs(d.right) > 1e-9 ? d.right : d.left);
-      line(svg, xRight, top, xLeft, bottom, 'diagram-line');
-    } else if (!d.linearValid) {
-      center(svg, zero, mid - 10, '全接触线弹性结果失效', 'action-text');
-      center(svg, zero, mid + 20, '不显示虚构的边缘应力', 'small');
-    }
-    if (d.N > 0) arrow(svg, 340, 15, 340, 62, 'action', 'stressAction');
+    marker(svg, 'stressAction', '#a34c3f'); marker(svg, 'stressDim', '#6f726b');
+    const interfaceLeft = 195, interfaceRight = 565, interfaceMid = 380;
+    add(svg, 'rect', { x: interfaceLeft, y: 62, width: interfaceRight - interfaceLeft, height: 22, class: 'outline' });
+    text(svg, interfaceLeft - 12, 57, '左缘', 'value').setAttribute('text-anchor', 'end');
+    text(svg, interfaceRight + 12, 57, '右缘', 'value');
+    if (d.N > 0) arrow(svg, interfaceMid, 12, interfaceMid, 54, 'action', 'stressAction');
+    text(svg, interfaceMid + 14, 30, d.N > 0 ? 'N' : 'N = 0', 'action-text');
     if (Math.abs(d.M) > 0) {
-      const dir = Math.sign(d.M), controlX = dir > 0 ? 35 : 145;
-      add(svg, 'path', { d: `M90 150Q${controlX} ${mid} 90 340`, fill: 'none', stroke: '#a34c3f', 'stroke-width': 3, 'marker-end': 'url(#stressAction)' });
+      const path = d.M > 0 ? 'M155 90Q100 60 155 30' : 'M155 30Q100 60 155 90';
+      add(svg, 'path', { d: path, fill: 'none', stroke: '#a34c3f', 'stroke-width': 3, 'marker-end': 'url(#stressAction)' });
+      text(svg, 116, 58, 'M', 'action-text');
     }
-    text(svg, 35, 95, d.linearValid ? `右缘 ${signed(d.right, 2)} MPa` : '右缘 —', d.linearValid && d.right > 0 ? 'action-text' : 'resistance-text');
-    text(svg, 35, 420, d.linearValid ? `左缘 ${signed(d.left, 2)} MPa` : '左缘 —', d.linearValid && d.left > 0 ? 'action-text' : 'resistance-text');
-    text(svg, 510, 95, `N = ${num(d.N)} kN`, 'action-text'); text(svg, 510, 125, `M = ${signed(d.M)} kN·m`, 'action-text');
-    text(svg, 510, 185, tensionCapable ? '连续界面：允许受拉' : '干堆界面：不能受拉', 'value');
-    if (!tensionCapable && d.N > 0) text(svg, 510, 215, `核心边界 |e| ≤ ${num(d.kern, 1)} m`, 'small');
-    center(svg, 340, 485, '绿色：压应力　红色：拉应力或作用', 'small');
+    line(svg, interfaceLeft, 88, interfaceLeft, 120, 'guide');
+    line(svg, interfaceRight, 88, interfaceRight, 120, 'guide');
+    line(svg, interfaceLeft, 112, interfaceRight, 112, 'guide').setAttribute('marker-start', 'url(#stressDim)');
+    svg.lastChild.setAttribute('marker-end', 'url(#stressDim)');
+    center(svg, interfaceMid, 106, `d = ${num(d.d)} m`, 'small');
+    const direction = d.M > 0 ? 'M > 0：左缘拉、右缘压' : d.M < 0 ? 'M < 0：左缘压、右缘拉' : 'M = 0：无弯曲应力';
+    center(svg, interfaceMid, 145, direction, 'small');
+    center(svg, interfaceMid, 172, '三个图横轴均为左缘 → 右缘；向上为拉、向下为压，共用当前比例', 'small');
+
+    const zero = 310, halfWidth = 85, amplitude = 90;
+    const actualMax = Math.max(Math.abs(d.left), Math.abs(d.right), d.axial, Math.abs(d.bending));
+    const scale = actualMax > 1e-9 ? amplitude / actualMax : 0;
+    const charts = [
+      { x: 140, title: '① 轴压 −N/A', left: -d.axial, right: -d.axial, valid: true },
+      { x: 380, title: '② 弯曲 ±M/W', left: d.bending, right: -d.bending, valid: true },
+      { x: 620, title: d.linearValid ? '③ 叠加结果' : '③ 叠加假定失效', left: d.left, right: d.right, valid: d.linearValid }
+    ];
+    const drawRegion = (chart, leftStress, rightStress) => {
+      const left = chart.x - halfWidth, right = chart.x + halfWidth;
+      const yLeft = zero - leftStress * scale, yRight = zero - rightStress * scale;
+      if (Math.abs(leftStress) < 1e-9 && Math.abs(rightStress) < 1e-9) {
+        center(svg, chart.x, zero - 12, '应力为零', 'small');
+        return;
+      }
+      if (leftStress * rightStress < 0) {
+        const xZero = left - leftStress * (right - left) / (rightStress - leftStress);
+        add(svg, 'path', { d: `M${left} ${zero}L${left} ${yLeft}L${xZero} ${zero}Z`, class: leftStress > 0 ? 'tension' : 'compression' });
+        add(svg, 'path', { d: `M${xZero} ${zero}L${right} ${yRight}L${right} ${zero}Z`, class: rightStress > 0 ? 'tension' : 'compression' });
+        center(svg, xZero, zero - 10, 'σ=0', 'small');
+      } else {
+        const stress = Math.abs(leftStress) > 1e-9 ? leftStress : rightStress;
+        add(svg, 'path', { d: `M${left} ${zero}L${left} ${yLeft}L${right} ${yRight}L${right} ${zero}Z`, class: stress > 0 ? 'tension' : 'compression' });
+      }
+      line(svg, left, yLeft, right, yRight, 'diagram-line');
+    };
+    charts.forEach((chart, index) => {
+      const left = chart.x - halfWidth, right = chart.x + halfWidth;
+      line(svg, left, zero, right, zero, 'diagram-line');
+      if (!chart.valid) {
+        center(svg, chart.x, zero - 60, '受拉侧张开', 'action-text');
+        const base = zero + 35;
+        line(svg, left, base, right, base, 'diagram-line');
+        if (d.M >= 0) line(svg, left + 8, base - 28, right, base, 'action');
+        else line(svg, left, base, right - 8, base - 28, 'action');
+        center(svg, chart.x, base + 32, '改按实际接触区分析', 'small');
+      } else {
+        drawRegion(chart, chart.left, chart.right);
+        if (index === 0) {
+          center(svg, chart.x, 424, `${signed(chart.left, 2)} MPa（全截面）`, 'resistance-text');
+        } else {
+          const yLeft = zero - chart.left * scale, yRight = zero - chart.right * scale;
+          center(svg, left, yLeft + (chart.left > 0 ? -10 : 20), `${signed(chart.left, 2)} MPa`, chart.left > 0 ? 'action-text' : 'resistance-text');
+          center(svg, right, yRight + (chart.right > 0 ? -10 : 20), `${signed(chart.right, 2)} MPa`, chart.right > 0 ? 'action-text' : 'resistance-text');
+        }
+      }
+      center(svg, chart.x, 458, chart.title, 'value');
+    });
+    center(svg, 260, 324, '+', 'equation-sign');
+    center(svg, 500, 324, '=', 'equation-sign');
+    center(svg, 380, 490, '红色：拉应力　绿色：压应力；顶部红色箭头表示外部作用', 'small');
+    const modelNote = tensionCapable
+      ? '连续界面：允许受拉；调参后图形重新归一化，精确值以数字为准'
+      : d.linearValid
+        ? `不能抗拉：全接触边界 |e| ≤ ${num(d.kern, 1)} m；调参后图形重新归一化`
+        : '不能抗拉：前两图仅为代数分项，张开后的实际应力需按接触区另算';
+    center(svg, 380, 518, modelNote, 'small');
   }
   function updateStress() {
     const d = stressData();
