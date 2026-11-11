@@ -70,6 +70,53 @@ h1, h2, h3 { line-height: 1.2; text-wrap: balance; }
 .map-list a:hover b { transform: translate(3px, -3px); }
 .site-footer { border-top: 1px solid var(--line); padding-block: 32px; font-size: 12px; color: var(--ink-soft); }
 .site-footer .shell { display: flex; justify-content: space-between; gap: 24px; }
+.site-footer a { color: var(--ink); box-shadow: 0 1px var(--line); }
+.site-footer a:hover { box-shadow: 0 1px var(--ink); }
+
+.home-about { padding-block: 80px 88px; display: grid; grid-template-columns: 2fr 4fr; gap: 6%; border-top: 1px solid var(--ink); scroll-margin-top: 96px; }
+.home-about-copy p, .home-reader > p { color: var(--ink-soft); font: 17px/2 var(--font-read); }
+.home-about-copy p { max-width: 44em; }
+.home-about-copy p + p { margin-top: 18px; }
+.home-reader { padding-block: 88px 96px; border-top: 1px solid var(--ink); }
+.home-reader h2 { max-width: 16em; margin: 16px 0 32px; font: 700 clamp(32px, 4vw, 52px)/1.3 var(--font-read); }
+.home-reader > p { max-width: 46em; }
+.home-reader > p + p { margin-top: 18px; }
+.home-reader blockquote { max-width: 42em; margin-top: 36px; padding: 24px 0 24px 28px; border-left: 2px solid var(--accent); }
+.home-reader blockquote p { font: 700 clamp(22px, 2.6vw, 32px)/1.7 var(--font-read); }
+@media (max-width: 720px) {
+  .home-about { grid-template-columns: 1fr; gap: 32px; padding-block: 64px 72px; }
+  .home-reader { padding-block: 64px 72px; }
+  .home-reader blockquote { padding-left: 20px; }
+}
+
+.support-section { padding-block: 56px; border-top: 1px solid var(--ink); }
+.support-inner { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 64px; align-items: center; }
+.support-copy h2 { margin: 12px 0 16px; font: 700 36px/1.3 var(--font-read); }
+.support-copy > p:not(.section-label) { color: var(--ink-soft); font-family: var(--font-read); }
+.support-copy > p + p:not(.support-note) { margin-top: 12px; }
+.support-copy .support-note { margin-top: 16px; font: 13px/1.75 var(--font-ui); }
+.support-code { display: block; width: 260px; justify-self: end; }
+.support-code img { display: block; width: 100%; height: auto; border: 1px solid var(--line); background: #fff; transition: border-color .16s ease; }
+.support-code > span { display: block; padding-top: 10px; text-align: center; color: var(--ink-soft); font-size: 12px; }
+.support-code > span b { color: var(--accent); font-weight: 400; }
+.support-code:hover img { border-color: var(--accent); }
+.support-dialog { width: min(600px, calc(100% - 32px)); max-height: calc(100dvh - 48px); margin: auto; padding: 24px; border: 1px solid var(--ink); background: var(--paper); color: var(--ink); overflow: auto; }
+.support-dialog::backdrop { background: oklch(0.15 0.008 95 / .72); }
+.support-dialog-heading { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.support-dialog-heading h2 { font: 700 24px/1.4 var(--font-read); }
+.support-dialog-heading button { flex: 0 0 44px; width: 44px; height: 44px; border: 1px solid var(--line); background: transparent; font-size: 26px; line-height: 1; }
+.support-dialog-heading button:hover { background: var(--paper-deep); }
+.support-dialog > img { display: block; width: min(100%, 540px); height: auto; margin: 20px auto; background: #fff; }
+.support-dialog-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px 24px; }
+.support-dialog-footer p { color: var(--ink-soft); font-size: 13px; }
+.support-dialog-footer a { min-height: 44px; display: inline-flex; align-items: center; box-shadow: 0 1px var(--ink); font-size: 13px; font-weight: 700; }
+body.support-dialog-open { overflow: hidden; }
+@media (max-width: 720px) {
+  .support-section { padding-block: 48px; }
+  .support-inner { grid-template-columns: 1fr; gap: 32px; }
+  .support-code { width: min(100%, 280px); justify-self: center; }
+  .support-dialog { width: calc(100% - 24px); max-height: calc(100dvh - 24px); padding: 16px; }
+}
 
 .lesson-hero { padding-block: 72px 88px; display: grid; grid-template-columns: repeat(6, 1fr); gap: 5%; }
 .breadcrumbs { grid-column: 1 / -1; font: 12px var(--font-mono); color: var(--ink-soft); margin-bottom: 56px; }

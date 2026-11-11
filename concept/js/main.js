@@ -79,6 +79,27 @@
     });
   });
 
+  const supportDialog = $('[data-support-dialog]');
+  const supportOpen = $('[data-support-open]');
+  if (supportDialog && supportOpen && typeof supportDialog.showModal === 'function') {
+    supportOpen.addEventListener('click', event => {
+      event.preventDefault();
+      supportDialog.showModal();
+      document.body.classList.add('support-dialog-open');
+    });
+    $('[data-support-close]', supportDialog).addEventListener('click', () => supportDialog.close());
+    supportDialog.addEventListener('click', event => {
+      if (event.target !== supportDialog) return;
+      const bounds = supportDialog.getBoundingClientRect();
+      const outside = event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom;
+      if (outside) supportDialog.close();
+    });
+    supportDialog.addEventListener('close', () => {
+      document.body.classList.remove('support-dialog-open');
+      supportOpen.focus();
+    });
+  }
+
   // Inline local SVGs so individual force arrows and dashed deformation layers can move.
   $$('[data-svg-src]').forEach(mount => {
     fetch(mount.dataset.svgSrc)
