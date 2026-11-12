@@ -11,12 +11,11 @@
 </head>
 <body>
   <div class="reading-progress" aria-hidden="true"><span></span></div>
-  <header class="site-header"><div class="shell header-inner"><a class="brand" href="../index.html" aria-label="结构概念学习首页"><span>结构概念<small>STRUCTURAL CONCEPTS</small></span></a><nav class="top-nav" aria-label="主导航"><a href="../index.html">学习首页</a><div class="course-menu" data-course-menu data-root="../"></div><a href="#concept">核心概念</a><a href="#lab">交互实验</a></nav></div></header>
+  <header class="site-header"><div class="shell header-inner"><a class="brand" href="../index.html" aria-label="结构概念学习首页"><span>结构概念<small>STRUCTURAL CONCEPTS</small></span></a><nav class="top-nav" aria-label="主导航"><a href="../index.html">学习首页</a><div class="course-menu" data-course-menu data-root="../"></div></nav></div></header>
 
   <main id="capacityLesson">
     <section class="lesson-hero shell">
       <div class="lesson-heading"><p class="chapter-tag">CAPACITY · STIFFNESS LAB</p><h1>承载力与刚度</h1><p class="hero-lead">“没有破坏”并不等于“可以正常使用”。承载力保证整体能够抵抗荷载，刚度则限制荷载引起的变形。方案阶段要把这两道门槛分开判断，再检查材料是否布置在真正有效的位置。</p></div>
-      <dl class="lesson-meta"><dt>承载能力</dt><dd>抵抗破坏与失效的能力</dd><dt>刚度</dt><dd>抵抗变形的能力，k = V/Δ</dd><dt>整体效率</dt><dd>材料性质 × 数量 × 几何布置</dd></dl>
     </section>
 
     <section class="lesson-section" id="concept" aria-labelledby="concept-title"><div class="shell">
@@ -47,8 +46,8 @@
             <div class="range-control"><label for="momentCapacity">抗倾覆比较值 MR <output id="momentCapacityOutput">160,000 kN·m</output></label><input id="momentCapacity" type="range" min="30000" max="400000" value="160000" step="10000"></div>
             <button class="control-button" id="resetCapacity">全部复位</button>
           </div>
-          <div class="parameter-notes"><p class="model-note"><strong>I<sub>eq</sub> 是什么？</strong>把真实的柱、墙、支撑及其连接共同组成的抗侧力体系，等效为一根沿高度均匀弯曲的悬臂梁后，用来代表整体抗弯变形能力的参数。它不是单根构件的截面惯性矩，也不是建筑固定不变的固有属性；会随所采用的等效模型、受力方向、连接与开裂状态等改变。本页的 12,000 m⁴ 是可调教学输入值，并非由建筑尺寸自动计算；在同一倒三角形荷载模型下，也可由顶点位移反算 I<sub>eq</sub> = 11VH³/(60EΔ)。侧向位移直接反映的是整体 EI<sub>eq</sub> 乘积，仅凭一个位移不能把 E 与 I<sub>eq</sub> 唯一拆分；页面保留二者独立调整，是为了分别观察参数影响，实际分解还需已知材料模量、几何布置或其他独立试验条件。若 Δ 来自包含剪切变形等因素的总位移，反算所得应称为“有效整体刚度参数”，不能解释为只代表纯弯曲截面性质。</p>
-          <p class="model-note"><strong>M<sub>R</sub> 是独立教学输入：</strong>不由建筑重力或支承宽度自动计算。实际抗倾覆能力还取决于重力、抗拔、锚固和基础条件；本页只比较 M 与所输入的 M<sub>R</sub>。</p></div>
+          <details class="parameter-notes"><summary>查看 I<sub>eq</sub> 与 M<sub>R</sub> 的输入说明</summary><div class="parameter-notes-body"><p class="model-note"><strong>I<sub>eq</sub> 是什么？</strong>把真实的柱、墙、支撑及其连接共同组成的抗侧力体系，等效为一根沿高度均匀弯曲的悬臂梁后，用来代表整体抗弯变形能力的参数。它不是单根构件的截面惯性矩，也不是建筑固定不变的固有属性；会随所采用的等效模型、受力方向、连接与开裂状态等改变。本页的 12,000 m⁴ 是可调教学输入值，并非由建筑尺寸自动计算；在同一倒三角形荷载模型下，也可由顶点位移反算 I<sub>eq</sub> = 11VH³/(60EΔ)。侧向位移直接反映的是整体 EI<sub>eq</sub> 乘积，仅凭一个位移不能把 E 与 I<sub>eq</sub> 唯一拆分；页面保留二者独立调整，是为了分别观察参数影响，实际分解还需已知材料模量、几何布置或其他独立试验条件。若 Δ 来自包含剪切变形等因素的总位移，反算所得应称为“有效整体刚度参数”，不能解释为只代表纯弯曲截面性质。</p>
+          <p class="model-note"><strong>M<sub>R</sub> 是独立教学输入：</strong>不由建筑重力或支承宽度自动计算。实际抗倾覆能力还取决于重力、抗拔、锚固和基础条件；本页只比较 M 与所输入的 M<sub>R</sub>。</p></div></details>
           <div class="demo-layout"><div class="diagram-stage"><span class="diagram-caption">整体悬臂模型 / 变形已放大显示，数值按弹性公式计算</span><svg id="capacityDiagram" class="aspect-figure" viewBox="0 0 760 580" role="img" aria-label="建筑水平作用、变形与基底剪力动态图"></svg></div>
             <div class="demo-controls"><h3>同一次作用，读两个结果</h3><p>水平作用采用基底为零、顶部最大的倒三角形分布，其合力位于 H̄ = 2H/3。倾覆力矩需求 M 与 M<sub>R</sub> 比较；顶点位移 Δ 只与教学参考值 H/550 对照，不作为实际工程验收结论。</p>
               <div class="metric-row"><div class="metric"><span>倾覆力矩需求 M</span><strong id="capacityMoment">0 kN·m</strong></div><div class="metric"><span>抗倾覆力矩比 M/M<sub>R</sub></span><strong id="capacityUtilisation">0.00</strong></div></div>
@@ -84,7 +83,7 @@
             <div class="range-control"><label for="totalArea">柱总面积 ΣA <output id="totalAreaOutput">8.0 m²</output></label><input id="totalArea" type="range" min="4" max="20" value="8" step="1"></div>
             <button class="control-button" id="resetEfficiency">复位</button>
           </div>
-          <div class="parameter-notes single"><p class="model-note">上页四柱图为带柱高的立面受力示意，并非严格的支承平面图。绿色箭头表示整体弯曲引起的柱轴力增量方向，不是柱总轴力，也不是地基支承总反力；按受拉为正，右侧 +ΔN 为受拉增量，左侧 −ΔN 为受压增量。</p></div>
+          <details class="parameter-notes single"><summary>查看四柱图的读图说明</summary><div class="parameter-notes-body"><p class="model-note">上页四柱图为带柱高的立面受力示意，并非严格的支承平面图。绿色箭头表示整体弯曲引起的柱轴力增量方向，不是柱总轴力，也不是地基支承总反力；按受拉为正，右侧 +ΔN 为受拉增量，左侧 −ΔN 为受压增量。</p></div></details>
           <div class="demo-layout"><div class="diagram-stage"><span class="diagram-caption">四根等面积柱立面 / 忽略局部惯性矩，比较整体轴向变形贡献</span><svg id="efficiencyDiagram" class="aspect-figure" viewBox="0 0 760 580" role="img" aria-label="四柱立面、内柱位置与整体抗弯效率动态图"></svg></div>
             <div class="demo-controls"><h3>内柱移向中部，效率怎样变化？</h3><p>四根柱面积相同，外柱固定在 ±B/2。这里选用“同面积全外置参照”：把相同柱总面积全部集中到 ±B/2 两侧，得到参照值 I<sub>ref</sub>。它只用于统一比较本模型的几何贡献，不代表实际工程的最佳方案。</p>
               <div class="metric-row"><div class="metric"><span>当前布置整体惯性矩 I</span><strong id="layoutInertia">0 m⁴</strong></div><div class="metric"><span>惯性矩比 η = I/I<sub>ref</sub></span><strong id="layoutEfficiency">0%</strong></div></div>
@@ -117,27 +116,8 @@
       <p class="model-note">模型说明：H/550 仅作为位移数值的教学参照，不对应特定结构类型的规范限值；整体顶点位移也不等于层间位移角。效率实验只比较材料位置对整体抗弯刚度的贡献，不代表完整柱网设计。</p>
     </div></section>
 
-    <div class="shell lesson-end"><div class="end-links"><a href="./chapter2-section3.html">← 回顾高宽比与倾覆</a><a href="../index.html">学习首页</a><a href="./chapter2-section5.html">继续：对称与非对称 →</a></div><p>学习完成：承载力控制破坏风险，刚度控制变形；材料的位置决定其整体抗弯效率。</p></div>
+    <div class="shell lesson-end"><div class="end-links"><a href="./chapter2-section3.html">← 上一节：高宽比与倾覆</a><a href="./chapter2-section5.html">下一节：对称与非对称 →</a></div><p>学习完成：承载力控制破坏风险，刚度控制变形；材料的位置决定其整体抗弯效率。</p></div>
   </main>
-  <aside class="support-section" aria-labelledby="support-title">
-    <div class="shell support-inner">
-      <div class="support-copy">
-        <p class="section-label">SUPPORT / 自愿赞赏</p>
-        <h2 id="support-title">支持本站</h2>
-        <p>如果这些内容对你有帮助，欢迎自愿赞赏。你的支持会鼓励我持续完善课程内容与交互实验。</p>
-        <p class="support-note">微信扫码赞赏，金额随意。</p>
-      </div>
-      <a class="support-code" href="../assets/images/wechat-reward.png" data-support-open aria-haspopup="dialog" aria-controls="support-dialog">
-        <img src="../assets/images/wechat-reward.png" alt="Zhao | Struct. E. 的微信赞赏码" width="1152" height="1152" loading="lazy">
-        <span>点击查看大图 <b aria-hidden="true">↗</b></span>
-      </a>
-    </div>
-    <dialog class="support-dialog" id="support-dialog" data-support-dialog aria-labelledby="support-dialog-title">
-      <div class="support-dialog-heading"><h2 id="support-dialog-title">微信赞赏码</h2><button type="button" data-support-close aria-label="关闭赞赏码">×</button></div>
-      <img src="../assets/images/wechat-reward.png" alt="Zhao | Struct. E. 的微信赞赏码大图" width="1152" height="1152" loading="lazy">
-      <div class="support-dialog-footer"><p>微信扫一扫，或保存图片后从相册识别。</p><a href="../assets/images/wechat-reward.png" download="zhao-struct-e-reward.png">保存图片</a></div>
-    </dialog>
-  </aside>
-  <footer class="site-footer"><div class="shell"><p>结构概念 · 交互教学 · <a href="../index.html#about">关于本站</a></p><p>承载力 · 轴向与抗弯刚度 · 支承布置效率</p></div></footer>
+  <footer class="site-footer"><div class="shell"><p><span class="site-credit">作者：Zhao | Struct. E.　　邮箱：<button class="email-copy" type="button" data-copy-email aria-label="复制邮箱 Zhao_Struct_E@163.com">Zhao_Struct_E@163.com</button></span></p><p>承载力 · 轴向与抗弯刚度 · 支承布置效率</p></div></footer>
 </body>
 </html>

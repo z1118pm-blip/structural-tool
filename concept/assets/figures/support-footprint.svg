@@ -14,14 +14,14 @@
   <path d="M135 138 305 198 570 138M135 166 305 226 570 166M135 194 305 254 570 194M135 222 305 282 570 222M135 250 305 310 570 250M135 278 305 338 570 278M135 306 305 366 570 306M135 334 305 394 570 334" stroke="#a9aaa3" stroke-width="1.4"/>
   <path d="M135 110v250M220 140v250M305 170v250M393 150v250M482 130v250M570 110v250" stroke-width="2.6"/>
 </g>
-<g fill="none" stroke="#6f726b" stroke-width="1.5"><g marker-start="url(#supportArrow)" marker-end="url(#supportArrow)"><path d="M95 95 375 38"/><path d="M425 38 595 92"/><path d="M610 110v250"/></g><path d="M135 110 95 95M400 55 375 38M400 55 425 38M570 110 595 92M570 110 610 110M570 360 610 360"/></g>
-<g font-family="PingFang SC,Microsoft YaHei,sans-serif" font-size="16" fill="#6f726b"><text x="220" y="65">60 m</text><text x="510" y="42">15 m</text><text x="625" y="225">n 层</text><text x="20" y="185" fill="#b45336">每层恒载＋活载 q</text><text x="90" y="440">W＝q × 单层面积 × 层数</text></g>
+<g fill="none" stroke="#6f726b" stroke-width="1.5"><g marker-start="url(#supportArrow)" marker-end="url(#supportArrow)"><path d="M95 95 375 38"/><path d="M425 38 595 92"/><path d="M610 110v95M610 245v115"/></g><path d="M135 110 95 95M400 55 375 38M400 55 425 38M570 110 595 92M570 110 610 110M570 360 610 360"/></g>
+<g font-family="PingFang SC,Microsoft YaHei,sans-serif" font-size="17" fill="#5b5f58"><text x="220" y="50">60 m</text><text x="510" y="42">15 m</text><text x="595" y="225">n 层</text></g>
 <g>
-  <rect x="830" y="120" width="67.5" height="67.5" fill="#f3ded5"/>
-  <rect x="897.5" y="120" width="135" height="67.5" fill="#e1ebe6"/>
-  <rect x="1032.5" y="187.5" width="135" height="135" fill="#e4e8ee"/>
+  <rect x="830" y="120" width="67.5" height="67.5" fill="#efd0c2"/>
+  <rect x="897.5" y="120" width="135" height="67.5" fill="#cbded4"/>
+  <rect x="1032.5" y="187.5" width="135" height="135" fill="#ced9e6"/>
   <rect x="830" y="120" width="540" height="270" fill="none" stroke="#242522" stroke-width="2.2"/>
-  <g fill="none" stroke="#9a9c95" stroke-width="1.3" stroke-dasharray="7 6"><path d="M897.5 120v270M1032.5 120v270M1167.5 120v270M1302.5 120v270M830 187.5h540M830 322.5h540"/></g>
+  <g fill="none" stroke="#757971" stroke-width="1.5" stroke-dasharray="7 6"><path d="M897.5 120v270M1032.5 120v270M1167.5 120v270M1302.5 120v270M830 187.5h540M830 322.5h540"/></g>
   <g fill="none" stroke="#6f726b" stroke-width="1.2"><path d="M965 120v270M1100 120v270M1235 120v270M830 255h540"/></g>
   <g fill="#242522">
     <circle cx="830" cy="120" r="6"/><circle cx="965" cy="120" r="6"/><circle cx="1100" cy="120" r="6"/><circle cx="1235" cy="120" r="6"/><circle cx="1370" cy="120" r="6"/>
@@ -30,13 +30,13 @@
   </g>
 </g>
 <g fill="none" stroke="#6f726b" stroke-width="1.4"><g marker-start="url(#supportArrow)" marker-end="url(#supportArrow)"><path d="M830 92h540"/><path d="M800 120v270"/></g><path d="M830 84v16M1370 84v16M792 120h16M792 390h16"/></g>
-<g font-family="PingFang SC,Microsoft YaHei,sans-serif" font-size="16" fill="#6f726b"><text x="1070" y="82">60 m</text><text x="780" y="260" text-anchor="end">15 m</text><text x="830" y="425">圆点表示柱；虚线划分各柱的受荷范围</text></g>
+<g font-family="PingFang SC,Microsoft YaHei,sans-serif" font-size="16" fill="#6f726b"><text x="1070" y="82">60 m</text><text x="782" y="255" text-anchor="middle" transform="rotate(-90 782 255)">15 m</text><text x="830" y="425">圆点表示柱；虚线划分各柱的受荷范围</text></g>
 <g font-family="PingFang SC,Microsoft YaHei,sans-serif" font-size="17">
-  <rect x="830" y="460" width="18" height="18" fill="#f3ded5"/><text x="860" y="475" fill="#242522">角柱：0.5 面积单位</text>
-  <rect x="1050" y="460" width="18" height="18" fill="#e1ebe6"/><text x="1080" y="475" fill="#242522">边柱：1 面积单位</text>
-  <rect x="830" y="505" width="18" height="18" fill="#e4e8ee"/><text x="860" y="520" fill="#242522">中柱：2 面积单位</text>
+  <rect x="830" y="460" width="18" height="18" fill="#efd0c2"/><text x="860" y="475" fill="#242522">角柱：1 面积单位</text>
+  <rect x="1050" y="460" width="18" height="18" fill="#cbded4"/><text x="1080" y="475" fill="#242522">边柱：2 面积单位</text>
+  <rect x="830" y="505" width="18" height="18" fill="#ced9e6"/><text x="860" y="520" fill="#242522">中柱：4 面积单位</text>
   <text x="1050" y="520" fill="#3f6c62">Nᵢ＝每面积单位荷载 × uᵢ</text>
 </g>
 <path d="M660 275h85" fill="none" stroke="#242522" stroke-width="2.2" marker-end="url(#supportArrow)"/>
-<text x="665" y="255" font-family="PingFang SC,Microsoft YaHei,sans-serif" font-size="16" fill="#6f726b">分配到柱</text>
+<text x="702" y="252" text-anchor="middle" font-family="PingFang SC,Microsoft YaHei,sans-serif" font-size="16" fill="#5b5f58">荷载分配</text>
 </svg>

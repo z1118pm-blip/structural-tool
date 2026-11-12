@@ -5,6 +5,7 @@
     <marker id="red" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0L9 4.5 0 9Z" fill="#a34c3f"/></marker>
     <marker id="green" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0L9 4.5 0 9Z" fill="#537567"/></marker>
     <marker id="black" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4 0 8Z" fill="#373632"/></marker>
+    <marker id="dimensionArrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto-start-reverse"><path d="M0 0L6 3 0 6Z" fill="#373632"/></marker>
     <pattern id="soil" width="18" height="12" patternUnits="userSpaceOnUse"><path d="M0 12L18 0M-5 5L5-5M13 17L23 7" stroke="#aaa59c"/></pattern>
   </defs>
   <rect width="1200" height="520" fill="#f5f3ef"/>
@@ -16,7 +17,7 @@
   <g>
     <path d="M330 410V110H450V410Z" fill="#e8e4dc" stroke="#373632" stroke-width="2"/>
     <path d="M318 410H462V430H318Z" fill="#d1ccc3" stroke="#373632" stroke-width="2"/>
-    <path d="M290 410H318V478H290ZM462 410H490V478H462Z" fill="url(#soil)"/>
+    <path d="M290 410H318V478H290ZM462 410H490V478H462ZM318 430H462V478H318Z" fill="url(#soil)"/>
     <path d="M290 410H318M462 410H490" stroke="#373632" stroke-width="2"/>
     <path d="M145 215H318" fill="none" stroke="#a34c3f" stroke-width="4" marker-end="url(#red)"/>
     <text x="145" y="196" fill="#a34c3f" font-weight="700">水平合力 V</text>
@@ -24,8 +25,13 @@
     <text x="405" y="245">W</text>
     <path d="M443 488V440" fill="none" stroke="#537567" stroke-width="4" marker-end="url(#green)"/>
     <text x="458" y="474" fill="#537567" font-weight="700">R</text>
-    <path d="M390 503H443" class="dimension"/>
-    <text x="398" y="519" class="small-text">e 较大</text>
+    <path d="M390 410V503" fill="none" stroke="#373632" stroke-width="1.5" stroke-dasharray="6 4"/>
+    <path d="M443 430V503" class="dimension"/>
+    <circle cx="390" cy="410" r="4" fill="#f5f3ef" stroke="#373632" stroke-width="2"/>
+    <text x="382" y="454" text-anchor="end" class="small-text">支承中心</text>
+    <path d="M390 503H443" class="dimension" marker-start="url(#dimensionArrow)" marker-end="url(#dimensionArrow)"/>
+    <text x="416.5" y="494" text-anchor="middle" class="small-text">偏心距 e</text>
+    <text x="407" y="519" class="small-text">较大</text>
     <path d="M505 110V410M496 110H514M496 410H514" class="dimension"/>
     <text x="522" y="265">H</text>
     <text x="335" y="103" class="small-text">高宽比 H/B 较大</text>
@@ -34,7 +40,7 @@
   <g>
     <path d="M810 410V235H1050V410Z" fill="#e8e4dc" stroke="#373632" stroke-width="2"/>
     <path d="M792 410H1068V430H792Z" fill="#d1ccc3" stroke="#373632" stroke-width="2"/>
-    <path d="M770 410H792V478H770ZM1068 410H1090V478H1068Z" fill="url(#soil)"/>
+    <path d="M770 410H792V478H770ZM1068 410H1090V478H1068ZM792 430H1068V478H792Z" fill="url(#soil)"/>
     <path d="M770 410H792M1068 410H1090" stroke="#373632" stroke-width="2"/>
     <path d="M625 296.25H798" fill="none" stroke="#a34c3f" stroke-width="4" marker-end="url(#red)"/>
     <text x="625" y="277.25" fill="#a34c3f" font-weight="700">水平合力 V</text>
@@ -42,8 +48,13 @@
     <text x="945" y="325">W</text>
     <path d="M952 488V440" fill="none" stroke="#537567" stroke-width="4" marker-end="url(#green)"/>
     <text x="967" y="474" fill="#537567" font-weight="700">R</text>
-    <path d="M930 503H952" class="dimension"/>
-    <text x="916" y="519" class="small-text">e 较小</text>
+    <path d="M930 410V503" fill="none" stroke="#373632" stroke-width="1.5" stroke-dasharray="6 4"/>
+    <path d="M952 430V503" class="dimension"/>
+    <circle cx="930" cy="410" r="4" fill="#f5f3ef" stroke="#373632" stroke-width="2"/>
+    <text x="922" y="454" text-anchor="end" class="small-text">支承中心</text>
+    <path d="M930 503H952" class="dimension" marker-start="url(#dimensionArrow)" marker-end="url(#dimensionArrow)"/>
+    <text x="941" y="494" text-anchor="middle" class="small-text">偏心距 e</text>
+    <text x="932" y="519" class="small-text">较小</text>
     <path d="M1085 235V410M1076 235H1094M1076 410H1094" class="dimension"/>
     <text x="1100" y="325">H</text>
     <text x="866" y="222" class="small-text">高宽比 H/B 较小</text>

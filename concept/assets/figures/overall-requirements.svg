@@ -11,41 +11,47 @@
 </g>
 <g stroke="#242522" stroke-width="2.3" stroke-linejoin="round">
   <g id="fixed">
-    <path d="M45 360 235 435 445 345 255 275Z" fill="url(#groundHatch)" stroke="#a9aaa3"/>
+    <path d="M15 325 235 415 475 295 255 215Z" fill="url(#groundHatch)" stroke="#92958d"/>
+    <path d="M15 325 235 415 475 295v10L235 425 15 335Z" fill="#e6e4dc" stroke="#92958d" stroke-width="1.5"/>
+    <path d="M100 300 200 340 365 290 265 250Z" transform="translate(0 5)" fill="#242522" opacity=".1" stroke="none"/>
     <path d="M100 300 200 340 365 290 265 250Z" fill="#d5d4cc"/>
-    <path d="M100 300v30l100 40 165-50v-30l-165 50Z" fill="#e6e4dc"/>
+    <path d="M100 300v30l100 40 165-50v-30l-165 50Z" fill="#f3f1ea" stroke="#6f726b" stroke-width="1.7" stroke-dasharray="7 5"/>
     <path d="M100 100 265 50 365 90 200 140Z" fill="#fdfcf9"/>
     <path d="M100 100 200 140 200 340 100 300Z" fill="#e6e4dc"/>
     <path d="M200 140 365 90 365 290 200 340Z" fill="#f7f5ef"/>
     <path d="M200 210 365 160M200 270 365 220M100 170 200 210M100 230 200 270" fill="none" stroke="#a9aaa3" stroke-width="1.5"/>
   </g>
   <g id="mass" transform="translate(500 0)">
-    <path d="M45 360 235 435 445 345 255 275Z" fill="url(#groundHatch)" stroke="#a9aaa3"/>
+    <path d="M15 325 235 415 475 295 255 215Z" fill="url(#groundHatch)" stroke="#92958d"/>
+    <path d="M15 325 235 415 475 295v10L235 425 15 335Z" fill="#e6e4dc" stroke="#92958d" stroke-width="1.5"/>
+    <path d="M100 300 200 340 365 290 265 250Z" transform="translate(0 5)" fill="#242522" opacity=".1" stroke="none"/>
     <path d="M100 300 200 340 365 290 265 250Z" fill="#d5d4cc"/>
-    <path d="M100 300v30l100 40 165-50v-30l-165 50Z" fill="#e6e4dc"/>
+    <path d="M100 300v30l100 40 165-50v-30l-165 50Z" fill="#f3f1ea" stroke="#6f726b" stroke-width="1.7" stroke-dasharray="7 5"/>
     <path d="M100 100 265 50 365 90 200 140Z" fill="#fdfcf9"/>
     <path d="M100 100 200 140 200 340 100 300Z" fill="#e6e4dc"/>
     <path d="M200 140 365 90 365 290 200 340Z" fill="#f7f5ef"/>
     <path d="M200 210 365 160M200 270 365 220M100 170 200 210M100 230 200 270" fill="none" stroke="#a9aaa3" stroke-width="1.5"/>
-    <circle cx="232.5" cy="195" r="7" fill="#b45336" stroke="none"/>
-    <path d="M232.5 210v75" fill="none" stroke="#b45336" stroke-width="3.5" marker-end="url(#overallArrow)"/>
-    <path d="M232.5 420v-80" fill="none" stroke="#3f6c62" stroke-width="3.5" marker-end="url(#overallReactionArrow)"/>
+    <circle cx="232.5" cy="240" r="7" fill="#b45336" stroke="none"/>
+    <path d="M232.5 255v70" fill="none" stroke="#b45336" stroke-width="3.5" marker-end="url(#overallArrow)"/>
+    <path d="M232.5 435v-65" fill="none" stroke="#3f6c62" stroke-width="3.5" marker-end="url(#overallReactionArrow)"/>
   </g>
   <g id="environment" transform="translate(1000 0)">
-    <path d="M45 360 235 435 445 345 255 275Z" fill="url(#groundHatch)" stroke="#a9aaa3"/>
+    <path d="M15 325 235 415 475 295 255 215Z" fill="url(#groundHatch)" stroke="#92958d"/>
+    <path d="M15 325 235 415 475 295v10L235 425 15 335Z" fill="#e6e4dc" stroke="#92958d" stroke-width="1.5"/>
+    <path d="M100 300 200 340 365 290 265 250Z" transform="translate(0 5)" fill="#242522" opacity=".1" stroke="none"/>
     <path d="M100 300 200 340 365 290 265 250Z" fill="#d5d4cc"/>
-    <path d="M100 300v30l100 40 165-50v-30l-165 50Z" fill="#e6e4dc"/>
+    <path d="M100 300v30l100 40 165-50v-30l-165 50Z" fill="#f3f1ea" stroke="#6f726b" stroke-width="1.7" stroke-dasharray="7 5"/>
     <path d="M100 100 265 50 365 90 200 140Z" fill="#fdfcf9"/>
     <path d="M100 100 200 140 200 340 100 300Z" fill="#e6e4dc"/>
     <path d="M200 140 365 90 365 290 200 340Z" fill="#f7f5ef"/>
     <path d="M200 210 365 160M200 270 365 220M100 170 200 210M100 230 200 270" fill="none" stroke="#a9aaa3" stroke-width="1.5"/>
     <g class="wind-svg" fill="none" stroke="#b45336" stroke-width="3.5" marker-end="url(#overallArrow)"><path d="M50 205 130 181"/></g>
-    <path class="eq-svg" d="M350 330 270 354" fill="none" stroke="#3f6c62" stroke-width="3.5" marker-end="url(#overallReactionArrow)"/>
+    <path class="eq-svg" d="M375 350 285 378" fill="none" stroke="#3f6c62" stroke-width="3.5" marker-end="url(#overallReactionArrow)"/>
   </g>
 </g>
-<g font-family="PingFang SC,Microsoft YaHei,sans-serif" font-size="18">
-  <g fill="#3f6c62"><text x="355" y="400">基础与地基相接</text><text x="747" y="435">R</text><text x="1355" y="370">基底抗力 R</text></g>
-  <g fill="#b45336"><text x="744" y="185">G</text><text x="747" y="250">W</text><g text-anchor="end"><text x="1080" y="160">风荷载或地震作用 H</text><text x="1080" y="185">箭头仅示作用方向</text></g></g>
+<g font-family="PingFang SC,Microsoft YaHei,sans-serif" font-size="20">
+  <g fill="#345e55"><text x="355" y="400">基础与地基相接</text><text x="750" y="442">R</text><text x="1380" y="405">基底抗力 R</text></g>
+  <g fill="#a94930"><text x="750" y="230">重心 G</text><text x="750" y="295">重力 W</text><g text-anchor="end"><text x="1080" y="150">水平作用 H</text><text x="1080" y="178">方向示意</text></g></g>
 </g>
-<g font-family="PingFang SC,Microsoft YaHei,sans-serif" font-size="17" fill="#6f726b" text-anchor="middle"><text x="250" y="475">建筑与基础直接相接，基础落于地基</text><text x="750" y="475">均匀建筑重心约在半高处，W 通过重心</text><text x="1250" y="475">H 与 R 平行反向，ΣH＝0</text></g>
+<g font-family="PingFang SC,Microsoft YaHei,sans-serif" font-size="19" fill="#555850" text-anchor="middle"><text x="250" y="480">建筑与基础直接相接，基础落于地基</text><text x="750" y="480">均匀建筑重心约在半高处，W 通过重心</text><text x="1250" y="480">H 与 R 平行反向，ΣH＝0</text></g>
 </svg>

@@ -36,7 +36,7 @@
       if (index === 0 || index === 5) {
         const groupTitle = document.createElement('h3');
         groupTitle.className = 'course-menu-group-title';
-        groupTitle.textContent = index === 0 ? '八个视角，建立一个整体模型' : '整体性及主要分体系的相互关系';
+        groupTitle.textContent = index === 0 ? '把建筑看作总结构体系' : '整体性及主要分体系的相互关系';
         list.append(groupTitle);
       }
       const link = document.createElement('a');
@@ -79,26 +79,84 @@
     });
   });
 
-  const supportDialog = $('[data-support-dialog]');
-  const supportOpen = $('[data-support-open]');
-  if (supportDialog && supportOpen && typeof supportDialog.showModal === 'function') {
-    supportOpen.addEventListener('click', event => {
-      event.preventDefault();
-      supportDialog.showModal();
-      document.body.classList.add('support-dialog-open');
+  const topNav = $('.top-nav');
+  if (topNav) {
+    const aboutOpen = document.createElement('button');
+    aboutOpen.type = 'button';
+    aboutOpen.className = 'about-open';
+    aboutOpen.textContent = '致读者';
+    aboutOpen.setAttribute('aria-haspopup', 'dialog');
+    aboutOpen.setAttribute('aria-controls', 'aboutDialog');
+
+    const aboutDialog = document.createElement('dialog');
+    aboutDialog.className = 'support-dialog about-dialog';
+    aboutDialog.id = 'aboutDialog';
+    aboutDialog.setAttribute('aria-labelledby', 'about-dialog-title');
+    aboutDialog.innerHTML = `
+      <div class="support-dialog-heading"><h2 id="about-dialog-title">致读者</h2><button type="button" data-about-close aria-label="关闭致读者">×</button></div>
+      <div class="about-dialog-copy about-reader">
+        <h3>结构工程师的最后主战场</h3>
+        <p>随着 AI 技术快速演进，AI 完成建模、出图正逐步成为现实。在这个时代，结构工程师的核心价值究竟何在？</p>
+        <p>答案在于：精准判断 AI 生成的结构方案，引导 AI 进行迭代优化，并为最终的结构安全兜底负责。这将成为结构工程师不可替代的最后主战场。</p>
+        <p>制作本网站的初衷，正是为了帮助广大结构工程师跟随林同炎大师的步伐，不断完善概念设计能力。</p>
+        <blockquote><p>因为软件可以算得很快，但判断对错与承担责任，永远属于人。</p></blockquote>
+        <div class="reader-support">
+          <div><h3>支持本站</h3><p>如果这些内容对你有帮助，欢迎自愿赞赏。你的支持会鼓励我持续完善课程内容与交互实验。</p><p>微信扫码赞赏，金额随意。</p></div>
+          <img src="${topNav.closest('header').querySelector('[data-root]')?.dataset.root || './'}assets/images/wechat-reward.png" alt="Zhao | Struct. E. 的微信赞赏码" width="180" height="180" loading="lazy">
+        </div>
+      </div>`;
+    topNav.append(aboutOpen);
+    document.body.append(aboutDialog);
+
+    aboutOpen.addEventListener('click', () => {
+      aboutDialog.showModal();
+      document.body.classList.add('about-dialog-open');
     });
-    $('[data-support-close]', supportDialog).addEventListener('click', () => supportDialog.close());
-    supportDialog.addEventListener('click', event => {
-      if (event.target !== supportDialog) return;
-      const bounds = supportDialog.getBoundingClientRect();
+    $('[data-about-close]', aboutDialog).addEventListener('click', () => aboutDialog.close());
+    aboutDialog.addEventListener('click', event => {
+      if (event.target !== aboutDialog) return;
+      const bounds = aboutDialog.getBoundingClientRect();
       const outside = event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom;
-      if (outside) supportDialog.close();
+      if (outside) aboutDialog.close();
     });
-    supportDialog.addEventListener('close', () => {
-      document.body.classList.remove('support-dialog-open');
-      supportOpen.focus();
+    aboutDialog.addEventListener('close', () => {
+      document.body.classList.remove('about-dialog-open');
+      aboutOpen.focus();
     });
   }
+
+  $$('[data-copy-email]').forEach(button => {
+    const email = 'Zhao_Struct_E@163.com';
+    button.addEventListener('click', async () => {
+      try {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(email);
+        } else {
+          const field = document.createElement('textarea');
+          field.value = email;
+          field.style.position = 'fixed';
+          field.style.opacity = '0';
+          document.body.append(field);
+          field.select();
+          if (!document.execCommand('copy')) throw new Error('Copy unavailable');
+          field.remove();
+        }
+        button.textContent = '邮箱已复制';
+        button.classList.add('is-copied');
+      } catch {
+        button.textContent = email;
+        const selection = window.getSelection();
+        const range = document.createRange();
+        range.selectNodeContents(button);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+      window.setTimeout(() => {
+        button.textContent = email;
+        button.classList.remove('is-copied');
+      }, 2000);
+    });
+  });
 
   // Inline local SVGs so individual force arrows and dashed deformation layers can move.
   $$('[data-svg-src]').forEach(mount => {
@@ -162,23 +220,23 @@
       activateDemo(tabs[next].dataset.demo, true);
     });
   });
-  if (tabs.length) activateDemo(new URLSearchParams(location.search).get('demo') || 'overall');
+  if (tabs.length) activateDemo(new URLSearchParams(location.search).get('demo') || 'footprint');
 
   const floorRange = $('#floorRange');
   if (floorRange) {
     const deadRange = $('#deadRange');
     const columnButtons = $$('[data-column-units]');
-    let selectedUnits = 2;
+    let selectedUnits = 4;
     const updateLoads = () => {
       const floors = Number(floorRange.value);
       const q = Number(deadRange.value);
       const total = q * 900 * floors;
-      const perUnit = total / 16;
+      const perUnit = total / 32;
       $('#floorOutput').textContent = `${floors} 层`;
       $('#deadOutput').textContent = `${q.toFixed(1)} kN/m²`;
       $('#totalLoad').textContent = `${format(total)} kN`;
       $('#unitLoad').textContent = `${format(perUnit)} kN`;
-      $('#columnResult').textContent = `已选中柱：${selectedUnits.toFixed(1)} 面积单位，估算柱荷载 ${format(perUnit * selectedUnits)} kN`;
+      $('#columnResult').textContent = `已选中柱：${selectedUnits} 面积单位，估算柱荷载 ${format(perUnit * selectedUnits)} kN`;
     };
     columnButtons.forEach(button => button.addEventListener('click', () => {
       selectedUnits = Number(button.dataset.columnUnits);
@@ -204,8 +262,8 @@
       panel.dataset.zero = String(H === 0);
       panel.style.setProperty('--overturn-angle', `${Math.min(2.5, ratio * 9).toFixed(2)}deg`);
       const reaction = $('.overturn-reaction');
-      // The support width d = 15 m is drawn as 170 SVG units; e uses the same scale.
-      const reactionOffset = e * (170 / 15);
+      // The support width d = 15 m is drawn as 150 SVG units; e uses the same scale.
+      const reactionOffset = Math.min(e * (150 / 15), 75);
       if (reaction) reaction.style.transform = `translateX(${reactionOffset.toFixed(1)}px)`;
       const reactionGuide = $('.overturn-reaction-guide');
       if (reactionGuide) reactionGuide.style.transform = `translateX(${reactionOffset.toFixed(1)}px)`;
@@ -239,7 +297,7 @@
         status.textContent = `e/d = ${ratio.toFixed(3)}，反力恰好到达支承边缘；这是仅靠重力维持平衡的临界状态。`;
       } else {
         status.dataset.level = 'danger';
-        status.textContent = `e/d = ${ratio.toFixed(3)}，反力越出支承宽度，单靠重力已无法维持整体抗倾覆平衡。`;
+        status.textContent = `e/d = ${ratio.toFixed(3)}，所需反力位置越出支承宽度；图示停在支承边缘，单靠重力已无法维持整体抗倾覆平衡。`;
       }
     };
     document.addEventListener('vectorready', event => {
@@ -369,22 +427,39 @@
       solidGroup.replaceChildren();
       pieces.forEach(piece => polygon(solidGroup, piece.points, { fill: piece.fill, stroke: piece.fill, 'stroke-width': 0.5, 'stroke-linejoin': 'round' }));
       // Only exterior edges are stroked; subdivision edges remain invisible.
-      surfaces.forEach(surface => {
+      surfaces.forEach((surface, index) => {
         if (surface.horizontal && !surface.top) return;
         if (!surface.horizontal && !verticalVisible(surface, (surface.z[0] + surface.z[1]) / 2, angle)) return;
         const points = surface.horizontal
           ? horizontalPoints(surface, angle)
           : verticalPoints(surface, surface.z[0], surface.z[1], angle);
-        polygon(solidGroup, points, { fill: 'none', stroke: '#242522', 'stroke-width': 2.4, 'stroke-linejoin': 'round' });
+        if (![2, 3, 5, 6, 7, 8].includes(index)) {
+          polygon(solidGroup, points, { fill: 'none', stroke: '#242522', 'stroke-width': 2.4, 'stroke-linejoin': 'round' });
+          return;
+        }
+        const path = document.createElementNS(NS, 'path');
+        const move = point => `M${point.x.toFixed(2)} ${point.y.toFixed(2)}`;
+        const line = point => `L${point.x.toFixed(2)} ${point.y.toFixed(2)}`;
+        let d;
+        if (index === 7) d = `${move(points[0])}${line(points[1])}${move(points[2])}${line(points[3])}${line(points[0])}`;
+        else if (index === 2 || index === 3) {
+          const joint = project(55, surface.at, 160, angle * 160 / 250);
+          d = `${move(points[0])}${line(points[1])}${line(joint)}${move(points[2])}${line(points[3])}${line(points[0])}`;
+        } else d = `${move(points[0])}${line(points[1])}${line(points[2])}${line(points[3])}`;
+        path.setAttribute('d', d);
+        path.setAttribute('fill', 'none');
+        path.setAttribute('stroke', '#242522');
+        path.setAttribute('stroke-width', '2.4');
+        solidGroup.appendChild(path);
       });
 
       // H is the resultant horizontal seismic action at the cantilever midpoint.
       // Its direction stays fixed in the global reference frame; R is parallel and opposite.
-      const hBasePoint = project(110, 0, 205, angle * 205 / 250);
-      const eccentricityPixels = Number(torsionRange.value) * 13.125;
+      const eccentricity = Number(torsionRange.value);
+      const hBasePoint = project(-107.5, -112.5, 310, angle * 310 / 250);
       const hPoint = {
-        x: hBasePoint.x - eNormal.x * eccentricityPixels,
-        y: hBasePoint.y - eNormal.y * eccentricityPixels
+        x: hBasePoint.x - eccentricity * 19.375,
+        y: hBasePoint.y - eccentricity * 8.75
       };
       const hArrow = arrowFromPoint(hPoint, hDirection, 145, 65);
       forcePath.setAttribute('d', hArrow.d);
@@ -442,28 +517,36 @@
       else if (reduceMotion.matches) playButton.textContent = '已减少动态效果';
       else if (!playing) playButton.textContent = '播放扭转动画';
       if (!playing) twistSolid(0);
-      const forceY = 360 - e * 13.125;
+      const forceX = 975 - e * 18.5625;
       const planH = $('.torsion-plan-h');
-      if (planH) planH.setAttribute('d', `M826.5 ${forceY}H950`);
+      if (planH) planH.setAttribute('d', `M${forceX} 400V330`);
+      const planR = $('.torsion-plan-r');
+      if (planR) planR.setAttribute('d', 'M975 320V390');
       const hGuide = $('.torsion-h-guide');
-      if (hGuide) hGuide.setAttribute('d', `M800 ${forceY}H1080`);
+      if (hGuide) hGuide.setAttribute('d', `M${forceX} 270V450`);
+      const rGuide = $('.torsion-r-guide');
+      if (rGuide) rGuide.setAttribute('d', 'M975 270V450');
       const hLabel = $('.torsion-plan-h-label');
-      if (hLabel) hLabel.setAttribute('y', String(forceY - 10));
+      if (hLabel) {
+        hLabel.setAttribute('x', String(forceX - 25));
+        hLabel.setAttribute('y', '320');
+      }
       const eDimension = $('.torsion-e-dimension');
       if (eDimension) {
-        eDimension.setAttribute('d', `M1080 ${forceY}V360`);
+        eDimension.setAttribute('d', `M${forceX} 455H975`);
         eDimension.style.display = e === 0 ? 'none' : '';
       }
       const rightAngle = $('.torsion-right-angle');
       if (rightAngle) {
-        const upperAngleY = Math.min(forceY + 18, 360);
-        rightAngle.innerHTML = `<path d="M1062 ${forceY}V${upperAngleY}H1080"/><path d="M1062 360V342H1080"/>`;
+        rightAngle.innerHTML = `<path d="M${forceX} 433.5H${forceX + 18}V455"/><path d="M975 433.5H957V455"/>`;
         rightAngle.style.display = e === 0 ? 'none' : '';
       }
       const eLabel = $('.torsion-e-label');
       if (eLabel) {
         eLabel.textContent = `e＝${e.toFixed(1)} m`;
-        eLabel.setAttribute('y', String((forceY + 360) / 2 + 5));
+        eLabel.setAttribute('x', String((forceX + 975) / 2));
+        eLabel.setAttribute('y', '485');
+        eLabel.setAttribute('text-anchor', 'middle');
         eLabel.style.display = e === 0 ? 'none' : '';
       }
       const momentNote = $('.torsion-moment-note');
@@ -521,6 +604,7 @@
 
   const NS = 'http://www.w3.org/2000/svg';
   const $ = id => document.getElementById(id);
+  const $$ = selector => [...document.querySelectorAll(selector)];
   const number = value => Number(value).toLocaleString('zh-CN', { maximumFractionDigits: 0 });
   const node = (tag, attrs = {}, text = '') => {
     const element = document.createElementNS(NS, tag);
@@ -545,51 +629,115 @@
   function sharedGeometry() {
     return {
       n: Number($('sharedFloors').value),
-      h: Number($('sharedStorey').value)
+      h: Number($('sharedStorey').value),
+      Bx: Number($('sharedWidthX').value),
+      By: Number($('sharedWidthY').value)
     };
   }
   function windValues() {
+    const geometry = sharedGeometry();
+    const direction = $('windDirection').value;
+    const structureType = $('structureType').value;
+    const vibrationWidth = direction === 'x' ? geometry.Bx : geometry.By;
+    const H = geometry.n * geometry.h;
+    const B = direction === 'x' ? geometry.By : geometry.Bx;
+    const T0 = structureType === 'shearWall'
+      ? 0.03 + 0.03 * H / Math.cbrt(vibrationWidth)
+      : 0.25 + 0.53e-3 * H ** 2 / Math.cbrt(vibrationWidth);
+    const psiT = Number($('periodReduction').value);
     return {
-      ...sharedGeometry(),
-      B: Number($('windWidth').value),
-      w0: Number($('windPressure').value)
+      ...geometry,
+      direction,
+      B,
+      D: vibrationWidth,
+      muS: H > 45 && vibrationWidth / B <= 1 ? 1.4 : 1.3,
+      w0: Number($('windPressure').value),
+      structureType,
+      vibrationWidth,
+      T0,
+      psiT,
+      T1: T0 * psiT
     };
   }
   function quakeValues() {
+    const geometry = sharedGeometry();
+    const q = Number($('areaLoad').value);
     return {
-      ...sharedGeometry(),
-      G: Number($('floorWeight').value),
-      alpha: Number($('quakeAlpha').value)
+      ...geometry,
+      q,
+      G: q * geometry.Bx * geometry.By,
+      alpha: Number($('quakeAlpha').value),
+      T1: Number($('quakePeriod').value),
+      Tg: Number($('characteristicPeriod').value)
     };
   }
+  const windHeightCoefficients = [
+    [5, 1.00], [10, 1.00], [15, 1.13], [20, 1.23], [30, 1.39],
+    [40, 1.52], [50, 1.62], [60, 1.71], [70, 1.79], [80, 1.87],
+    [90, 1.93], [100, 2.00], [150, 2.25], [200, 2.46], [250, 2.63],
+    [300, 2.77], [350, 2.91], [400, 2.91], [450, 2.91], [500, 2.91], [550, 2.91]
+  ];
+  function windHeightCoefficient(z) {
+    if (z <= 5) return 1;
+    for (let index = 1; index < windHeightCoefficients.length; index += 1) {
+      const [upperZ, upperMu] = windHeightCoefficients[index];
+      if (z <= upperZ) {
+        const [lowerZ, lowerMu] = windHeightCoefficients[index - 1];
+        return lowerMu + (upperMu - lowerMu) * (z - lowerZ) / (upperZ - lowerZ);
+      }
+    }
+    return 2.91;
+  }
+  const frameShearModes = [0, 0.02, 0.08, 0.17, 0.27, 0.38, 0.45, 0.67, 0.74, 0.86, 1];
+  function windModeShape(z, H, structureType) {
+    const ratio = z / H;
+    if (structureType === 'frame') return Math.sin(Math.PI * ratio / 2);
+    if (structureType === 'shearWall') return Math.tan(Math.PI / 4 * ratio ** 0.7);
+    const position = Math.min(ratio, 1) * 10;
+    const lower = Math.floor(position);
+    const upper = Math.min(lower + 1, 10);
+    return frameShearModes[lower] + (frameShearModes[upper] - frameShearModes[lower]) * (position - lower);
+  }
   function calculateWind() {
-    const { B, n, h, w0 } = windValues();
+    const { Bx, By, B, D, muS, direction, n, h, w0, T0, T1, psiT, structureType, vibrationWidth } = windValues();
     const H = n * h;
-    const C = 1.3;
+    const correlationB = Math.min(B, 2 * H);
+    const rhoX = 10 * Math.sqrt(correlationB + 50 * Math.exp(-correlationB / 50) - 50) / correlationB;
+    const rhoZ = 10 * Math.sqrt(H + 60 * Math.exp(-H / 60) - 60) / H;
+    const x1 = 30 / T1 / Math.sqrt(w0);
+    const R = Math.sqrt(Math.PI * x1 ** 2 / (6 * 0.05 * (1 + x1 ** 2) ** (4 / 3)));
     const floors = Array.from({ length: n }, (_, index) => {
       const level = index + 1;
-      const z = level * h;
-      const mu = 0.6 + 0.4 * z / H;
-      const pressure = w0 * mu * C;
+      const z = (index + 0.5) * h;
+      const mu = windHeightCoefficient(z);
+      const phi = windModeShape(z, H, structureType);
+      const background = 0.670 * H ** 0.187 * rhoX * rhoZ * phi / mu;
+      const beta = 1 + 2 * 2.5 * 0.14 * background * Math.sqrt(1 + R ** 2);
+      const pressure = beta * w0 * mu * muS;
       const F = pressure * B * h;
-      return { level, Hi: level * h, z, mu, pressure, F };
+      return { level, Hi: z, z, mu, phi, background, beta, pressure, F };
     });
     const V = floors.reduce((sum, floor) => sum + floor.F, 0);
     const M = floors.reduce((sum, floor) => sum + floor.F * floor.Hi, 0);
-    return { B, n, h, w0, H, floors, V, M, resultant: M / V };
+    return { Bx, By, B, D, muS, direction, n, h, w0, T0, T1, psiT, structureType, vibrationWidth, H, correlationB, rhoX, rhoZ, x1, R, floors, V, M, resultant: M / V };
   }
   function calculateQuake() {
-    const { n, h, G, alpha } = quakeValues();
+    const { Bx, By, n, h, q, G, alpha, T1, Tg } = quakeValues();
     const H = n * h;
-    const V = alpha * n * G;
+    const equivalentG = 0.85 * n * G;
+    const V = alpha * equivalentG;
+    const delta = T1 <= 1.4 * Tg ? 0 : Tg <= 0.35 ? 0.08 * T1 + 0.07 : Tg <= 0.55 ? 0.08 * T1 + 0.01 : 0.08 * T1 - 0.02;
+    const additionalTop = delta * V;
     const weightedHeight = Array.from({ length: n }, (_, index) => G * (index + 1) * h).reduce((a, b) => a + b, 0);
     const floors = Array.from({ length: n }, (_, index) => {
       const level = index + 1;
       const Hi = level * h;
-      return { level, Hi, F: V * G * Hi / weightedHeight };
+      const regularF = V * G * Hi / weightedHeight * (1 - delta);
+      const additionalF = level === n ? additionalTop : 0;
+      return { level, Hi, regularF, additionalF, F: regularF + additionalF };
     });
     const M = floors.reduce((sum, floor) => sum + floor.F * floor.Hi, 0);
-    return { n, h, G, alpha, H, floors, V, M, resultant: M / V };
+    return { Bx, By, n, h, q, G, alpha, T1, Tg, equivalentG, delta, additionalTop, H, floors, V, M, resultant: M / V };
   }
 
   function drawBuilding(svg, data, options) {
@@ -604,16 +752,17 @@
     const group = add(svg, 'g', { class: `load-model load-model-${mode}` });
     add(group, 'rect', { x, y: top, width, height: base - top, class: 'lateral-building' });
     data.floors.forEach(floor => {
-      const y = base - (floor.level / data.n) * (base - top);
-      addLine(group, x, y, right, y, 'lateral-floor');
+      const floorY = base - (floor.level / data.n) * (base - top);
+      const actionY = base - (floor.Hi / data.H) * (base - top);
+      addLine(group, x, floorY, right, floorY, 'lateral-floor');
       const length = 25 + maxArrow * floor.F / maxForce;
       const arrowClass = mode === 'wind' ? 'action-arrow wind-force' : 'action-arrow quake-force';
       if (mode === 'wind') {
-        addLine(group, x - 14 - length, y, x - 14, y, arrowClass).setAttribute('marker-end', `url(#${redMarker})`);
+        addLine(group, x - 14 - length, actionY, x - 14, actionY, arrowClass).setAttribute('marker-end', `url(#${redMarker})`);
       } else {
         const massX = x + width / 2;
-        add(group, 'circle', { cx: massX, cy: y, r: compact ? 3 : 4, class: 'floor-mass' });
-        addLine(group, massX, y, massX + length, y, arrowClass).setAttribute('marker-end', `url(#${redMarker})`);
+        add(group, 'circle', { cx: massX, cy: actionY, r: compact ? 3 : 4, class: 'floor-mass' });
+        addLine(group, massX, actionY, massX + length, actionY, arrowClass).setAttribute('marker-end', `url(#${redMarker})`);
       }
     });
     add(group, 'rect', { x: x - 12, y: base, width: width + 24, height: 18, class: 'lateral-foundation' });
@@ -621,6 +770,7 @@
     addLine(group, right + 12, base, right + 35, base, 'lateral-ground');
     for (let tick = x - 30; tick < x - 12; tick += 12) addLine(group, tick, base + 4, tick - 10, base + 18, 'lateral-soil');
     for (let tick = right + 18; tick < right + 35; tick += 12) addLine(group, tick, base + 4, tick - 10, base + 18, 'lateral-soil');
+    for (let tick = x; tick < right + 12; tick += 14) addLine(group, tick, base + 30, tick + 12, base + 18, 'lateral-soil');
     const reactionY = base + 50;
     addLine(group, x - 8, reactionY, x - (compact ? 64 : 105), reactionY, 'reaction-arrow').setAttribute('marker-end', `url(#${greenMarker})`);
     addText(group, x - (compact ? 66 : 104), reactionY + 22, `${mode === 'wind' ? 'Vw' : 'VE'} = ${number(data.V)} kN`, 'reaction-label');
@@ -639,25 +789,37 @@
   function drawWindPlan(svg, data) {
     const centerX = 590;
     const centerY = 255;
-    const planHeight = 50 + data.B * 2;
-    const left = centerX - 50;
-    const right = centerX + 50;
+    const scale = 120 / Math.max(data.Bx, data.By);
+    const planWidth = data.Bx * scale;
+    const planHeight = data.By * scale;
+    const left = centerX - planWidth / 2;
+    const right = centerX + planWidth / 2;
     const top = centerY - planHeight / 2;
     const bottom = centerY + planHeight / 2;
-    const dimensionX = 666;
-    addText(svg, centerX, 90, '迎风面平面', 'diagram-title').setAttribute('text-anchor', 'middle');
-    addText(svg, 496, centerY - 30, '风向', 'force-value').setAttribute('text-anchor', 'middle');
-    addLine(svg, 480, centerY, left - 14, centerY, 'action-arrow').setAttribute('marker-end', 'url(#windRedArrow)');
-    add(svg, 'rect', { x: left, y: top, width: right - left, height: planHeight, class: 'lateral-building' });
-    addLine(svg, left, top, left, bottom, 'windward-edge');
-    addText(svg, left - 14, centerY - 48, '迎风边', 'force-value').setAttribute('text-anchor', 'middle');
-    svg.lastChild.setAttribute('transform', `rotate(-90 ${left - 14} ${centerY - 48})`);
-    addLine(svg, right + 8, top, dimensionX, top, 'aspect-dimension');
-    addLine(svg, right + 8, bottom, dimensionX, bottom, 'aspect-dimension');
-    addLine(svg, dimensionX, top, dimensionX, bottom, 'aspect-dimension').setAttribute('marker-start', 'url(#windDimension)');
-    svg.lastChild.setAttribute('marker-end', 'url(#windDimension)');
-    addText(svg, 690, centerY, `B = ${data.B} m`, 'diagram-subtitle').setAttribute('text-anchor', 'middle');
-    svg.lastChild.setAttribute('transform', `rotate(-90 690 ${centerY})`);
+    addText(svg, centerX, 90, '建筑平面与风向', 'diagram-title').setAttribute('text-anchor', 'middle');
+    add(svg, 'rect', { x: left, y: top, width: planWidth, height: planHeight, class: 'lateral-building' });
+    if (data.direction === 'x') {
+      addText(svg, left - 55, centerY - 30, '沿 X 向', 'force-value').setAttribute('text-anchor', 'middle');
+      addLine(svg, left - 65, centerY, left - 14, centerY, 'action-arrow').setAttribute('marker-end', 'url(#windRedArrow)');
+      addLine(svg, left, top, left, bottom, 'windward-edge');
+      const dimensionX = right + 24;
+      addLine(svg, right + 8, top, dimensionX, top, 'aspect-dimension');
+      addLine(svg, right + 8, bottom, dimensionX, bottom, 'aspect-dimension');
+      addLine(svg, dimensionX, top, dimensionX, bottom, 'aspect-dimension').setAttribute('marker-start', 'url(#windDimension)');
+      svg.lastChild.setAttribute('marker-end', 'url(#windDimension)');
+      addText(svg, dimensionX + 20, centerY, `By = ${data.B} m`, 'diagram-subtitle').setAttribute('text-anchor', 'middle');
+      svg.lastChild.setAttribute('transform', `rotate(-90 ${dimensionX + 20} ${centerY})`);
+    } else {
+      addText(svg, centerX - 30, top - 42, '沿 Y 向', 'force-value').setAttribute('text-anchor', 'middle');
+      addLine(svg, centerX, top - 55, centerX, top - 14, 'action-arrow').setAttribute('marker-end', 'url(#windRedArrow)');
+      addLine(svg, left, top, right, top, 'windward-edge');
+      const dimensionY = bottom + 24;
+      addLine(svg, left, bottom + 8, left, dimensionY, 'aspect-dimension');
+      addLine(svg, right, bottom + 8, right, dimensionY, 'aspect-dimension');
+      addLine(svg, left, dimensionY, right, dimensionY, 'aspect-dimension').setAttribute('marker-start', 'url(#windDimension)');
+      svg.lastChild.setAttribute('marker-end', 'url(#windDimension)');
+      addText(svg, centerX, dimensionY + 24, `Bx = ${data.B} m`, 'diagram-subtitle').setAttribute('text-anchor', 'middle');
+    }
     addText(svg, centerX, 395, '每层迎风面积 = B × h', 'resultant-label').setAttribute('text-anchor', 'middle');
   }
 
@@ -667,7 +829,7 @@
     marker(svg, 'windRedArrow', '#a34c3f');
     marker(svg, 'windGreenArrow', '#537567');
     marker(svg, 'windDimension', '#6f726b');
-    drawBuilding(svg, data, { x: 315, width: 150, mode: 'wind' });
+    drawBuilding(svg, data, { x: 270, width: 140, mode: 'wind' });
     drawWindPlan(svg, data);
   }
   function renderQuake(data) {
@@ -686,22 +848,112 @@
     drawBuilding(svg, quake, { x: 430, width: 100, mode: 'seismic', compact: true });
   }
 
+  const calculationDialog = $('calculationDialog');
+  const calculationReport = $('calculationReport');
+  if (calculationDialog && calculationReport) {
+    const reportNumber = (value, digits = 3) => Number(value).toFixed(digits);
+    const parameterRows = rows => `<dl class="report-parameters">${rows.map(([name, value]) => `<div><dt>${name}</dt><dd>${value}</dd></div>`).join('')}</dl>`;
+    const reportTable = (headers, rows) => `<div class="report-table-wrap"><table><thead><tr>${headers.map(header => `<th>${header}</th>`).join('')}</tr></thead><tbody>${rows.map(row => `<tr>${row.map(value => `<td>${value}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+    const checks = data => `<p class="report-check">平衡核对：ΣF = ${reportNumber(data.V)} kN；Σ(F·H) = ${reportNumber(data.M)} kN·m；H̄ = M/V = ${reportNumber(data.resultant)} m。上述结果与逐层求和一致。</p>`;
+    let reportName = '';
+
+    function windReport(data) {
+      const modeText = {
+        frame: '框架采用剪切型教学近似 φ1(z) = sin[πz/(2H)]',
+        frameShear: '框剪按 GB 50009 附录 G 表 G.0.3 的第一振型系数线性插值',
+        shearWall: '剪力墙采用弯剪型近似 φ1(z) = tan[π(z/H)^0.7/4]'
+      }[data.structureType];
+      const common = [
+        ['建筑层数 n', `${data.n} 层`], ['层高 h', `${reportNumber(data.h, 1)} m`],
+        ['总高度 H', `${reportNumber(data.H, 1)} m`], ['平面尺寸 Bx × By', `${data.Bx} m × ${data.By} m`],
+        ['风向', data.direction === 'x' ? '沿 X 向' : '沿 Y 向'], ['迎风面宽度 B', `${data.B} m`],
+        ['顺风向进深 D', `${data.D} m`], ['深宽比 D/B', reportNumber(data.D / data.B)],
+        ['基本风压 w0', `${reportNumber(data.w0, 2)} kN/m²`], ['结构类型', { frame: '钢筋混凝土框架', frameShear: '钢筋混凝土框架-剪力墙', shearWall: '钢筋混凝土剪力墙' }[data.structureType]],
+        ['振动方向宽度 B', `${data.vibrationWidth} m`], ['周期折减系数 ψT', reportNumber(data.psiT, 2)],
+        ['估算周期 T0', `${reportNumber(data.T0)} s`], ['折减后基本自振周期 T1', `${reportNumber(data.T1)} s`],
+        ['体型系数 μs', reportNumber(data.muS, 2)], ['ρx 计算宽度 min(B, 2H)', `${reportNumber(data.correlationB, 1)} m`],
+        ['阻尼比 ζ1', '0.05']
+      ];
+      const dynamic = [['g / I10', '2.5 / 0.14'], ['k / a1 / kw', '0.670 / 0.187 / 1.0'], ['ρx / ρz', `${reportNumber(data.rhoX)} / ${reportNumber(data.rhoZ)}`], ['x1 / R', `${reportNumber(data.x1)} / ${reportNumber(data.R)}`]];
+      const rows = data.floors.map(floor => [floor.level, reportNumber(floor.Hi, 1), reportNumber(floor.mu), reportNumber(floor.phi), reportNumber(floor.background), reportNumber(floor.beta), reportNumber(floor.pressure), reportNumber(floor.F), reportNumber(floor.F * floor.Hi)]);
+      return `<h3>风荷载估算计算书</h3><p class="report-time">参数快照：${new Date().toLocaleString('zh-CN')}</p><h4>1. 计算依据与假定</h4><p>主体风荷载按 GB 50009 式 8.1.1-1 计算，风振系数按式 8.4.3～8.4.7 及附录 G 计算。采用 B 类地面粗糙度，仅考虑顺风向第一振型；${modeText}。各受风段按中点风压乘以 Bh，并将集中力作用于该段中点。当 B＞2H 时，ρx 的计算宽度按 2H 截取，作为教学模型的边界处理。</p><h4>2. 输入参数</h4>${parameterRows(common)}<h4>3. 风振参数</h4>${parameterRows(dynamic)}<p>βz = 1 + 2gI10Bz√(1+R²)；Bz = kH<sup>a1</sup>ρxρzφ1(z)/μz；R² = πx1²/[6ζ1(1+x1²)<sup>4/3</sup>]；x1 = 30/(T1√(kww0))。</p><h4>4. 逐层计算</h4><p>zi = (i−1/2)h；Fw,i = βz,i w0 μz,i μs B h；Mi = Fw,i zi。力单位为 kN，力矩单位为 kN·m。</p>${reportTable(['层', 'zi(m)', 'μz', 'φ1', 'Bz', 'βz', 'wi(kN/m²)', 'Fw,i(kN)', 'Mi(kN·m)'], rows)}<h4>5. 汇总与平衡核对</h4>${parameterRows([['基底剪力 Vw = ΣFw,i', `${reportNumber(data.V)} kN`], ['倾覆力矩 Mw = ΣMi', `${reportNumber(data.M)} kN·m`], ['合力高度 H̄ = Mw/Vw', `${reportNumber(data.resultant)} m`]])}${checks(data)}<p class="report-disclaimer">本计算书对应上述教学模型和参数快照，不替代实际工程的动力分析、风荷载确定及设计验算。</p>`;
+    }
+
+    function quakeReport(data) {
+      const weightedHeight = data.floors.reduce((sum, floor) => sum + data.G * floor.Hi, 0);
+      const rows = data.floors.map(floor => [floor.level, reportNumber(floor.Hi, 1), reportNumber(data.G), reportNumber(data.G * floor.Hi), reportNumber(data.G * floor.Hi / weightedHeight), reportNumber(floor.regularF), reportNumber(floor.additionalF), reportNumber(floor.F), reportNumber(floor.F * floor.Hi)]);
+      const scopeNote = data.H > 40 ? '<p class="report-check">适用性提示：当前建筑高度超过 40 m，超出底部剪力法通常适用范围；本结果仅作概念演示，实际工程宜采用振型分解反应谱法。</p>' : '';
+      return `<h3>地震作用估算计算书</h3><p class="report-time">参数快照：${new Date().toLocaleString('zh-CN')}</p><h4>1. 计算依据与假定</h4><p>参照 GB/T 50011 底部剪力法，按等效总重力荷载求基底剪力，再按楼层重量与高度分配，并计入顶部附加作用。模型假定各层等重、等高，结构规则且以剪切变形为主；α1 由用户直接输入，实际工程应按烈度、场地、设计分组、结构周期和阻尼确定。</p>${scopeNote}<h4>2. 输入参数</h4>${parameterRows([['建筑层数 n', `${data.n} 层`], ['层高 h', `${reportNumber(data.h, 1)} m`], ['总高度 H', `${reportNumber(data.H, 1)} m`], ['平面尺寸 Bx × By', `${data.Bx} m × ${data.By} m`], ['单位面积重力荷载代表值 q', `${data.q} kN/m²`], ['基本自振周期 T1', `${reportNumber(data.T1, 2)} s`], ['场地特征周期 Tg', `${reportNumber(data.Tg, 2)} s`], ['地震影响系数 α1', reportNumber(data.alpha)]])}<h4>3. 总剪力与分配系数</h4><p>每层重量 Gi = qBxBy = ${reportNumber(data.G)} kN；总重量 ΣGi = ${reportNumber(data.n * data.G)} kN；等效总重力荷载 Geq = 0.85ΣGi = ${reportNumber(data.equivalentG)} kN。</p><p>基底剪力 VE = α1Geq = ${reportNumber(data.V)} kN；δn = ${reportNumber(data.delta)}；顶部附加作用 ΔFn = δnVE = ${reportNumber(data.additionalTop)} kN。</p><p>Σ(GiHi) = ${reportNumber(weightedHeight)} kN·m；规则分配 Fi = VE(1−δn)GiHi/Σ(GjHj)，顶层总作用另加 ΔFn。</p><h4>4. 逐层计算</h4>${reportTable(['层', 'Hi(m)', 'Gi(kN)', 'GiHi(kN·m)', '高度分配比例', '规则分配 Fi(kN)', '顶部附加 ΔFi(kN)', '合计 Fi(kN)', 'Mi(kN·m)'], rows)}<h4>5. 汇总与平衡核对</h4>${parameterRows([['基底剪力 VE = ΣFi', `${reportNumber(data.V)} kN`], ['倾覆力矩 ME = ΣMi', `${reportNumber(data.M)} kN·m`], ['合力高度 H̄ = ME/VE', `${reportNumber(data.resultant)} m`]])}${checks(data)}<p class="report-disclaimer">本计算书对应上述教学模型和参数快照，不包含楼层最小剪重比等全部规范验算，不替代实际工程设计。</p>`;
+    }
+
+    $$('[data-report-open]').forEach(button => button.addEventListener('click', () => {
+      reportName = button.dataset.reportOpen;
+      calculationDialog.showModal();
+      try {
+        calculationReport.innerHTML = reportName === 'wind' ? windReport(calculateWind()) : quakeReport(calculateQuake());
+      } catch (error) {
+        calculationReport.textContent = `计算书生成失败：${error.message}`;
+      }
+      document.body.classList.add('calculation-dialog-open');
+    }));
+    $('closeCalculation').addEventListener('click', () => calculationDialog.close());
+    calculationDialog.addEventListener('close', () => document.body.classList.remove('calculation-dialog-open'));
+    calculationDialog.addEventListener('click', event => {
+      if (event.target !== calculationDialog) return;
+      const bounds = calculationDialog.getBoundingClientRect();
+      if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) calculationDialog.close();
+    });
+    const reportDocument = () => `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${reportName === 'wind' ? '风荷载' : '地震作用'}估算计算书</title><style>body{max-width:1200px;margin:40px auto;padding:0 24px;color:#292923;font:14px/1.7 sans-serif}h3{font-size:26px}h4{margin:28px 0 12px;font-size:18px}.report-time,.report-disclaimer{color:#666}.report-parameters{display:grid;grid-template-columns:repeat(2,1fr);gap:0 28px}.report-parameters div{display:flex;justify-content:space-between;gap:16px;padding:6px 0;border-bottom:1px solid #ddd}.report-table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;white-space:nowrap}th,td{padding:8px;border:1px solid #bbb;text-align:right}th:first-child,td:first-child{text-align:center}.report-check{padding:12px;background:#f2f1eb;font-weight:700}@media print{body{margin:0}.report-parameters{font-size:11px}table{font-size:10px}h4{break-after:avoid}tr{break-inside:avoid}}</style></head><body>${calculationReport.innerHTML}</body></html>`;
+    $('exportCalculation').addEventListener('click', () => {
+      const blob = new Blob([reportDocument()], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${reportName === 'wind' ? '风荷载' : '地震作用'}估算计算书.html`;
+      link.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    });
+    $('printCalculation').addEventListener('click', () => {
+      const frame = document.createElement('iframe');
+      frame.className = 'calculation-print-frame';
+      document.body.append(frame);
+      frame.contentDocument.open();
+      frame.contentDocument.write(reportDocument());
+      frame.contentDocument.close();
+      frame.contentWindow.addEventListener('load', () => {
+        frame.contentWindow.focus();
+        frame.contentWindow.print();
+        window.setTimeout(() => frame.remove(), 1000);
+      }, { once: true });
+    });
+  }
+
   function updateLesson() {
     const wind = calculateWind();
     const quake = calculateQuake();
     $('sharedFloorsOutput').textContent = `${wind.n} 层`;
     $('sharedStoreyOutput').textContent = `${wind.h.toFixed(1)} m`;
-    $('windWidthOutput').textContent = `${wind.B} m`;
+    $('sharedWidthXOutput').textContent = `${wind.Bx} m`;
+    $('sharedWidthYOutput').textContent = `${wind.By} m`;
     $('windPressureOutput').textContent = `${wind.w0.toFixed(2)} kN/m²`;
+    $('windBasePeriod').textContent = `${wind.T0.toFixed(3)} s`;
+    $('windPeriodOutput').textContent = `${wind.T1.toFixed(3)} s`;
+    $('periodFormula').textContent = `${wind.structureType === 'shearWall' ? '剪力墙按 F.2.2-2：T0 = 0.03 + 0.03H/∛B' : '框架、框剪按 F.2.2-1：T0 = 0.25 + 0.53×10⁻³H²/∛B'}；B = ${wind.vibrationWidth} m（振动方向宽度），T1 = ψT·T0。`;
     $('windShear').textContent = `${number(wind.V)} kN`;
     $('windMoment').textContent = `${number(wind.M)} kN·m`;
-    $('windStatus').textContent = `顶层风荷载 ${number(wind.floors[wind.floors.length - 1].F)} kN；合力位于基底以上 ${wind.resultant.toFixed(1)} m。`;
+    const topWind = wind.floors[wind.floors.length - 1];
+    const correlationNote = wind.B > 2 * wind.H ? ` B > 2H，ρx 的计算宽度已按 ${wind.correlationB.toFixed(1)} m 截取。` : '';
+    $('windStatus').dataset.level = correlationNote ? 'warning' : 'note';
+    $('windStatus').textContent = `迎风面宽度 ${wind.B} m，μs = ${wind.muS.toFixed(2)}；顶层受风段中点 μz = ${topWind.mu.toFixed(3)}、βz = ${topWind.beta.toFixed(3)}，风荷载 ${number(topWind.F)} kN；合力位于基底以上 ${wind.resultant.toFixed(1)} m。${correlationNote}`;
 
-    $('floorWeightOutput').textContent = `${number(quake.G)} kN`;
+    $('areaLoadOutput').textContent = `${quake.q} kN/m²`;
+    $('quakePeriodOutput').textContent = `${quake.T1.toFixed(2)} s`;
     $('quakeAlphaOutput').textContent = `${quake.alpha.toFixed(3)}`;
     $('quakeShear').textContent = `${number(quake.V)} kN`;
     $('quakeMoment').textContent = `${number(quake.M)} kN·m`;
-    $('quakeStatus').textContent = `顶层地震作用 ${number(quake.floors[quake.floors.length - 1].F)} kN；合力位于基底以上 ${quake.resultant.toFixed(1)} m。`;
+    const scopeNote = quake.H > 40 ? ` H = ${quake.H.toFixed(1)} m > 40 m，已超出底部剪力法通常适用范围；结果仅作概念演示，实际宜采用振型分解反应谱法。` : '';
+    $('quakeStatus').dataset.level = scopeNote ? 'warning' : 'note';
+    $('quakeStatus').textContent = `等效总重量 ${number(quake.equivalentG)} kN；δn = ${quake.delta.toFixed(3)}，顶部附加作用 ${number(quake.additionalTop)} kN；顶层总作用 ${number(quake.floors[quake.floors.length - 1].F)} kN；合力位于基底以上 ${quake.resultant.toFixed(1)} m。${scopeNote}`;
 
     $('compareWindShear').textContent = `${number(wind.V)} kN`;
     $('compareQuakeShear').textContent = `${number(quake.V)} kN`;
@@ -722,17 +974,21 @@
     renderCompare(wind, quake);
   }
 
-  ['sharedFloors', 'sharedStorey', 'windWidth', 'windPressure', 'floorWeight', 'quakeAlpha'].forEach(id => {
+  ['sharedFloors', 'sharedStorey', 'sharedWidthX', 'sharedWidthY', 'windDirection', 'windPressure', 'structureType', 'periodReduction', 'areaLoad', 'quakePeriod', 'characteristicPeriod', 'quakeAlpha'].forEach(id => {
     $(id).addEventListener('input', updateLesson);
   });
 
   $('resetLateral').addEventListener('click', () => {
-    const defaults = { sharedFloors: 10, sharedStorey: 3.6, windWidth: 30, windPressure: 0.5, floorWeight: 8000, quakeAlpha: 0.08 };
+    const defaults = { sharedFloors: 10, sharedStorey: 3.6, sharedWidthX: 30, sharedWidthY: 30, windDirection: 'x', windPressure: 0.5, structureType: 'frame', periodReduction: 1, areaLoad: 12, quakePeriod: 0.47, characteristicPeriod: 0.35, quakeAlpha: 0.08 };
     Object.entries(defaults).forEach(([id, value]) => { $(id).value = value; });
     updateLesson();
   });
 
-  updateLesson();
+  try {
+    updateLesson();
+  } catch (error) {
+    $('windStatus').textContent = `初始化错误：${error.stack}`;
+  }
 })();
 
 
@@ -799,7 +1055,7 @@
     marker(svg, 'aspectRed', '#a34c3f');
     marker(svg, 'aspectGreen', '#537567');
     marker(svg, 'aspectBlack', '#373632');
-    const scale = 3.4;
+    const scale = Math.min(4.2, 340 / data.H);
     const base = 420;
     const center = 375;
     const width = data.B * scale;

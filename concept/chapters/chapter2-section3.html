@@ -14,7 +14,7 @@
   <header class="site-header">
     <div class="shell header-inner">
       <a class="brand" href="../index.html" aria-label="结构概念学习首页"><span>结构概念<small>STRUCTURAL CONCEPTS</small></span></a>
-      <nav class="top-nav" aria-label="主导航"><a href="../index.html">学习首页</a><div class="course-menu" data-course-menu data-root="../"></div><a href="#concept">核心概念</a><a href="#lab">交互实验</a></nav>
+      <nav class="top-nav" aria-label="主导航"><a href="../index.html">学习首页</a><div class="course-menu" data-course-menu data-root="../"></div></nav>
     </div>
   </header>
 
@@ -25,7 +25,6 @@
         <h1>高宽比与倾覆</h1>
         <p class="hero-lead">建筑越高，水平力的倾覆力臂通常越大；支承越窄，重力能够提供的稳定力臂越小。高宽比把这两种几何影响放在一起，是方案阶段判断整体抗倾覆敏感性的直观指标。</p>
       </div>
-      <dl class="lesson-meta"><dt>几何指标</dt><dd>高宽比 H/B</dd><dt>平衡指标</dt><dd>反力偏心 e 与 e/B</dd><dt>判断顺序</dt><dd>倾覆力矩 → 稳定力矩 → 基底接触</dd></dl>
     </section>
 
     <section class="lesson-section" id="concept" aria-labelledby="concept-title">
@@ -33,7 +32,7 @@
         <div class="section-heading"><p class="section-label">核心概念 / 01</p><div><h2 id="concept-title">高宽比不是装饰比例，而是受力比例</h2><p>在重量、水平合力及其相对作用高度相同的条件下，增加高度会放大倾覆力矩，增加支承宽度则会扩大稳定力矩。</p></div></div>
         <figure class="source-figure original-figure"><img src="../assets/figures/slenderness-overturning.svg" alt="高窄与宽矮矩形建筑抗倾覆对比图"><figcaption class="figure-swipe-hint">左右滑动查看全图</figcaption></figure>
         <div class="concept-grid concept-text-grid">
-          <article class="concept-item"><h3>倾覆力矩随作用高度增加</h3><p>水平合力 V 乘以合力作用高度 H̄ 得到倾覆力矩。楼层力分布改变时，即使基底剪力不变，合力高度和倾覆力矩也会改变。</p></article>
+          <article class="concept-item"><h3>倾覆力矩随作用高度增加</h3><p>水平合力 V 乘以合力作用高度 <span class="hbar">H</span> 得到倾覆力矩。楼层力分布改变时，即使基底剪力不变，合力高度和倾覆力矩也会改变。</p></article>
           <article class="concept-item"><h3>重力通过支承宽度提供稳定力矩</h3><p>对矩形支承范围，重力 W 到倾覆边缘的最大力臂为 B/2，因此理想稳定力矩为 WB/2。</p></article>
           <article class="concept-item"><h3>偏心把整体平衡反映到基底</h3><p>由 M = We 可得 e = M/W。e/B 较小时基底全接触；继续增大后，部分区域可能脱开，直至无法仅靠重力维持平衡。</p></article>
         </div>
@@ -62,7 +61,7 @@
 
           <section class="demo-panel is-active" id="aspectPanel" role="tabpanel" aria-labelledby="tab-aspect">
             <div class="demo-layout">
-              <div class="diagram-stage"><span class="diagram-caption">整体受力 / 反力位置按 e 与 B 的真实比例绘制</span><svg id="aspectDiagram" class="aspect-figure" viewBox="0 0 720 560" role="img" aria-label="高宽比、水平作用与基底反力偏心动态图"></svg></div>
+              <div class="diagram-stage"><span class="diagram-caption">整体受力 / 反力位置按 e 与 B 的真实比例绘制</span><svg id="aspectDiagram" class="aspect-figure" viewBox="40 0 620 560" role="img" aria-label="高宽比、水平作用与基底反力偏心动态图"></svg></div>
               <div class="demo-controls">
                 <h3>高度与宽度怎样进入平衡？</h3><p>水平作用产生 M，重力使竖向反力相对支承中心偏移 e。图中 R 与 W 大小相等、方向相反。</p>
                 <div class="metric-row"><div class="metric"><span>高宽比 H/B</span><strong id="aspectRatio">0.00</strong></div><div class="metric"><span>合力高度 H̄</span><strong id="resultantHeight">0 m</strong></div></div>
@@ -81,7 +80,7 @@
                 <div class="metric-row"><div class="metric"><span>偏心比 e/B</span><strong id="contactRatio">0.000</strong></div><div class="metric"><span>接触宽度 a</span><strong id="contactLength">0 m</strong></div></div>
                 <div class="metric-row"><div class="metric"><span>最大压力 qmax</span><strong id="pressureMax">0 kN/m</strong></div><div class="metric"><span>最小压力 qmin</span><strong id="pressureMin">0 kN/m</strong></div></div>
                 <div class="status-line" id="contactStatus" aria-live="polite"></div>
-                <div class="formula-box formula-explainer"><span class="formula-kicker">刚性矩形基底的压力合力与 W 等效</span><strong>全接触：qmax,min = W/B · (1 ± 6e/B)<br>部分接触：a = 3(B/2 − e)，qmax = 2W/a</strong><p class="formula-source"><strong>符号与单位：</strong>c 为预设合力相对高度，H̄ = cH；a 为实际接触宽度（m）；qmax、qmin 为单位进深基底最大、最小线压力（kN/m），W/B 表示把竖向合力 W（kN）分摊到支承宽度 B（m）。压力图面积等于 W，压力合力作用点与竖向反力位置一致。</p><p class="formula-source"><strong>适用边界：</strong>e/B ≤ 1/6 使用全接触梯形公式，等号时 qmin = 0；1/6 &lt; e/B &lt; 1/2 使用部分接触三角形公式。e/B = 1/2 时 a → 0，不能代入 qmax = 2W/a；e/B &gt; 1/2 时合力越出支承范围，本模型失效。均假定基底只承压、材料不变形且不计锚固。</p></div>
+                <div class="formula-box formula-explainer"><span class="formula-kicker">刚性矩形基底的压力合力与 W 等效</span><strong>全接触：qmax,min = W/B · (1 ± 6e/B)<br>部分接触：a = 3(B/2 − e)，qmax = 2W/a</strong><details class="formula-details"><summary>符号、单位与适用边界</summary><p class="formula-source"><strong>符号与单位：</strong>c 为预设合力相对高度，H̄ = cH；a 为实际接触宽度（m）；qmax、qmin 为单位进深基底最大、最小线压力（kN/m），W/B 表示把竖向合力 W（kN）分摊到支承宽度 B（m）。压力图面积等于 W，压力合力作用点与竖向反力位置一致。</p><p class="formula-source"><strong>适用边界：</strong>e/B ≤ 1/6 使用全接触梯形公式，等号时 qmin = 0；1/6 &lt; e/B &lt; 1/2 使用部分接触三角形公式。e/B = 1/2 时 a → 0，不能代入 qmax = 2W/a；e/B &gt; 1/2 时合力越出支承范围，本模型失效。均假定基底只承压、材料不变形且不计锚固。</p></details></div>
               </div>
             </div>
           </section>
@@ -102,27 +101,8 @@
       </div>
     </section>
 
-    <div class="shell lesson-end"><div class="end-links"><a href="../index.html">← 返回学习首页</a><a href="./chapter2-section2.html">回顾水平作用估算</a><a href="./chapter2-section4.html">继续：承载力与刚度 →</a></div><p>学习完成：高宽比决定整体几何敏感性，e/B 则把这一敏感性与具体荷载、重量和基底接触状态联系起来。</p></div>
+    <div class="shell lesson-end"><div class="end-links"><a href="./chapter2-section2.html">← 上一节：水平作用估算</a><a href="./chapter2-section4.html">下一节：承载力与刚度 →</a></div><p>学习完成：高宽比决定整体几何敏感性，e/B 则把这一敏感性与具体荷载、重量和基底接触状态联系起来。</p></div>
   </main>
-  <aside class="support-section" aria-labelledby="support-title">
-    <div class="shell support-inner">
-      <div class="support-copy">
-        <p class="section-label">SUPPORT / 自愿赞赏</p>
-        <h2 id="support-title">支持本站</h2>
-        <p>如果这些内容对你有帮助，欢迎自愿赞赏。你的支持会鼓励我持续完善课程内容与交互实验。</p>
-        <p class="support-note">微信扫码赞赏，金额随意。</p>
-      </div>
-      <a class="support-code" href="../assets/images/wechat-reward.png" data-support-open aria-haspopup="dialog" aria-controls="support-dialog">
-        <img src="../assets/images/wechat-reward.png" alt="Zhao | Struct. E. 的微信赞赏码" width="1152" height="1152" loading="lazy">
-        <span>点击查看大图 <b aria-hidden="true">↗</b></span>
-      </a>
-    </div>
-    <dialog class="support-dialog" id="support-dialog" data-support-dialog aria-labelledby="support-dialog-title">
-      <div class="support-dialog-heading"><h2 id="support-dialog-title">微信赞赏码</h2><button type="button" data-support-close aria-label="关闭赞赏码">×</button></div>
-      <img src="../assets/images/wechat-reward.png" alt="Zhao | Struct. E. 的微信赞赏码大图" width="1152" height="1152" loading="lazy">
-      <div class="support-dialog-footer"><p>微信扫一扫，或保存图片后从相册识别。</p><a href="../assets/images/wechat-reward.png" download="zhao-struct-e-reward.png">保存图片</a></div>
-    </dialog>
-  </aside>
-  <footer class="site-footer"><div class="shell"><p>结构概念 · 交互教学 · <a href="../index.html#about">关于本站</a></p><p>高宽比 · 反力偏心 · 基底接触</p></div></footer>
+  <footer class="site-footer"><div class="shell"><p><span class="site-credit">作者：Zhao | Struct. E.　　邮箱：<button class="email-copy" type="button" data-copy-email aria-label="复制邮箱 Zhao_Struct_E@163.com">Zhao_Struct_E@163.com</button></span></p><p>高宽比 · 反力偏心 · 基底接触</p></div></footer>
 </body>
 </html>

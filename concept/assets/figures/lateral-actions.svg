@@ -15,7 +15,7 @@
   <g id="windConcept">
     <path d="M250 410V150H480V410Z" fill="#e8e4dc" stroke="#373632" stroke-width="2"/>
     <path d="M250 410H480V432H250Z" fill="#d1ccc3" stroke="#373632" stroke-width="2"/>
-    <path d="M220 410H250V478H220ZM480 410H510V478H480Z" fill="url(#soil)"/>
+    <path d="M220 410H250V478H220ZM480 410H510V478H480ZM250 432H480V478H250Z" fill="url(#soil)"/>
     <path d="M220 410H250M480 410H510" stroke="#373632" stroke-width="2"/>
     <g stroke="#777168" stroke-width="1">
       <path d="M250 193H480M250 236H480M250 279H480M250 322H480M250 365H480"/>
@@ -34,7 +34,7 @@
   <g id="quakeConcept">
     <path d="M760 410V150H990V410Z" fill="#e8e4dc" stroke="#373632" stroke-width="2"/>
     <path d="M760 410H990V432H760Z" fill="#d1ccc3" stroke="#373632" stroke-width="2"/>
-    <path d="M730 410H760V478H730ZM990 410H1020V478H990Z" fill="url(#soil)"/>
+    <path d="M730 410H760V478H730ZM990 410H1020V478H990ZM760 432H990V478H760Z" fill="url(#soil)"/>
     <path d="M730 410H760M990 410H1020" stroke="#373632" stroke-width="2"/>
     <g stroke="#777168" stroke-width="2">
       <path d="M760 193H990M760 236H990M760 279H990M760 322H990M760 365H990"/>

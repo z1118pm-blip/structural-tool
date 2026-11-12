@@ -11,13 +11,12 @@
 </head>
 <body>
   <div class="reading-progress" aria-hidden="true"><span></span></div>
-  <header class="site-header"><div class="shell header-inner"><a class="brand" href="../index.html" aria-label="结构概念学习首页"><span>结构概念<small>STRUCTURAL CONCEPTS</small></span></a><nav class="top-nav" aria-label="主导航"><a href="../index.html">学习首页</a><div class="course-menu" data-course-menu data-root="../"></div><a href="#concept">核心概念</a><a href="#lab">交互实验</a></nav></div></header>
+  <header class="site-header"><div class="shell header-inner"><a class="brand" href="../index.html" aria-label="结构概念学习首页"><span>结构概念<small>STRUCTURAL CONCEPTS</small></span></a><nav class="top-nav" aria-label="主导航"><a href="../index.html">学习首页</a><div class="course-menu" data-course-menu data-root="../"></div></nav></div></header>
 
   <main id="solidLesson">
     <section class="lesson-hero shell">
       <nav class="breadcrumbs" aria-label="页面位置"><a href="../index.html">结构概念</a></nav>
       <div class="lesson-heading"><p class="chapter-tag">SOLID FORM · SLICES · SECTION</p><h1>总体系分析的<br>整体与局部问题</h1><p class="hero-lead">把建筑先想成一个实体，整体问题会变得很清楚：竖向作用像柱一样向下传，水平作用像悬臂一样产生剪力和弯矩。再把实体沿高度切成薄片，就能检查整体假定需要哪些局部能力来兑现。</p></div>
-      <dl class="lesson-meta"><dt>整体抽象</dt><dd>柱的轴压＋悬臂的抗剪、抗弯</dd><dt>局部条件</dt><dd>薄片间能承压、抗剪并传递拉压力偶</dd><dt>方案反馈</dt><dd>用截面形状与材料位置提高整体效能</dd></dl>
     </section>
 
     <section class="lesson-section" id="concept" aria-labelledby="concept-title"><div class="shell">
@@ -792,27 +791,8 @@
     </div></section>
 
     <section class="lesson-section knowledge-chain" aria-labelledby="chain-title"><div class="shell"><div class="section-heading"><p class="section-label">知识链 / 05</p><div><h2 id="chain-title">用三个问题审查整体方案</h2></div></div><ol class="calculation-steps"><li><div><strong>作用能否累计到基础？</strong><p>竖向轴力沿高度累计，水平作用形成剪力与弯矩；先明确作用分布和薄片位置。</p></div></li><li><div><strong>局部界面能否实现整体内力？</strong><p>分别寻找承压、传剪和拉压力偶路径；不能把摩擦、抗剪和抗拉混为一谈。</p></div></li><li><div><strong>几何布置是否高效且可实现？</strong><p>用力臂与 I 比较方案，再检查腹板、连接与空间协同是否能维持该整体模型。</p></div></li></ol><aside class="design-caution"><strong>模型边界</strong><p>本页采用静力、线弹性和理想截面假定。真实建筑还需考虑空间受力、稳定、变形、材料非线性、连接滑移和荷载组合；页面结果仅用于结构概念教学。</p></aside></div></section>
-    <div class="shell lesson-end"><div class="end-links"><a href="./chapter2-section5.html">回顾：对称与非对称</a><a href="../index.html">返回学习首页</a></div><p>学习完成：实体抽象给整体估算以秩序，局部传力条件决定这份秩序是否成立。</p></div>
+    <div class="shell lesson-end"><div class="end-links"><a href="./chapter2-section5.html">← 上一节：对称与非对称</a></div><p>学习完成：实体抽象给整体估算以秩序，局部传力条件决定这份秩序是否成立。</p></div>
   </main>
-  <aside class="support-section" aria-labelledby="support-title">
-    <div class="shell support-inner">
-      <div class="support-copy">
-        <p class="section-label">SUPPORT / 自愿赞赏</p>
-        <h2 id="support-title">支持本站</h2>
-        <p>如果这些内容对你有帮助，欢迎自愿赞赏。你的支持会鼓励我持续完善课程内容与交互实验。</p>
-        <p class="support-note">微信扫码赞赏，金额随意。</p>
-      </div>
-      <a class="support-code" href="../assets/images/wechat-reward.png" data-support-open aria-haspopup="dialog" aria-controls="support-dialog">
-        <img src="../assets/images/wechat-reward.png" alt="Zhao | Struct. E. 的微信赞赏码" width="1152" height="1152" loading="lazy">
-        <span>点击查看大图 <b aria-hidden="true">↗</b></span>
-      </a>
-    </div>
-    <dialog class="support-dialog" id="support-dialog" data-support-dialog aria-labelledby="support-dialog-title">
-      <div class="support-dialog-heading"><h2 id="support-dialog-title">微信赞赏码</h2><button type="button" data-support-close aria-label="关闭赞赏码">×</button></div>
-      <img src="../assets/images/wechat-reward.png" alt="Zhao | Struct. E. 的微信赞赏码大图" width="1152" height="1152" loading="lazy">
-      <div class="support-dialog-footer"><p>微信扫一扫，或保存图片后从相册识别。</p><a href="../assets/images/wechat-reward.png" download="zhao-struct-e-reward.png">保存图片</a></div>
-    </dialog>
-  </aside>
-  <footer class="site-footer"><div class="shell"><p>结构概念 · 交互教学 · <a href="../index.html#about">关于本站</a></p><p>实体形式 · 薄片分体系 · 抗剪 · 拉压力偶 · 几何刚度</p></div></footer>
+  <footer class="site-footer"><div class="shell"><p><span class="site-credit">作者：Zhao | Struct. E.　　邮箱：<button class="email-copy" type="button" data-copy-email aria-label="复制邮箱 Zhao_Struct_E@163.com">Zhao_Struct_E@163.com</button></span></p><p>实体形式 · 薄片分体系 · 抗剪 · 拉压力偶 · 几何刚度</p></div></footer>
 </body>
 </html>

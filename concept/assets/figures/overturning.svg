@@ -4,6 +4,7 @@
   <marker id="overturnArrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0 9 4.5 0 9Z" fill="#b45336"/></marker>
   <marker id="overturnDarkArrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0 9 4.5 0 9Z" fill="#242522"/></marker>
   <marker id="overturnReactionArrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0 9 4.5 0 9Z" fill="#3f6c62"/></marker>
+  <pattern id="overturnSoil" width="14" height="14" patternUnits="userSpaceOnUse"><path d="M-3 3 3-3M0 14 14 0M11 17 17 11" fill="none" stroke="#d5d4cc" stroke-width="1"/></pattern>
 </defs>
 <rect width="1600" height="620" fill="#fdfcf9"/>
 <g font-family="PingFang SC,Microsoft YaHei,sans-serif" fill="#242522" font-size="21" font-weight="700"><text x="120" y="35">01　竖向平衡</text><text x="565" y="35">02　水平作用产生倾覆力矩</text><text x="1060" y="35">03　反力偏心形成抵抗力矩</text></g>
@@ -12,6 +13,7 @@
   <g class="overturn-building overturn-building-mid"><path d="M610 340V75h150v265Z"/></g>
   <g class="overturn-building overturn-building-right"><path d="M1120 340V75h150v270Z"/></g>
 </g>
+<g fill="url(#overturnSoil)" stroke="none"><path d="M130 340h270v22H130Z"/><path d="M550 340h270v22H550Z"/><path d="M1050 345h290v22h-290Z"/></g>
 <g fill="none" stroke="#242522" stroke-width="3"><path d="M130 340h270M550 340h270M1050 345h290"/></g>
 <g fill="none" stroke="#b45336" stroke-width="3.2" marker-end="url(#overturnArrow)">
   <path class="overturn-force" d="M500 155H598"/>
@@ -21,21 +23,22 @@
 <g fill="none" stroke="#3f6c62" stroke-width="3.2" marker-end="url(#overturnReactionArrow)">
   <path d="M265 420v-70"/>
   <path d="M700 350h-90"/>
-  <path d="M1280 355h-90"/>
-  <path class="overturn-reaction" d="M1195 440v-95"/>
+  <path d="M1245 365h-130"/>
+  <path class="overturn-reaction" d="M1195 450v-105"/>
 </g>
-<path class="overturn-moment" d="M800 120q95 110 20 225" fill="none" stroke="#b45336" stroke-width="2.6" marker-end="url(#overturnArrow)"/>
-<g fill="none" stroke="#6f726b" stroke-width="1.7"><path d="M590 155v185M575 155h30M575 340h30M1080 155v190M1068 155h24M1068 345h24"/><path class="overturn-e-dimension" d="M1195 490h9.4"/><path d="M1110 60h170M1110 52v16M1280 52v16"/><path d="M1195 360v140" stroke-dasharray="5 5"/><path class="overturn-reaction-guide" d="M1195 365v135" stroke-dasharray="5 5"/></g>
+<path class="overturn-moment" d="M790 150q65 95 10 180" fill="none" stroke="#b45336" stroke-width="2.6" marker-end="url(#overturnArrow)"/>
+<g fill="none" stroke="#6f726b" stroke-width="1.7"><path d="M590 155v185M575 155h30M575 340h30M1080 155v190M1068 155h24M1068 345h24"/><path class="overturn-e-dimension" d="M1195 490h9.4"/><path d="M1195 482v16M1120 60h150M1120 52v16M1270 52v16"/><path d="M1195 360v140" stroke-dasharray="5 5"/><path class="overturn-reaction-guide" d="M1195 365v135" stroke-dasharray="5 5"/></g>
 <g font-family="PingFang SC,Microsoft YaHei,sans-serif" font-size="20">
   <g fill="#242522"><circle cx="265" cy="207.5" r="7" fill="#b45336"/><circle cx="1195" cy="207.5" r="7" fill="#b45336"/><text x="280" y="255" fill="#b45336">W</text><text x="1210" y="255" fill="#b45336">W</text><text x="555" y="245">a</text><text x="1045" y="245">a</text><text x="1190" y="55">d</text><text class="overturn-e-label" x="1199.7" y="520">e</text></g>
-  <g fill="#b45336"><text x="500" y="140">H</text><text x="1010" y="140">H</text><text x="805" y="105">M＝H×a</text></g>
-  <g fill="#3f6c62"><text x="190" y="455">R＝W</text><text x="615" y="390">基底剪力＝H</text><text x="1080" y="390">基底剪力＝H</text><text class="overturn-reaction-label" x="1215" y="465">R</text></g>
+  <g fill="#b45336"><text x="500" y="140">H</text><text x="1010" y="140">H</text><text x="785" y="135">M＝H×a</text></g>
+  <g fill="#3f6c62"><text x="190" y="455">R＝W</text><text x="615" y="390">基底剪力＝H</text><text x="1055" y="405">基底剪力＝H</text><text class="overturn-reaction-label" x="1215" y="475">R</text></g>
 </g>
+<rect x="1365" y="90" width="195" height="185" fill="#f7f5ef" stroke="#d5d4cc"/>
 <g font-family="PingFang SC,Microsoft YaHei,sans-serif" fill="#6f726b" font-size="18">
-  <text x="160" y="495">无水平作用时，反力位于中心</text><text x="205" y="525">ΣV＝0</text>
-  <text x="610" y="435">水平力相对基底形成力偶</text><text x="650" y="470">倾覆力矩 M＝H×a</text>
-  <text x="1400" y="130">ΣV＝0</text><text x="1400" y="165">ΣH＝0</text><text x="1400" y="200">ΣM＝0</text><text x="1400" y="245" fill="#242522" font-weight="700">H×a＝W×e</text>
-  <text x="1060" y="565">反力合力沿倾覆方向移动，以 W×e 抵抗倾覆；</text><text x="1060" y="597">e 越大，支承反力分布越不利。</text>
+  <text x="1400" y="130">ΣV＝0</text><text x="1400" y="165">ΣH＝0</text><text x="1400" y="200">ΣM＝0</text><text x="1385" y="245" fill="#242522" font-weight="700">H×a＝W×e</text>
+  <text x="130" y="555">无水平作用时，反力位于中心</text><text x="205" y="585">ΣV＝0</text>
+  <text x="565" y="555">水平力相对基底形成力偶</text><text x="610" y="585">倾覆力矩 M＝H×a</text>
+  <text x="1060" y="555">反力合力沿倾覆方向移动，以 W×e 抵抗倾覆；</text><text x="1060" y="585">e 越大，支承反力分布越不利。</text>
 </g>
 <path d="M885 375h70" fill="none" stroke="#6f726b" stroke-width="2" marker-end="url(#overturnDarkArrow)"/>
 </svg>

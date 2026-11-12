@@ -14,7 +14,7 @@
   <header class="site-header">
     <div class="shell header-inner">
       <a class="brand" href="../index.html" aria-label="结构概念学习首页"><span>结构概念<small>STRUCTURAL CONCEPTS</small></span></a>
-      <nav class="top-nav" aria-label="主导航"><a href="../index.html">学习首页</a><div class="course-menu" data-course-menu data-root="../"></div><a href="#concept">核心概念</a><a href="#lab">交互实验</a></nav>
+      <nav class="top-nav" aria-label="主导航"><a href="../index.html">学习首页</a><div class="course-menu" data-course-menu data-root="../"></div></nav>
     </div>
   </header>
 
@@ -25,13 +25,16 @@
         <h1>整体受力与平衡</h1>
         <p class="hero-lead">方案尚未落到梁柱尺寸时，先把整个建筑抽象成一个有质量、有刚度、与地面相连的整体。你要回答的不是“这根柱多大”，而是“力如何进入地面，整体如何保持平衡”。</p>
       </div>
-      <dl class="lesson-meta"><dt>学习核心</dt><dd>荷载—抗力关系</dd><dt>读图方式</dt><dd>高清矢量＋参数实验</dd><dt>方案阶段目标</dt><dd>判断整体可行性，而非完成构件设计</dd></dl>
     </section>
 
     <section class="lesson-section" id="concept" aria-labelledby="concept-title">
       <div class="shell">
         <div class="section-heading"><p class="section-label">核心概念 / 01</p><div><h2 id="concept-title">把空间形式看作一个完整受力体</h2><p>建筑外形可以先来自功能与空间组织，但任何形体一旦要成为建筑，就必须同时满足三项最基本的物理要求。</p></div></div>
         <figure class="source-figure original-figure"><img src="../assets/figures/overall-requirements.svg" alt="房屋固定于地面、质量由地面支承并抵抗环境荷载的受力图"><figcaption class="figure-swipe-hint">左右滑动查看全图</figcaption></figure>
+        <div class="concept-load-path">
+          <figure class="load-ground-static"><img src="../assets/figures/load-to-ground.svg" alt="建筑重量通过基础传入地基，地基提供向上支承反力"></figure>
+          <div><h3>从形体到整体受力</h3><p>建筑通过基础固定于地面；重力由竖向反力支承，风荷载或地震作用由基底剪力与抗倾覆体系承担。</p><div class="formula-box">整体平衡<strong>ΣV = 0　→　R = W<br>ΣH = 0　→　基底剪力 = H</strong></div></div>
+        </div>
         <div class="concept-grid concept-text-grid">
           <article class="concept-item"><h3>有刚度，并固定于地面</h3><p>整体不能随意改变形状，也不能相对地面自由移动。基础与支承体系把建筑和场地连成稳定的整体。</p></article>
           <article class="concept-item"><h3>质量必须由地面支承</h3><p>恒载与活载最终都要传到地基。竖向力可以经墙形成线支承，也可以经柱形成点支承。</p></article>
@@ -43,39 +46,27 @@
 
     <section class="lesson-section" id="lab" aria-labelledby="lab-title">
       <div class="shell">
-        <div class="section-heading"><p class="section-label">交互实验 / 02</p><div><h2 id="lab-title">沿受力图观察力流与平衡</h2><p>切换实验或拖动参数，直接观察受力关系与计算结果。仅在需要表达建筑整体运动时使用动画；数值单位采用 kN、m 与 kN/m²。</p></div></div>
+        <div class="section-heading"><p class="section-label">交互实验 / 02</p><div><h2 id="lab-title">沿受力图观察力流与平衡</h2></div></div>
         <div class="lab-shell">
-          <div class="demo-tabs" role="tablist" aria-label="结构整体实验">
-            <button class="demo-tab" id="tab-overall" role="tab" aria-selected="true" aria-controls="overallPanel" data-demo="overall"><span>OVERALL</span>整体三项要求</button>
-            <button class="demo-tab" id="tab-footprint" role="tab" aria-selected="false" aria-controls="footprintPanel" data-demo="footprint" tabindex="-1"><span>SUPPORT</span>支承平面与柱荷载</button>
+          <div class="demo-tabs three-tabs" role="tablist" aria-label="结构整体实验">
+            <button class="demo-tab" id="tab-footprint" role="tab" aria-selected="true" aria-controls="footprintPanel" data-demo="footprint"><span>SUPPORT</span>支承平面与柱荷载</button>
             <button class="demo-tab" id="tab-overturning" role="tab" aria-selected="false" aria-controls="overturnPanel" data-demo="overturning" tabindex="-1"><span>OVERTURNING</span>抗倾覆与偏心</button>
             <button class="demo-tab" id="tab-torsion" role="tab" aria-selected="false" aria-controls="torsionPanel" data-demo="torsion" tabindex="-1"><span>TORSION</span>偏心引起扭转</button>
           </div>
 
-          <section class="demo-panel is-active" id="overallPanel" role="tabpanel" aria-labelledby="tab-overall">
-            <div class="demo-layout">
-              <div class="diagram-stage"><span class="diagram-caption">受力图观察 / 整体与地面的荷载—抗力关系</span><div class="overall-static-figures"><div class="original-figure demo-original"><div class="vector-mount" id="overallRequirementsFigure" data-svg-src="../assets/figures/overall-requirements.svg"><img src="../assets/figures/overall-requirements.svg" alt="整体三项基本要求高清矢量图"></div></div><figure class="load-ground-static"><img src="../assets/figures/load-to-ground.svg" alt="建筑重量通过基础传入地基，地基提供向上支承反力"></figure></div></div>
-              <div class="demo-controls">
-                <h3>从形体到整体受力</h3><p>几何稳定、重量支承和水平抗力是同一个整体必须同时满足的条件。固定与水平作用合并展示，不再进行循环或分层动画。</p>
-                <p class="live-note">建筑通过基础固定于地面；重力由竖向反力支承，风荷载或地震作用由基底剪力与抗倾覆体系承担。</p>
-                <div class="formula-box">整体平衡<strong>ΣV = 0　→　R = W<br>ΣH = 0　→　基底剪力 = H</strong></div>
-              </div>
-            </div>
-          </section>
-
-          <section class="demo-panel" id="footprintPanel" role="tabpanel" aria-labelledby="tab-footprint" hidden>
+          <section class="demo-panel is-active" id="footprintPanel" role="tabpanel" aria-labelledby="tab-footprint">
             <div class="demo-layout">
               <div class="diagram-stage"><span class="diagram-caption">受力图观察 / 支承平面与受荷面积</span><div class="original-figure demo-original"><img src="../assets/figures/support-footprint.svg" alt="建筑支承平面和柱受荷面积受力图"></div></div>
               <div class="demo-controls">
                 <h3>用受荷面积估算柱荷载</h3><p>教学算例采用 15 m × 60 m 的相同楼层平面，并假设全部恒载与活载均布。选择柱位类型，查看估算结果。</p>
                 <div class="range-control"><label for="floorRange">地上层数 <output id="floorOutput">10 层</output></label><input id="floorRange" type="range" min="2" max="20" value="10" step="1"></div>
-                <div class="range-control"><label for="deadRange">楼面均布荷载（恒载＋活载） <output id="deadOutput">4.8 kN/m²</output></label><input id="deadRange" type="range" min="3" max="8" value="4.8" step="0.1"></div>
-                <div class="column-selector" aria-label="选择柱位类型"><button data-column-units="0.5" aria-pressed="false">角柱 0.5</button><button data-column-units="1" aria-pressed="false">边柱 1</button><button data-column-units="2" aria-pressed="true">中柱 2</button></div>
-                <div class="metric-row"><div class="metric"><span>建筑总荷载 W（恒载＋活载）</span><strong id="totalLoad">43,200 kN</strong></div><div class="metric"><span>每面积单位荷载</span><strong id="unitLoad">2,700 kN</strong></div></div>
-                <div class="status-line" id="columnResult" aria-live="polite">已选中柱：2.0 面积单位，估算柱荷载 5,400 kN</div>
-                <div class="formula-box formula-explainer">估算关系<strong>Nᵢ = q × n × A ÷ 16 × uᵢ</strong><p class="formula-source"><strong>来源与符号：</strong>由“楼面均布荷载 × 受荷面积 × 层数”估算第 i 根柱的轴力。A = 15 × 60 = 900 m²，为单层建筑面积；q 为楼面均布荷载（kN/m²）；n 为层数；uᵢ 为柱位受荷面积系数，角柱 0.5、边柱 1、中柱 2；Nᵢ 单位为 kN。16 个基本面积单位恰好铺满平面，假定各层荷载相同且全部传至柱，不含柱自重、荷载不均及体系重分配。</p></div>
+                <div class="range-control"><label for="deadRange">单位面积重力荷载（恒载＋活载） <output id="deadOutput">13.0 kN/m²</output></label><input id="deadRange" type="range" min="10" max="16" value="13" step="0.1"></div>
+                <div class="column-selector" aria-label="选择柱位类型"><button data-column-units="1" aria-pressed="false">角柱 1</button><button data-column-units="2" aria-pressed="false">边柱 2</button><button data-column-units="4" aria-pressed="true">中柱 4</button></div>
+                <div class="metric-row"><div class="metric"><span>建筑总荷载 W（恒载＋活载）</span><strong id="totalLoad">117,000 kN</strong></div><div class="metric"><span>每面积单位荷载</span><strong id="unitLoad">3,656 kN</strong></div></div>
+                <div class="status-line" id="columnResult" aria-live="polite">已选中柱：4 面积单位，估算柱荷载 14,625 kN</div>
               </div>
             </div>
+            <div class="formula-box formula-explainer demo-formula-footer"><div>估算关系<strong>Nᵢ = q × n × A ÷ 32 × uᵢ</strong></div><p class="formula-source"><strong>取值与符号：</strong>参考《高规》5.1.8 条文说明，框架结构由恒载和活载引起的单位面积重力可取 12～14 kN/m²，本算例默认取 13 kN/m²。A = 15 × 60 = 900 m²，为单层建筑面积；q 为折算到建筑面积上的恒载与活载总值；n 为层数；uᵢ 为柱位受荷面积系数，角柱 1、边柱 2、中柱 4；Nᵢ 单位为 kN。图中最小格子为 1 面积单位，32 个面积单位恰好铺满平面。假定各层荷载相同且全部传至柱，不含荷载不均及体系重分配。</p></div>
           </section>
 
           <section class="demo-panel" id="overturnPanel" role="tabpanel" aria-labelledby="tab-overturning" hidden>
@@ -109,27 +100,8 @@
       </div>
     </section>
 
-    <div class="shell lesson-end"><a href="../index.html">← 返回学习首页</a><p>学习完成：你已从整体层面理解竖向支承、抗倾覆与抗扭。</p></div>
+    <div class="shell lesson-end"><div class="end-links"><a href="./chapter2-section2.html">下一节：风荷载与地震作用估算 →</a></div><p>学习完成：你已从整体层面理解竖向支承、抗倾覆与抗扭。</p></div>
   </main>
-  <aside class="support-section" aria-labelledby="support-title">
-    <div class="shell support-inner">
-      <div class="support-copy">
-        <p class="section-label">SUPPORT / 自愿赞赏</p>
-        <h2 id="support-title">支持本站</h2>
-        <p>如果这些内容对你有帮助，欢迎自愿赞赏。你的支持会鼓励我持续完善课程内容与交互实验。</p>
-        <p class="support-note">微信扫码赞赏，金额随意。</p>
-      </div>
-      <a class="support-code" href="../assets/images/wechat-reward.png" data-support-open aria-haspopup="dialog" aria-controls="support-dialog">
-        <img src="../assets/images/wechat-reward.png" alt="Zhao | Struct. E. 的微信赞赏码" width="1152" height="1152" loading="lazy">
-        <span>点击查看大图 <b aria-hidden="true">↗</b></span>
-      </a>
-    </div>
-    <dialog class="support-dialog" id="support-dialog" data-support-dialog aria-labelledby="support-dialog-title">
-      <div class="support-dialog-heading"><h2 id="support-dialog-title">微信赞赏码</h2><button type="button" data-support-close aria-label="关闭赞赏码">×</button></div>
-      <img src="../assets/images/wechat-reward.png" alt="Zhao | Struct. E. 的微信赞赏码大图" width="1152" height="1152" loading="lazy">
-      <div class="support-dialog-footer"><p>微信扫一扫，或保存图片后从相册识别。</p><a href="../assets/images/wechat-reward.png" download="zhao-struct-e-reward.png">保存图片</a></div>
-    </dialog>
-  </aside>
-  <footer class="site-footer"><div class="shell"><p>结构概念 · 交互教学 · <a href="../index.html#about">关于本站</a></p><p>高清矢量插图 · 建筑整体运动演示</p></div></footer>
+  <footer class="site-footer"><div class="shell"><p><span class="site-credit">作者：Zhao | Struct. E.　　邮箱：<button class="email-copy" type="button" data-copy-email aria-label="复制邮箱 Zhao_Struct_E@163.com">Zhao_Struct_E@163.com</button></span></p><p>高清矢量插图 · 建筑整体运动演示</p></div></footer>
 </body>
 </html>
