@@ -948,3 +948,23 @@ body.recording #leftCol { border-right-color: #f43f5e; }
   color: #0f172a !important;
 }
 
+/* =====================================================================
+   关卡库（js/12-levels.js）
+   ===================================================================== */
+#modalLevelsCard{width:min(760px,100%)}
+.lvSub{
+  flex:0 0 auto;padding:10px 22px 12px;font-size:11px;color:#94a3b8;line-height:1.7;
+  border-bottom:1px solid rgba(148,163,184,0.08);
+}
+.lvSub b{color:#cbd5e1}
+.levelCard .lvBtns{display:flex;gap:6px;margin-top:8px}
+.levelCard .lvBtns button{
+  flex:1;padding:5px 0;font-size:11px;font-family:inherit;cursor:pointer;
+  border-radius:6px;border:1px solid #334155;background:#0b1220;color:#cbd5e1;
+  transition:all .15s;font-weight:600;
+}
+.levelCard .lvBtnGo{color:#7dd3fc;border-color:rgba(56,189,248,.4)}
+.levelCard .lvBtnGo:hover{background:rgba(56,189,248,.15);border-color:#38bdf8}
+.levelCard .lvBtnPredict{color:#fbbf24;border-color:rgba(251,191,36,.4)}
+.levelCard .lvBtnPredict:hover{background:rgba(251,191,36,.15);border-color:#fbbf24}
+
