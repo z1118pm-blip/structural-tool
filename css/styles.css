@@ -968,3 +968,35 @@ body.recording #leftCol { border-right-color: #f43f5e; }
 .levelCard .lvBtnPredict{color:#fbbf24;border-color:rgba(251,191,36,.4)}
 .levelCard .lvBtnPredict:hover{background:rgba(251,191,36,.15);border-color:#fbbf24}
 
+/* =====================================================================
+   先猜后算（js/13-predict.js）
+   ===================================================================== */
+.predict-locked{pointer-events:none !important;opacity:.55;filter:saturate(.6)}
+#predictOverlay{position:absolute;z-index:20}
+#predictOverlay canvas{display:block;width:100%;height:100%;touch-action:none;cursor:crosshair}
+.prdHint{
+  position:absolute;top:8px;left:12px;max-width:58%;z-index:2;
+  font-size:11.5px;line-height:1.6;color:#fbbf24;
+  background:rgba(15,23,42,0.85);border:1px solid rgba(251,191,36,0.35);
+  border-radius:6px;padding:6px 10px;pointer-events:none;
+}
+.prdHint b{color:#fde68a}
+.prdBar{position:absolute;top:8px;right:10px;display:flex;gap:6px;z-index:2}
+.prdBtn{
+  padding:5px 12px;font-size:11.5px;font-weight:600;font-family:inherit;cursor:pointer;
+  border-radius:6px;border:1px solid #475569;background:rgba(15,23,42,0.9);color:#e2e8f0;
+  transition:all .15s;
+}
+.prdBtn:hover{border-color:#94a3b8;background:#1e293b}
+.prdBtn.prdPrimary{color:#0f172a;background:#fbbf24;border-color:#fbbf24}
+.prdBtn.prdPrimary:hover{background:#fcd34d;border-color:#fcd34d}
+.prdPanel{
+  position:absolute;top:46px;left:12px;width:min(340px,82%);z-index:3;
+  background:rgba(15,23,42,0.95);border:1px solid rgba(251,191,36,0.5);
+  border-radius:10px;padding:12px 14px;color:#e2e8f0;font-size:12px;line-height:1.6;
+  box-shadow:0 8px 24px rgba(0,0,0,.45);
+  max-height:70%;overflow-y:auto;
+}
+.prdStars{color:#fbbf24;font-size:18px;letter-spacing:2px}
+
+
