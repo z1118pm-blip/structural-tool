@@ -1,0 +1,1499 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Structura（测试版）· 平面刚架线弹性静力分析</title>
+<script>
+  // =========================================================
+  // 🌟 全站唯一版本号修改处！
+  // 以后升级版本，只需修改下面这个字符串，全站标题、UI、JS防缓存全部自动联动。
+  // =========================================================
+  window.APP_VERSION = 'v0.2.3';
+
+  // 动态加载核心状态文件（自动带上版本号防缓存）
+  document.write(`<script src="js/01-state.js?${window.APP_VERSION}"><\/script>`);
+
+  document.addEventListener('DOMContentLoaded', () => {
+    if (typeof APP_VERSION !== 'undefined') {
+      document.title = `Structura ${APP_VERSION} · 平面刚架线弹性静力分析`;
+    }
+  });
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+
+<script>
+var _hmt = _hmt || [];
+(function() {
+  var hm = document.createElement("script");
+  hm.src = "https://hm.baidu.com/hm.js?a740bfea63060a1ab40a92a48c671870";
+  hm.async = true;
+  var s = document.getElementsByTagName("script")[0]; 
+  s.parentNode.insertBefore(hm, s);
+})();
+</script>
+
+<!-- 内嵌微型二维码生成库（兼容原 qrcode API），避免浏览器跟踪防护拦截外部 CDN -->
+<script>
+(function(){
+  function QR8bitByte(data){this.mode=4;this.data=data;this.parsedData=[];for(var i=0,l=this.data.length;i<l;i++){var byte=this.data.charCodeAt(i);if(byte>255){this.parsedData.push(byte>>8&255,byte&255);}else{this.parsedData.push(byte);}}}
+  QR8bitByte.prototype={getLength:function(){return this.parsedData.length;},write:function(buffer){for(var i=0,l=this.parsedData.length;i<l;i++){buffer.put(this.parsedData[i],8);}}};
+  var QRMode={MODE_8BIT_BYTE:4};
+  var QRErrorCorrectLevel={L:1,M:0,Q:3,H:2};
+  var QRMaskPattern={PATTERN000:0,PATTERN001:1,PATTERN010:2,PATTERN011:3,PATTERN100:4,PATTERN101:5,PATTERN110:6,PATTERN111:7};
+  var QRUtil={
+    PATTERN_POSITION_TABLE:[
+      [],
+      [6,18],
+      [6,22],
+      [6,26],
+      [6,30],
+      [6,34],
+      [6,22,38],
+      [6,24,42],
+      [6,26,46],
+      [6,28,50],
+      [6,30,54],
+      [6,32,58],
+      [6,34,62],
+      [6,26,46,66],
+      [6,26,48,70],
+      [6,26,50,74],
+      [6,30,54,78],
+      [6,30,56,82],
+      [6,30,58,86],
+      [6,34,62,90],
+      [6,28,50,72,94],
+      [6,26,50,74,98],
+      [6,30,54,78,102],
+      [6,28,54,80,106],
+      [6,32,58,84,110],
+      [6,30,58,86,114],
+      [6,34,62,90,118],
+      [6,26,50,74,98,122],
+      [6,30,54,78,102,126],
+      [6,26,52,78,104,130],
+      [6,30,56,82,108,134],
+      [6,34,60,86,112,138],
+      [6,30,58,86,114,142],
+      [6,34,62,90,118,146],
+      [6,30,54,78,102,126,150],
+      [6,24,50,76,102,128,154],
+      [6,28,54,80,106,132,158],
+      [6,32,58,84,110,136,162],
+      [6,26,54,82,110,138,166],
+      [6,30,58,86,114,142,170]
+    ],
+    G15:0x537,
+    G18:0x1F25,
+    G15_MASK:0x5412,
+    getBCHTypeInfo:function(data){var d=data<<10;while(QRUtil.getBCHDigit(d)-QRUtil.getBCHDigit(QRUtil.G15)>=0){d^=(QRUtil.G15<<(QRUtil.getBCHDigit(d)-QRUtil.getBCHDigit(QRUtil.G15)));}return((data<<10)|d)^QRUtil.G15_MASK;},
+    getBCHDigit:function(data){var digit=0;while(data!=0){digit++;data>>>=1;}return digit;}
+  };
+  var QRMath={expTable:[],logTable:[]};
+  for(var i=0;i<8;i++)QRMath.expTable[i]=1<<i;
+  for(var i=8;i<256;i++)QRMath.expTable[i]=QRMath.expTable[i-4]^QRMath.expTable[i-5]^QRMath.expTable[i-6]^QRMath.expTable[i-8];
+  for(var i=0;i<255;i++)QRMath.logTable[QRMath.expTable[i]]=i;
+  var QRPolynomial=function(num,shift){var offset=0;while(offset<num.length&&num[offset]==0){offset++;}this.num=new Array(num.length-offset+shift);for(var i=0;i<num.length-offset;i++){this.num[i]=num[i+offset];}};
+  QRPolynomial.prototype={get:function(index){return this.num[index];},getLength:function(){return this.num.length;},multiply:function(e){var num=new Array(this.getLength()+e.getLength()-1);for(var i=0;i<this.getLength();i++){for(var j=0;j<e.getLength();j++){num[i+j]^=QRMath.expTable[(QRMath.logTable[this.get(i)]+QRMath.logTable[e.get(j)])%255];}}return new QRPolynomial(num,0);},mod:function(e){if(this.getLength()-e.getLength()<0){return this;}var ratio=QRMath.logTable[this.get(0)]-QRMath.logTable[e.get(0)];var num=new Array(this.getLength());for(var i=0;i<this.getLength();i++){num[i]=this.get(i);}for(var i=0;i<e.getLength();i++){num[i]^=QRMath.expTable[(QRMath.logTable[e.get(i)]+ratio)%255];}return new QRPolynomial(num,0).mod(e);}};
+  var QRRSBlock={};
+  QRRSBlock.getRSBlocks=function(typeNumber,errorCorrectLevel){
+    var rsBlock=[
+      [1,26,19],[1,26,16],[1,26,13],[1,26,9],
+      [1,44,34],[1,44,28],[1,44,22],[1,44,16],
+      [1,70,55],[1,70,44],[2,35,17],[2,35,13],
+      [1,100,80],[2,50,32],[2,50,24],[4,25,9],
+      [1,134,108],[2,67,43],[2,33,15],[2,33,11],
+      [2,86,68],[4,43,27],[4,43,19],[4,43,15],
+      [2,98,78],[4,49,31],[2,32,14],[4,39,13],
+      [2,121,97],[2,60,38],[4,40,18],[4,40,14],
+      [2,146,116],[3,58,36],[4,36,16],[4,36,12],
+      [2,86,68],[4,69,43],[6,43,19],[6,43,15],
+      [4,101,81],[1,80,50],[4,50,22],[3,36,12],
+      [2,116,92],[6,58,36],[4,46,20],[7,42,14],
+      [4,133,107],[8,59,37],[8,44,20],[12,33,11],
+      [3,145,115],[4,64,40],[11,36,16],[11,36,12],
+      [5,109,87],[5,65,41],[5,54,24],[11,36,12],
+      [5,122,98],[7,73,45],[15,43,19],[3,45,15],
+      [1,135,107],[10,74,46],[1,50,22],[2,42,14],
+      [5,150,120],[9,69,43],[17,50,22],[2,42,14],
+      [3,141,113],[3,70,44],[17,47,21],[9,39,13],
+      [3,135,107],[3,67,41],[15,54,24],[15,43,15],
+      [4,144,116],[3,73,45],[17,50,22],[19,46,16],
+      [2,139,111],[7,73,45],[7,50,22],[34,37,13],
+      [4,151,121],[5,75,47],[11,50,22],[16,45,15],
+      [6,147,117],[13,75,47],[11,50,22],[30,45,15],
+      [8,132,106],[17,74,46],[7,54,24],[22,45,15],
+      [10,142,114],[28,73,45],[21,50,22],[16,45,15],
+      [8,152,122],[8,75,47],[23,50,22],[30,45,15],
+      [3,147,117],[4,74,46],[11,54,24],[21,46,16],
+      [7,153,123],[12,75,47],[19,50,22],[26,45,15],
+      [5,148,118],[11,74,46],[15,54,24],[23,46,16],
+      [13,158,128],[13,75,47],[35,50,22],[25,45,15],
+      [17,158,128],[16,75,47],[23,54,24],[25,45,15],
+      [17,158,128],[20,75,47],[15,54,24],[31,45,15],
+      [13,160,128],[35,75,47],[19,54,24],[29,45,15],
+      [12,162,128],[29,75,47],[37,54,24],[28,45,15],
+      [6,164,128],[42,75,47],[49,54,24],[31,45,15],
+      [17,165,128],[31,75,47],[25,54,24],[34,45,15],
+      [4,167,128],[42,75,47],[16,54,24],[26,45,15],
+      [20,167,128],[50,75,47],[23,54,24],[37,45,15],
+      [6,173,128],[67,75,47],[45,54,24],[44,45,15]
+    ];
+    var offset=(typeNumber-1)*4+errorCorrectLevel;
+    var r=rsBlock[offset];
+    var list=[];
+    for(var i=0; i<r[0]; i++) {
+      list.push({totalCount: r[1], dataCount: r[2]});
+    }
+    return list;
+  };
+  function QRCodeModel(typeNumber,errorCorrectLevel){this.typeNumber=typeNumber;this.errorCorrectLevel=errorCorrectLevel;this.modules=null;this.moduleCount=0;this.dataCache=null;this.dataList=[];}
+  QRCodeModel.prototype={
+    addData:function(data){this.dataList.push(new QR8bitByte(data));this.dataCache=null;},
+    isDark:function(row,col){if(row<0||this.moduleCount<=row||col<0||this.moduleCount<=col){throw new Error(row+","+col);}return this.modules[row][col];},
+    getModuleCount:function(){return this.moduleCount;},
+    make:function(){
+      if(this.typeNumber<1){
+        var typeNumber=1;
+        for(typeNumber=1;typeNumber<40;typeNumber++){
+          var rsBlocks=QRRSBlock.getRSBlocks(typeNumber,this.errorCorrectLevel);
+          var buffer=new QRBitBuffer();var totalDataCount=0;
+          for(var i=0;i<rsBlocks.length;i++)totalDataCount+=rsBlocks[i].dataCount;
+          for(var i=0;i<this.dataList.length;i++){var data=this.dataList[i];buffer.put(data.mode,4);buffer.put(data.getLength(),QRUtil.getLengthInBits(data.mode,typeNumber));data.write(buffer);}
+          if(buffer.getLengthInBits()<=totalDataCount*8)break;
+        }
+        this.typeNumber=typeNumber;
+      }
+      this.makeImpl(false,this.getBestMaskPattern());
+    },
+    makeImpl:function(test,maskPattern){
+      this.moduleCount=this.typeNumber*4+17;this.modules=new Array(this.moduleCount);
+      for(var row=0;row<this.moduleCount;row++){this.modules[row]=new Array(this.moduleCount);for(var col=0;col<this.moduleCount;col++){this.modules[row][col]=null;}}
+      this.setupPositionProbePattern(0,0);this.setupPositionProbePattern(this.moduleCount-7,0);this.setupPositionProbePattern(0,this.moduleCount-7);this.setupPositionAdjustPattern();this.setupTimingPattern();this.setupTypeInfo(test,maskPattern);this.setupTypeNumber(test);if(this.dataCache==null){this.dataCache=QRCodeModel.createData(this.typeNumber,this.errorCorrectLevel,this.dataList);}this.mapData(this.dataCache,maskPattern);
+    },
+    setupPositionProbePattern:function(row,col){
+      for(var r=-1;r<=7;r++){if(row+r<=-1||this.moduleCount<=row+r)continue;for(var c=-1;c<=7;c++){if(col+c<=-1||this.moduleCount<=col+c)continue;if((0<=r&&r<=6&&(c==0||c==6))||(0<=c&&c<=6&&(r==0||r==6))||(2<=r&&r<=4&&2<=c&&c<=4)){this.modules[row+r][col+c]=true;}else{this.modules[row+r][col+c]=false;}}}
+    },
+    getBestMaskPattern:function(){var minLostPoint=0,pattern=0;for(var i=0;i<8;i++){this.makeImpl(true,i);var lostPoint=QRUtil.getLostPoint(this);if(i==0||minLostPoint>lostPoint){minLostPoint=lostPoint;pattern=i;}}return pattern;},
+    setupTimingPattern:function(){for(var r=8;r<this.moduleCount-8;r++){if(this.modules[r][6]!=null)continue;this.modules[r][6]=(r%2==0);}for(var c=8;c<this.moduleCount-8;c++){if(this.modules[6][c]!=null)continue;this.modules[6][c]=(c%2==0);}},
+    setupPositionAdjustPattern:function(){var pos=QRUtil.getPatternPosition(this.typeNumber);for(var i=0;i<pos.length;i++){for(var j=0;j<pos.length;j++){var row=pos[i],col=pos[j];if(this.modules[row][col]!=null)continue;for(var r=-2;r<=2;r++){for(var c=-2;c<=2;c++){if(r==-2||r==2||c==-2||c==2||(r==0&&c==0)){this.modules[row+r][col+c]=true;}else{this.modules[row+r][col+c]=false;}}}}}},
+    setupTypeNumber:function(test){var bits=QRUtil.getBCHTypeNumber(this.typeNumber);for(var i=0;i<18;i++){var mod=(!test&&((bits>>i)&1)==1);this.modules[Math.floor(i/3)][i%3+this.moduleCount-8-3]=mod;}for(var i=0;i<18;i++){var mod=(!test&&((bits>>i)&1)==1);this.modules[i%3+this.moduleCount-8-3][Math.floor(i/3)]=mod;}},
+    setupTypeInfo:function(test,maskPattern){var data=(this.errorCorrectLevel<<3)|maskPattern;var bits=QRUtil.getBCHTypeInfo(data);for(var i=0;i<15;i++){var mod=(!test&&((bits>>i)&1)==1);if(i<6){this.modules[i][8]=mod;}else if(i<8){this.modules[i+1][8]=mod;}else{this.modules[this.moduleCount-15+i][8]=mod;}}for(var i=0;i<15;i++){var mod=(!test&&((bits>>i)&1)==1);if(i<8){this.modules[8][this.moduleCount-i-1]=mod;}else if(i<9){this.modules[8][15-i-1+1]=mod;}else{this.modules[8][15-i-1]=mod;}}this.modules[this.moduleCount-8][8]=(!test);},
+    mapData:function(data,maskPattern){
+      var inc=-1,row=this.moduleCount-1,bitIndex=7,byteIndex=0;
+      for(var col=this.moduleCount-1;col>0;col-=2){if(col==6)col--;while(true){for(var c=0;c<2;c++){if(this.modules[row][col-c]==null){var dark=false;if(byteIndex<data.length){dark=(((data[byteIndex]>>>bitIndex)&1)==1);}var mask=QRUtil.getMask(maskPattern,row,col-c);if(mask)dark=!dark;this.modules[row][col-c]=dark;bitIndex--;if(bitIndex==-1){byteIndex++;bitIndex=7;}}}row+=inc;if(row<0||this.moduleCount<=row){row-=inc;inc=-inc;break;}}}
+    }
+  };
+  QRCodeModel.createData=function(typeNumber,errorCorrectLevel,dataList){
+    var rsBlocks=QRRSBlock.getRSBlocks(typeNumber,errorCorrectLevel);var buffer=new QRBitBuffer();
+    for(var i=0;i<dataList.length;i++){var data=dataList[i];buffer.put(data.mode,4);buffer.put(data.getLength(),QRUtil.getLengthInBits(data.mode,typeNumber));data.write(buffer);}
+    var totalDataCount=0;for(var i=0;i<rsBlocks.length;i++)totalDataCount+=rsBlocks[i].dataCount;
+    if(buffer.getLengthInBits()>totalDataCount*8){throw new Error("code length overflow. ("+buffer.getLengthInBits()+">"+totalDataCount*8+")");}
+    if(buffer.getLengthInBits()+4<=totalDataCount*8){buffer.put(0,4);}
+    while(buffer.getLengthInBits()%8!=0){buffer.putBit(false);}
+    while(true){if(buffer.getLengthInBits()>=totalDataCount*8)break;buffer.put(0xEC,8);if(buffer.getLengthInBits()>=totalDataCount*8)break;buffer.put(0x11,8);}
+    return QRCodeModel.createBytes(buffer,rsBlocks);
+  };
+  QRCodeModel.createBytes=function(buffer,rsBlocks){
+    var offset=0,maxDcCount=0,maxEcCount=0;var dcdata=new Array(rsBlocks.length);var ecdata=new Array(rsBlocks.length);
+    for(var r=0;r<rsBlocks.length;r++){var dcCount=rsBlocks[r].dataCount;var ecCount=rsBlocks[r].totalCount-dcCount;maxDcCount=Math.max(maxDcCount,dcCount);maxEcCount=Math.max(maxEcCount,ecCount);dcdata[r]=new Array(dcCount);for(var i=0;i<dcdata[r].length;i++){dcdata[r][i]=0xff&buffer.buffer[i+offset];}offset+=dcCount;var rsPoly=QRUtil.getErrorCorrectPolynomial(ecCount);var rawPoly=new QRPolynomial(dcdata[r],rsPoly.getLength()-1);var modPoly=rawPoly.mod(rsPoly);ecdata[r]=new Array(rsPoly.getLength()-1);for(var i=0;i<ecdata[r].length;i++){var modIndex=i+modPoly.getLength()-ecdata[r].length;ecdata[r][i]=(modIndex>=0)?modPoly.get(modIndex):0;}}
+    var totalCodeCount=0;for(var i=0;i<rsBlocks.length;i++){totalCodeCount+=rsBlocks[i].totalCount;}
+    var data=new Array(totalCodeCount);var index=0;
+    for(var i=0;i<maxDcCount;i++){for(var r=0;r<rsBlocks.length;r++){if(i<dcdata[r].length){data[index++]=dcdata[r][i];}}}
+    for(var i=0;i<maxEcCount;i++){for(var r=0;r<rsBlocks.length;r++){if(i<ecdata[r].length){data[index++]=ecdata[r][i];}}}
+    return data;
+  };
+  function QRBitBuffer(){this.buffer=[];this.length=0;}
+  QRBitBuffer.prototype={get:function(index){var bufIndex=Math.floor(index/8);return((this.buffer[bufIndex]>>>(7-index%8))&1)==1;},put:function(num,length){for(var i=0;i<length;i++){this.putBit(((num>>>(length-i-1))&1)==1);}},getLengthInBits:function(){return this.length;},putBit:function(bit){var bufIndex=Math.floor(this.length/8);if(this.buffer.length<=bufIndex){this.buffer.push(0);}if(bit){this.buffer[bufIndex]|=(0x80>>>(this.length%8));}this.length++;}};
+  QRUtil.getLengthInBits=function(mode,type){
+    if(type>=1 && type<10) return 8;
+    if(type>=10 && type<27) return 16;
+    if(type>=27 && type<41) return 16;
+    throw new Error("type:" + type);
+  };
+  QRUtil.getLostPoint=function(qrcode){
+    var moduleCount=qrcode.getModuleCount();var lostPoint=0;
+    for(var row=0;row<moduleCount;row++){for(var col=0;col<moduleCount;col++){var sameCount=0;var dark=qrcode.isDark(row,col);for(var r=-1;r<=1;r++){if(row+r<0||moduleCount<=row+r)continue;for(var c=-1;c<=1;c++){if(col+c<0||moduleCount<=col+c)continue;if(r==0&&c==0)continue;if(dark==qrcode.isDark(row+r,col+c))sameCount++;}}if(sameCount>5){lostPoint+=(3+sameCount-5);}}}
+    for(var row=0;row<moduleCount-1;row++){for(var col=0;col<moduleCount-1;col++){var count=0;if(qrcode.isDark(row,col))count++;if(qrcode.isDark(row+1,col))count++;if(qrcode.isDark(row,col+1))count++;if(qrcode.isDark(row+1,col+1))count++;if(count==0||count==4)lostPoint+=3;}}
+    for(var row=0;row<moduleCount;row++){for(var col=0;col<moduleCount-6;col++){if(qrcode.isDark(row,col)&&!qrcode.isDark(row,col+1)&&qrcode.isDark(row,col+2)&&qrcode.isDark(row,col+3)&&qrcode.isDark(row,col+4)&&!qrcode.isDark(row,col+5)&&qrcode.isDark(row,col+6)){lostPoint+=40;}}}
+    for(var col=0;col<moduleCount;col++){for(var row=0;row<moduleCount-6;row++){if(qrcode.isDark(row,col)&&!qrcode.isDark(row+1,col)&&qrcode.isDark(row+2,col)&&qrcode.isDark(row+3,col)&&qrcode.isDark(row+4,col)&&!qrcode.isDark(row+5,col)&&qrcode.isDark(row+6,col)){lostPoint+=40;}}}
+    var darkCount=0;for(var col=0;col<moduleCount;col++){for(var row=0;row<moduleCount;row++){if(qrcode.isDark(row,col)){darkCount++;}}}
+    var ratio=Math.abs(100*darkCount/moduleCount/moduleCount-50)/5;lostPoint+=ratio*10;
+    return lostPoint;
+  };
+  QRUtil.getErrorCorrectPolynomial=function(errorCorrectLength){var a=new QRPolynomial([1],0);for(var i=0;i<errorCorrectLength;i++){a=a.multiply(new QRPolynomial([1,QRMath.expTable[i]],0));}return a;};
+  QRUtil.getBCHTypeNumber=function(data){var d=data<<12;while(QRUtil.getBCHDigit(d)-QRUtil.getBCHDigit(0x1f25)>=0){d^=(0x1f25<<(QRUtil.getBCHDigit(d)-QRUtil.getBCHDigit(0x1f25)));}return(data<<12|d);};
+  QRUtil.getPatternPosition=function(typeNumber){return QRUtil.PATTERN_POSITION_TABLE[typeNumber-1];};
+  QRUtil.getMask=function(maskPattern,i,j){switch(maskPattern){case 0:return(i+j)%2==0;case 1:return i%2==0;case 2:return j%3==0;case 3:return(i+j)%3==0;case 4:return(Math.floor(i/2)+Math.floor(j/3))%2==0;case 5:return(i*j)%2+(i*j)%3==0;case 6:return((i*j)%2+(i*j)%3)%2==0;case 7:return((i*j)%3+(i+j)%2)%2==0;default:throw new Error("bad maskPattern:"+maskPattern);}};
+  window.qrcode = function(typeNumber, errorCorrectLevel){return new QRCodeModel(typeNumber, errorCorrectLevel);};
+})();
+</script>
+
+</head>
+<body>
+<div id="app">
+
+  <div id="leftCol">
+    <div class="brand">
+      <div class="brandIcon">
+        <img src="assets/img/1.png" alt="Structura 测试版">
+      </div>
+      <div class="brandText">
+        <div class="brandRow" style="justify-content: space-between; margin-bottom: 2px; align-items: center; width: 100%;">
+          <span class="brandName">Structura<span class="brandTest">测试版</span></span>
+        </div>
+        <div class="brandRule"></div>
+        <div class="brandSub" style="margin-bottom: 10px;">平面刚架线弹性静力分析</div>
+      </div>
+    </div>
+
+    <!-- 模型摘要卡已移至右侧读数面板 -->
+
+    <!-- 开发中警示横幅已移除，详见使用说明 -->
+
+    <!-- Tab 栏 -->
+    <div class="tabBar" id="tabBar">
+      <button type="button" data-tab="selftest" class="on">自检</button>
+      <button type="button" data-tab="model">模型</button>
+      <button type="button" data-tab="load">荷载</button>
+      <div class="tabInd" id="tabInd"></div>
+    </div>
+
+    <!-- Tab 内容 -->
+    <div class="tabContent" id="tabContent">
+
+      <!-- ============ Tab 1: 自检 ============ -->
+      <div class="tabPanel on" data-tab="selftest">
+        <div class="group" id="selfTestContainer">
+          <!-- 自检卡片由 10-boot.js 根据 SELF_TEST_CASES 和 SELF_TEST_UI_CONFIG 动态生成 -->
+        </div>
+      </div>
+
+      <!-- ============ Tab 2: 模型 ============ -->
+      <div class="tabPanel" data-tab="model">
+        
+        <!-- 面板 1：结构拓扑与几何 -->
+        <details class="tabDetails" id="details-model-topo" open>
+          <summary><span style="display:flex; align-items:center; gap:8px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>结构拓扑与几何</span></summary>
+          <div class="groupContent">
+            <div class="group">
+              <div class="gtitle" style="display:none">结构拓扑</div>
+              <div class="ctrl">
+                <div class="head"><span>跨数</span></div>
+                <div class="seg" id="segBay">
+                  <button type="button" data-bay="1" class="on">1 跨</button>
+                  <button type="button" data-bay="2">2 跨</button>
+                  <button type="button" data-bay="3">3 跨</button>
+                </div>
+              </div>
+              <div class="ctrl">
+                <div class="head"><span>层数</span></div>
+                <div class="seg" id="segLev">
+                  <button type="button" data-lev="1" class="on">1 层</button>
+                  <button type="button" data-lev="2">2 层</button>
+                  <button type="button" data-lev="3">3 层</button>
+                </div>
+              </div>
+              <div class="ctrl">
+                <div class="head"><span>右侧悬挑</span></div>
+                <div class="seg" id="segCant">
+                  <button type="button" data-cant="0" class="on">无</button>
+                  <button type="button" data-cant="1">有</button>
+                </div>
+              </div>
+              <div class="ctrl" id="row-L1">
+                <div class="head"><span>左跨 L₁</span><b id="v-L1">6.0 m</b></div>
+                <input type="range" id="L1" min="3" max="12" step="0.1" value="6">
+              </div>
+              <div class="ctrl" id="row-L2">
+                <div class="head"><span>第二跨 L₂</span><b id="v-L2">6.0 m</b></div>
+                <input type="range" id="L2" min="3" max="12" step="0.1" value="6">
+              </div>
+              <div class="ctrl" id="row-L3">
+                <div class="head"><span>第三跨 L₃</span><b id="v-L3">6.0 m</b></div>
+                <input type="range" id="L3" min="3" max="12" step="0.1" value="6">
+              </div>
+              <div class="ctrl" id="row-h1">
+                <div class="head"><span>一层层高 h₁</span><b id="v-h1">4.0 m</b></div>
+                <input type="range" id="h1" min="2.5" max="7" step="0.1" value="4">
+              </div>
+              <div class="ctrl" id="row-h2">
+                <div class="head"><span>二层层高 h₂</span><b id="v-h2">4.0 m</b></div>
+                <input type="range" id="h2" min="2.5" max="7" step="0.1" value="4">
+              </div>
+              <div class="ctrl" id="row-h3">
+                <div class="head"><span>三层层高 h₃</span><b id="v-h3">4.0 m</b></div>
+                <input type="range" id="h3" min="2.5" max="7" step="0.1" value="4">
+              </div>
+              <div class="ctrl" id="row-Lc">
+                <div class="head"><span>右侧悬挑长度 L<sub>c</sub></span><b id="v-Lc">1.5 m</b></div>
+                <input type="range" id="Lc" min="0.5" max="4" step="0.1" value="1.5">
+              </div>
+            </div>
+
+            <!-- 合并进来的梁系移除网格 -->
+            <div class="group" style="margin-top:14px;">
+              <div class="gtitle" style="display:none">梁系移除</div>
+              <div class="ctrl">
+                <div class="head"><span>梁系移除（点击网格移除/恢复跨内梁）</span></div>
+                <div id="removeBeamGridWrap" class="braceGridWrap"></div>
+              </div>
+              <div class="hint">移除某跨梁后，该跨失去侧向刚度及梁自重，用于模拟穿层柱或抽梁工况。悬挑梁不受影响。如想模拟“既抽梁又无楼板”，请去「荷载」Tab 将楼板设为“无楼板”。</div>
+            </div>
+
+          </div>
+        </details>
+
+        <!-- 面板 2：材料与截面 -->
+        <details class="tabDetails" id="details-model-mat" open>
+          <summary><span style="display:flex; align-items:center; gap:8px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>材料与截面</span></summary>
+          <div class="groupContent">
+            <div class="group">
+              <div class="gtitle" style="display:none">材料与截面</div>
+              <div class="ctrl">
+                <div class="head"><span>梁柱材质</span></div>
+                <div class="seg" id="segFrameMat">
+                  <button type="button" data-mat="conc" class="on">混凝土 C30</button>
+                  <button type="button" data-mat="steel">钢材 Q355</button>
+                </div>
+              </div>
+              <div class="ctrl">
+                <div class="head"><span>柱截面类型</span></div>
+                <select id="in-colSecType" class="sweepSel" style="width:100%">
+                  <option value="rect">矩形混凝土</option>
+                  <option value="HW">H型钢 (HW宽翼缘)</option>
+                </select>
+              </div>
+              <div id="wrap-col-rect">
+                <div class="ctrl" id="row-bc">
+                  <div class="head"><span>边柱宽 b<sub>c</sub>（出平面）</span><b id="v-bc">400 mm</b></div>
+                  <input type="range" id="bc" min="300" max="800" step="50" value="400">
+                </div>
+                <div class="ctrl" id="row-hc">
+                  <div class="head"><span>边柱高 h<sub>c</sub>（平面内）</span><b id="v-hc">400 mm</b></div>
+                  <input type="range" id="hc" min="300" max="800" step="50" value="400">
+                </div>
+              </div>
+              <div id="wrap-col-HW" style="display:none;">
+                <div class="ctrl">
+                  <div class="head"><span>HW 截面规格</span></div>
+                  <select id="in-colHW" class="sweepSel" style="width:100%">
+                    <option value="HW200x200">HW200x200</option>
+                    <option value="HW250x250">HW250x250</option>
+                    <option value="HW300x300">HW300x300</option>
+                    <option value="HW350x350">HW350x350</option>
+                    <option value="HW400x400">HW400x400</option>
+                  </select>
+                </div>
+                <div class="ctrl">
+                  <div class="head"><span>平面内放置方向</span></div>
+                  <select id="in-colAxis" class="sweepSel" style="width:100%">
+                    <option value="strong">强轴在平面内 (Ix)</option>
+                    <option value="weak">弱轴在平面内 (Iy)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="ctrl">
+                <div class="head"><span>梁截面类型</span></div>
+                <select id="in-beamSecType" class="sweepSel" style="width:100%">
+                  <option value="rect">矩形混凝土</option>
+                  <option value="HN">H型钢 (HN窄翼缘)</option>
+                </select>
+              </div>
+              <div id="wrap-beam-rect">
+                <div class="ctrl" id="row-bb">
+                  <div class="head"><span>梁宽 b<sub>b</sub></span><b id="v-bb">250 mm</b></div>
+                  <input type="range" id="bb" min="200" max="500" step="50" value="250">
+                </div>
+                <div class="ctrl" id="row-hb">
+                  <div class="head"><span>梁高 h<sub>b</sub></span><b id="v-hb">500 mm</b></div>
+                  <input type="range" id="hb" min="400" max="900" step="50" value="500">
+                </div>
+              </div>
+              <div id="wrap-beam-HN" style="display:none;">
+                <div class="ctrl">
+                  <div class="head"><span>HN 截面规格</span></div>
+                  <select id="in-beamHN" class="sweepSel" style="width:100%">
+                    <option value="HN200x100">HN200x100</option>
+                    <option value="HN250x125">HN250x125</option>
+                    <option value="HN300x150">HN300x150</option>
+                    <option value="HN350x175">HN350x175</option>
+                    <option value="HN400x200">HN400x200</option>
+                    <option value="HN450x200">HN450x200</option>
+                    <option value="HN500x200">HN500x200</option>
+                    <option value="HN600x200">HN600x200</option>
+                    <option value="HN700x300">HN700x300</option>
+                  </select>
+                </div>
+              </div>
+              <div class="ctrl" id="row-r">
+                <div class="head"><span>内柱 / 边柱刚度比 r</span><b id="v-r">1.00</b></div>
+                <input type="range" id="r" min="0.25" max="4" step="0.05" value="1">
+              </div>
+              <div class="hint">内柱 EI、EA 均为边柱的 r 倍。r &gt; 1 时内柱更刚，水平力分配更偏向内柱。</div>
+              <div class="ctrl">
+                <div class="head"><span>轴向变形</span></div>
+                <div class="seg" id="segAxial">
+                  <button type="button" data-axial="real" class="on">考虑（精确）</button>
+                  <button type="button" data-axial="rigid">忽略（刚性）</button>
+                </div>
+              </div>
+              <div class="hint">忽略轴向变形 = 梁柱 EA 放大 1e6 倍，模拟传统手算"轴向不可伸长"假定。仅影响梁柱，支撑不受影响。</div>
+            </div>
+          </div>
+        </details>
+
+        <!-- 面板 3：支撑系统 -->
+        <details class="tabDetails" id="details-model-brace">
+          <summary><span style="display:flex; align-items:center; gap:8px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 22h20"/><path d="M12 2v20"/><path d="M5 22l7-10 7 10"/><path d="M9 22l3-4 3 4"/></svg>支撑系统</span></summary>
+          <div class="groupContent">
+            <div class="group">
+              <div class="gtitle" style="display:none">支撑系统</div>
+              <div class="ctrl">
+                <div class="head"><span>支撑形式（画笔）</span></div>
+                <div class="seg" id="segBraceTopo">
+                  <button type="button" data-brace="none" class="on">无</button>
+                  <button type="button" data-brace="X">X</button>
+                  <button type="button" data-brace="L">╱</button>
+                  <button type="button" data-brace="R">╲</button>
+                </div>
+              </div>
+              <div class="ctrl">
+                <div class="head"><span>布置网格</span></div>
+                <div id="braceGridWrap" class="braceGridWrap"></div>
+              </div>
+              <div class="ctrl">
+                <div class="head"><span>支撑材质</span></div>
+                <div class="seg" id="segBraceMat">
+                  <button type="button" data-mat="steel" class="on">钢材 Q355</button>
+                  <button type="button" data-mat="conc">混凝土 C30</button>
+                </div>
+              </div>
+              <div class="ctrl" id="row-As">
+                <div class="head"><span>支撑截面积 A<sub>s</sub></span><b id="v-As">2000 mm²</b></div>
+                <input type="range" id="As" min="100" max="5000" step="100" value="2000">
+              </div>
+              <div class="ctrl" id="row-braceI">
+                <div class="head"><span>支撑回转半径 i</span><b id="v-braceI">30 mm</b></div>
+                <input type="range" id="braceI" min="10" max="100" step="1" value="30">
+              </div>
+              <div class="ctrl">
+                <div class="seg">
+                  <button type="button" id="btnBraceTension">全部仅受拉</button>
+                </div>
+              </div>
+              <div class="hint">支撑仅承担轴力。点击网格每格右上角的 <b style="color:#7dd3fc">T</b> 角标可单独开启/关闭该格的“仅受拉”；上方按钮为批量开关。开启后，受压支撑将退出工作。<br>长细比 λ = μL/i 由杆长 L=√(跨²+层高²) 与回转半径 i 实时计算（μ=1，两端铰接）。N<sub>cr</sub> = π²EA/λ² 超限仅报警，不改变内力结果。</div>
+            </div>
+          </div>
+        </details>
+
+      </div>
+      <!-- ============ Tab 2: 荷载 ============ -->
+      <div class="tabPanel" data-tab="load">
+        
+        <!-- 面板 1：竖向荷载 -->
+        <details class="tabDetails" id="details-load-vert" open>
+          <summary><span style="display:flex; align-items:center; gap:8px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="m19 15-7 7-7-7"/></svg>竖向荷载（均布 / 集中力 / 悬挑）</span></summary>
+          <div class="groupContent">
+            <div class="group">
+              <div class="gtitle" style="display:none">跨内梁均布</div>
+              <div class="ctrl" id="row-q1">
+                <div class="head"><span>一层梁 q₁（统一值）</span><b id="v-q1">0 kN/m</b></div>
+                <input type="range" id="q1" min="0" max="100" step="0.5" value="0">
+                <div class="spanEditRow">
+                  <button type="button" class="spanEditToggle" data-lev="1">按跨指定 ▾</button>
+                </div>
+                <div class="spanEditBox" id="qSpanBox1" hidden></div>
+              </div>
+              <div class="ctrl" id="row-q2">
+                <div class="head"><span>二层梁 q₂（统一值）</span><b id="v-q2">0 kN/m</b></div>
+                <input type="range" id="q2" min="0" max="100" step="0.5" value="0">
+                <div class="spanEditRow">
+                  <button type="button" class="spanEditToggle" data-lev="2">按跨指定 ▾</button>
+                </div>
+                <div class="spanEditBox" id="qSpanBox2" hidden></div>
+              </div>
+              <div class="ctrl" id="row-q3">
+                <div class="head"><span>三层梁 q₃（统一值）</span><b id="v-q3">0 kN/m</b></div>
+                <input type="range" id="q3" min="0" max="100" step="0.5" value="0">
+                <div class="spanEditRow">
+                  <button type="button" class="spanEditToggle" data-lev="3">按跨指定 ▾</button>
+                </div>
+                <div class="spanEditBox" id="qSpanBox3" hidden></div>
+              </div>
+              <div class="hint">「统一值」作用于本层所有跨。点「按跨指定」可对单跨单独赋值；此时拖动统一值滑块会清除本层逐跨覆盖。扫掠 q₁/q₂/q₃ 时，已单独指定的跨保持其值不变。</div>
+            </div>
+
+            <div class="group">
+              <div class="gtitle">右侧悬挑均布</div>
+              <div class="ctrl" id="row-qc1">
+                <div class="head"><span>一层悬挑 q<sub>c1</sub></span><b id="v-qc1">0 kN/m</b></div>
+                <input type="range" id="qc1" min="0" max="100" step="0.5" value="0">
+              </div>
+              <div class="ctrl" id="row-qc2">
+                <div class="head"><span>二层悬挑 q<sub>c2</sub></span><b id="v-qc2">0 kN/m</b></div>
+                <input type="range" id="qc2" min="0" max="100" step="0.5" value="0">
+              </div>
+              <div class="ctrl" id="row-qc3">
+                <div class="head"><span>三层悬挑 q<sub>c3</sub></span><b id="v-qc3">0 kN/m</b></div>
+                <input type="range" id="qc3" min="0" max="100" step="0.5" value="0">
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <!-- 面板 2：水平力与二阶 -->
+        <details class="tabDetails" id="details-load-horz" open>
+          <summary><span style="display:flex; align-items:center; gap:8px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h20"/><path d="m15 5 7 7-7 7"/></svg>水平力与二阶效应</span></summary>
+          <div class="groupContent">
+            <div class="group">
+              <div class="gtitle" style="display:none">水平力</div>
+              <div class="ctrl">
+                <div class="head"><span>施加方式</span></div>
+                <div class="seg" id="segHmode">
+                  <button type="button" data-mode="none" class="on">无楼板</button>
+                  <button type="button" data-mode="rigid">刚性楼板</button>
+                </div>
+              </div>
+              <div class="ctrl" id="row-H1">
+                <div class="head"><span>一层 H₁</span><b id="v-H1">0 kN</b></div>
+                <input type="range" id="H1" min="0" max="100" step="0.5" value="0">
+              </div>
+              <div class="ctrl" id="row-H2">
+                <div class="head"><span>二层 H₂</span><b id="v-H2">0 kN</b></div>
+                <input type="range" id="H2" min="0" max="100" step="0.5" value="0">
+              </div>
+              <div class="ctrl" id="row-H3">
+                <div class="head"><span>三层 H₃</span><b id="v-H3">0 kN</b></div>
+                <input type="range" id="H3" min="0" max="100" step="0.5" value="0">
+              </div>
+              <div class="hint">无楼板：同层柱顶自由，靠梁刚度耦合（风压偏心）；刚性楼板：强制同层水平位移相等，按刚度自动分配（现浇楼盖）</div>
+            </div>
+
+            <div class="group">
+              <div class="gtitle">二阶效应</div>
+              <div class="ctrl">
+                <div class="seg">
+                  <button type="button" id="btnPDelta" class="on">P-Δ 放大系数 B</button>
+                </div>
+              </div>
+              <div class="hint">开启后，变形图显示 B = 1/(1−ΣN/ΣN_cr)。<br><strong style="color:#38bdf8">💡 算法说明：</strong>系统会在后台自动“剥离”所有竖向荷载，临时计算一次纯水平力下的侧向刚度，从而推导出真实的 N_cr。因此，即使存在大悬挑或不对称竖向荷载，B 值也不受重力偏心引起的假侧移干扰。</div>
+            </div>
+          </div>
+        </details>
+
+        <!-- 面板 3：移动荷载 -->
+        <details class="tabDetails" id="details-load-moving">
+          <summary><span style="display:flex; align-items:center; gap:8px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/><circle cx="5" cy="12" r="2"/></svg>移动荷载（单跨竖向集中力）</span></summary>
+          <div class="groupContent">
+            <div class="group">
+              <div class="ctrl" id="row-movingLev">
+                <div class="head"><span>作用层</span></div>
+                <select id="movingLoadLev" class="sweepSel"></select>
+              </div>
+              <div class="ctrl" id="row-movingBay">
+                <div class="head"><span>作用跨</span></div>
+                <select id="movingLoadBay" class="sweepSel"></select>
+              </div>
+              <div class="ctrl" id="row-movingP">
+                <div class="head"><span>集中力大小 P <small style="color:#64748b">(0=关闭)</small></span><b id="v-movingLoadP">0 kN</b></div>
+                <input type="range" id="movingLoadP" min="0" max="200" step="5" value="0">
+              </div>
+              <div class="ctrl" id="row-movingT">
+                <div class="head"><span>位置 t (0=左端, 1=右端)</span><b id="v-movingLoadT">50%</b></div>
+                <input type="range" id="movingLoadT" min="0" max="1" step="0.01" value="0.5">
+              </div>
+              <div class="ctrl" id="row-movingSpeed">
+                <div class="head"><span>播放速度</span><b id="v-movingLoadSpeed">1.0x</b></div>
+                <input type="range" id="movingLoadSpeed" min="0.1" max="5" step="0.1" value="1.0">
+              </div>
+              <div class="ctrl" style="display:flex; gap:8px;">
+                <button type="button" id="btnMovingLoadPlay" class="btnSweep" style="flex:1;">▶ 播放</button>
+                <button type="button" id="btnMovingLoadStop" class="btnSweep" style="flex:1; display:none;">■ 停止</button>
+              </div>
+              <div class="hint">移动荷载启用时，会覆盖当前跨的「逐跨指定」集中力，并在荷载简图中动态显示。</div>
+            </div>
+          </div>
+        </details>
+
+        <!-- 面板 4：非荷载作用（沉降和动态注入的温度） -->
+        <details class="tabDetails" id="details-load-other">
+          <summary><span style="display:flex; align-items:center; gap:8px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></svg>非荷载作用（温度 / 沉降）</span></summary>
+          <div class="groupContent">
+            <div class="group" id="group-load-other-placeholder" style="display:none"></div>
+
+            <div class="group">
+              <div class="gtitle">支座类型与强迫位移（每柱独立）</div>
+              <div id="supportMapPanel"></div>
+              <div class="hint">
+                每根柱独立选择支座类型（固接 / 铰接 / 滚轴）。<br>
+                <b>滚轴</b>：仅约束竖向，水平可滑动、转动自由；至少一根柱需为固接或铰接，否则水平方向为机构。<br>
+                <b>竖向位移</b>：正=沉降向下，负=上抬向上（抗浮）。<br>
+                <b>强迫转角</b>：模拟基础转动造成的柱底强迫转角，正=逆时针。<br>
+                若上方「柱脚竖向沉降」已设置某柱，但下方该柱竖向位移也非 0，以下方为准。
+              </div>
+            </div>
+          </div>
+        </details>
+
+      </div>
+    </div>
+
+    <!-- 参数扫掠条 -->
+    <div id="sweepBar">
+      <div class="sweepRow">
+        <select id="sweepParam" class="sweepSel" title="选择要扫掠的参数">
+          <optgroup label="几何">
+            <option value="L1">左跨 L₁</option>
+            <option value="L2">第二跨 L₂</option>
+            <option value="L3">第三跨 L₃</option>
+            <option value="h1">一层层高 h₁</option>
+            <option value="h2">二层层高 h₂</option>
+            <option value="h3">三层层高 h₃</option>
+            <option value="Lc">悬挑长度 Lc</option>
+          </optgroup>
+          <optgroup label="截面">
+            <option value="bc">边柱宽 bc</option>
+            <option value="hc">边柱高 hc</option>
+            <option value="bb">梁宽 bb</option>
+            <option value="hb">梁高 hb</option>
+            <option value="r">内/边柱刚度比 r</option>
+          </optgroup>
+          <optgroup label="支撑">
+            <option value="As">支撑截面积 As</option>
+            <option value="braceI">支撑回转半径 i</option>
+          </optgroup>
+          <optgroup label="跨内梁均布">
+            <option value="q1">一层梁 q₁</option>
+            <option value="q2">二层梁 q₂</option>
+            <option value="q3">三层梁 q₃</option>
+          </optgroup>
+          <optgroup label="悬挑均布">
+            <option value="qc1">一层悬挑 qc₁</option>
+            <option value="qc2">二层悬挑 qc₂</option>
+            <option value="qc3">三层悬挑 qc₃</option>
+          </optgroup>
+          <optgroup label="集中力">
+            <option value="P1">一层集中力 P₁</option>
+            <option value="P2">二层集中力 P₂</option>
+            <option value="P3">三层集中力 P₃</option>
+          </optgroup>
+          <optgroup label="温度">
+            <option value="tempAll">整体升温 ΔT</option>
+            <option value="tempGrad">截面温差 ΔT</option>
+          </optgroup>
+          <optgroup label="水平力">
+            <option value="H1">一层水平力 H₁</option>
+            <option value="H2">二层水平力 H₂</option>
+            <option value="H3">三层水平力 H₃</option>
+          </optgroup>
+          <optgroup label="边界刚度">
+            <option value="betaF">柱脚 β_f</option>
+            <option value="betaJ">梁端 β_j</option>
+          </optgroup>
+          <optgroup label="非荷载作用">
+            <option value="settleDy">左柱竖向位移 (mm)</option>
+            <option value="supportRot0">左柱强迫转角 (mrad)</option>
+          </optgroup>
+        </select>
+      </div>
+      <div class="sweepRow btns">
+        <div class="segMini" id="sweepRecScope" title="录制目标画面">
+          <button type="button" data-scope="force" class="on">录内力</button>
+          <button type="button" data-scope="deform">录变形</button>
+        </div>
+        <button type="button" id="btnSweepPlay"  class="btnSweep" title="循环播放（再点一次停止）">▶ 播放</button>
+        <button type="button" id="btnSweepRec"   class="btnSweep" title="录制为视频（自动选 mp4 / webm，再点一次取消）">⬇ 录制</button>
+        <button type="button" id="btnSweepReset" class="btnSweep" title="回到最小值">⟲</button>
+        <button type="button" id="btnSweepClose" class="btnSweep" title="关闭">×</button>
+      </div>
+    </div>
+
+    <!-- 底栏 -->
+    <div id="leftFooter">
+      <button id="btn-reset" class="btnReset btnSecondary">重置全部</button>
+      <button id="btn-sweep" class="btnReset btnPrimary">▶ 扫掠</button>
+    
+    <button id="btn-help"  class="btnReset btnHelp">？ 使用说明</button>
+    <button id="btn-share" class="btnReset btnIcon" title="复制分享链接（当前工况）">🔗</button>
+    </div>
+
+  </div>
+
+  <!-- ============ 右侧图形区 ============ -->
+  <main id="stage">
+
+    <!-- 底部状态栏 -->
+    <div id="stageStatusBar">
+      <span class="ssbItem"><b>NODES</b><i id="ssbNodes">—</i></span>
+      <span class="ssbItem"><b>ELEMENTS</b><i id="ssbElems">—</i></span>
+      <span class="ssbItem"><b>DOF</b><i id="ssbDof">—</i></span>
+      <span class="ssbItem"><b>SOLVE</b><i id="ssbTime">—</i></span>
+      <span class="ssbItem"><b>RESIDUAL</b><i id="ssbResid">—</i></span>
+      <span class="ssbItem"><b>STATUS</b><i id="ssbStatus" class="ok">OK</i></span>
+      <span class="ssbItem" id="ssbBraceWrap" style="display:none"><b>BRACE</b><i id="ssbBrace">—</i></span>
+      <span class="ssbSpacer"></span>
+      <span class="ssbMeta" title="工具持续开发中，请勿盲目相信计算结果">⚠ 持续开发中 · 结果仅供概念参考 · Zhao | Struct. E. · <span id="ui-ver-status"></span></span>
+    </div>
+
+    <!-- 求解徽章 -->
+    <div id="solveBadge">ANALYZING…</div>
+
+    <!-- 顶部：显示模式（全局布局级开关） -->
+    <div id="stageModeBar">
+      <div class="segMini" id="segDisp">
+        <button type="button" data-disp="all" class="on">全部</button>
+        <button type="button" data-disp="force">仅受力图</button>
+        <button type="button" data-disp="deform">仅变形图</button>
+      </div>
+    </div>
+
+    <div class="rowTop">
+      <aside id="readout">
+        <div class="rTitle">实时读数</div>
+
+        <div class="rGroup">
+          <div class="rGroupTitle">模型</div>
+          <div class="rRow"><span class="lbl">截面（边柱 / 梁）</span><span class="val" id="r-colsec">—</span></div>
+          <div class="rRow" id="row-bracesec" style="display:none"><span class="lbl">支撑截面积 A<sub>s</sub></span><span class="val" id="r-bracesec">—</span></div>
+          <div class="rRow"><span class="lbl">内柱 / 边柱刚度比 r</span><span class="val" id="r-kmid">—</span></div>
+          <div class="rRow" style="padding-top:6px">
+            <span class="lbl" style="color:#cbd5e1">ρ = (EI<sub>b</sub>/L) / (EI<sub>c</sub>/h)</span>
+            <span class="val" style="color:#cbd5e1;font-weight:400">逐层逐跨</span>
+          </div>
+          <div id="r-rhoBox"></div>
+          
+          <div class="rRow" style="padding-top:8px; margin-top:6px; border-top:1px dashed #334155;">
+            <span class="lbl" style="color:#cbd5e1;font-weight:600;">体系判定</span>
+            <span class="val" id="r-systemType" style="color:#38bdf8;font-weight:600;">—</span>
+          </div>
+          <div class="rRow" style="padding-bottom:4px;">
+            <span class="lbl" id="r-systemDesc" style="font-size:10px;color:#94a3b8;line-height:1.4;">—</span>
+          </div>
+        </div>
+
+
+
+
+
+        <div class="rGroup" id="row-probe">
+          <div class="rGroupTitle" style="display:flex;justify-content:space-between;align-items:center;">
+            <span>截面探针（点击右侧内力图选中）</span>
+            <button id="btnProbeClear" style="font-size:10px;padding:2px 6px;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:4px;cursor:pointer;display:none;">清除</button>
+          </div>
+          <canvas id="cvProbe" style="width:100%;height:180px;display:block;border-radius:6px;background:transparent;border:1px dashed #334155;"></canvas>
+          <div id="r-probeInfo" class="hint" style="margin-top:4px;text-align:center;">在右侧内力图上点击任意杆件以分析截面应力。</div>
+        </div>
+
+        <div class="rGroup">
+          <div class="rGroupTitle">水平力分配（按柱，左→右）</div>
+          <div class="rRow" id="row-alloc1"><span class="lbl">一层</span><span class="val" id="r-alloc1">—</span></div>
+          <div class="rRow" id="row-alloc2"><span class="lbl">二层</span><span class="val" id="r-alloc2">—</span></div>
+          <div class="rRow" id="row-alloc3" style="display:none"><span class="lbl">三层</span><span class="val" id="r-alloc3">—</span></div>
+        </div>
+
+        <div class="rGroup" id="row-stiffDecomp">
+          <div class="rGroupTitle">刚度贡献分解（当前工况）</div>
+          <div class="rRow"><span class="lbl">基准 K</span><span class="val" id="r-Kall">—</span></div>
+          <div class="rRow"><span class="lbl">去支撑后 K</span><span class="val" id="r-Knobrace">—</span></div>
+          <div class="rRow"><span class="lbl">去梁约束后 K</span><span class="val" id="r-Knobeam">—</span></div>
+          <div class="hint" style="margin-top:4px">去梁 = 梁端铰接（β<sub>j</sub>=0）；分项不可线性叠加；扫掠中暂不更新</div>
+        </div>
+
+        <div class="rGroup" id="row-braceChk">
+          <div class="rGroupTitle">受压支撑校核</div>
+          <div id="r-braceChkList" style="font-size:11px;line-height:1.5;"></div>
+        </div>
+
+        <div class="rGroup">
+          <div class="rGroupTitle" style="display:flex;justify-content:space-between;align-items:center;">
+            <span>反弯点 x/h vs ρ</span>
+            <button id="btnFloatAntiRho" style="font-size:10px;padding:2px 6px;background:#1e293b;border:1px solid #334155;color:#38bdf8;border-radius:4px;cursor:pointer;" title="在独立悬浮窗中打开对比">⤢ 浮动</button>
+          </div>
+          <canvas id="cvAntiRho" style="width:100%;height:140px;display:block;border-radius:6px;background:transparent;border:1px dashed #334155;"></canvas>
+          <div class="hint" style="margin-top:4px">横轴 ρ：梁柱线刚度比；纵轴 x/h：反弯点高度；虚线：x/h=0.5</div>
+        </div>
+
+        <!-- 支座反力已移至内力图 R 标签，此处留空 -->
+
+        <!-- 平衡校验已移至右下角状态栏，此处不再显示 -->
+      </aside>
+
+      <div class="chart grow" id="chartForce">
+        <canvas id="cvForce" style="cursor: crosshair;"></canvas>
+        <div class="tagBar">
+          <span class="tag" id="tagForce">弯矩图 M</span>
+          <div class="segMiniGroup">
+                        <div class="segMini" id="segForce">
+              <button type="button" data-force="M" class="on">M</button>
+              <button type="button" data-force="N">N</button>
+              <button type="button" data-force="V">V</button>
+              <button type="button" data-force="R">R</button>
+            </div>
+            <div class="segMini" id="segElem">
+              <button type="button" data-filter="all" class="on">全部</button>
+              <button type="button" data-filter="col">柱</button>
+              <button type="button" data-filter="beam">梁</button>
+              <button type="button" data-filter="brace">撑</button>
+            </div>
+            <div class="segMini" id="segView">
+              <button type="button" id="btnVals">数值</button>
+              <button type="button" id="btnAntiPts" title="显示/隐藏反弯点及位置">反弯点</button>
+              <button type="button" id="btnFreeze">冻结</button>
+              <button type="button" id="btnIds" title="显示节点/单元编号">N#</button>
+              <button type="button" id="btnShotForce" title="导出内力图为 PNG（2x）">📷</button>
+            </div>
+          </div>
+        </div>
+        <div class="chartBar chartBar2">
+          <div class="cbRow cbRowSplit">
+            <span class="barLbl" title="内力图显示缩放倍数（仅影响显示，不影响计算）">缩放</span>
+            <input type="range" id="mScale" min="0.05" max="10" step="0.05" value="1" title="内力图显示比例（1.0 为默认比例，仅影响显示，不改变计算结果）">
+            <b id="v-mScale" class="barVal">1.00</b>
+            <span class="barLbl" title="柱脚转动约束：1=固接，0=铰接，中间=弹性">柱脚 β<sub>f</sub></span>
+            <input type="range" id="betaF" min="0" max="1" step="0.01" value="1" title="柱脚转动约束 1=固接，0=铰接">
+            <b id="v-betaF" class="barVal">1.00</b>
+            <span class="barLbl" title="跨内梁端转动约束：1=刚接，0=铰接，中间=半刚接（注：悬挑梁根部默认强制刚接，不受此滑块影响）">跨内梁端 β<sub>j</sub></span>
+            <input type="range" id="betaJ" min="0" max="1" step="0.01" value="1" title="梁端转动约束 1=刚接，0=铰接">
+            <b id="v-betaJ" class="barVal">1.00</b>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="rowBottom">
+      <div class="chart" id="chartLoad">
+        <canvas id="cvLoad"></canvas>
+        <div class="tagBar"><span class="tag">荷载简图</span></div>
+        <div class="chartBar" style="justify-content: center; gap: 16px;">
+          <span class="barLbl">施加荷载</span>
+          <b class="barVal wide" id="loadSum" style="flex: 0 1 auto; text-align: center; color: #cbd5e1;">ΣV = 0 · ΣH = 0</b>
+        </div>
+      </div>
+
+      <div class="chart grow" id="chartDeform">
+        <canvas id="cvD"></canvas>
+        <div class="tagBar">
+          <span class="tag"></span>
+          <div class="segMiniGroup">
+            <div class="segMini">
+              <button type="button" id="btnFreezeDeform" title="冻结当前变形图作为基准（虚线）">冻结</button>
+              <button type="button" id="btnShotDeform" title="导出变形图为 PNG（2x）">📷</button>
+            </div>
+          </div>
+        </div>
+        <div class="deformOverlay collapsed" id="deformOverlayBox">
+          <div class="dTitle" id="deformOverlayTitle">
+            <span>变形图</span>
+            <button class="deformToggleBtn" id="deformToggleIcon" title="收起/展开面板">展开 ▾</button>
+          </div>
+          <div id="deformOverlayContent" style="display: none;">
+            <div class="dRow"><span title="对于受温度弯曲等工况，位移极值可能发生在构件中部，而非节点处">最大水平位移 u<sub>x</sub></span><b id="r-maxDx">—</b></div>
+          <div class="dRow"><span title="结构发生整体沉降或刚体平动时的最大竖向绝对位移">最大刚体竖向位移</span><b id="r-rigidDy">—</b></div>
+          <div class="dRow"><span title="扣除支座刚体位移后，梁体自身的真实弯曲挠度（用于判定 1/200 限值）">最大受弯挠度 v<sub>bend</sub></span><b id="r-maxDy">—</b></div>
+          <div id="r-drift-list" style="margin: 4px 0 8px 0; display: flex; flex-direction: column; gap: 4px; font-size: 11.5px; font-family: 'JetBrains Mono', ui-monospace, monospace;"></div>
+          <div class="dRow"><span>表观侧移刚度 K</span><b id="r-K">—</b></div>
+          <div id="rowPD" style="display:none; border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 6px; padding-top: 6px;">
+            <div class="dRow"><span>当前总重力 ΣN</span><b id="r-totalN">—</b></div>
+            <div class="dRow"><span style="color:#fbbf24">失稳临界力 N<sub>cr</sub></span><b id="r-Ncr" style="color:#fbbf24">—</b></div>
+            <div class="dRowStack" style="margin-top: 4px;">
+              <div class="stack-top">
+                <span style="font-size:11px; color:#94a3b8;">P-Δ 二阶放大倍数 B</span>
+                <b id="r-pd" style="font-size:13.5px; font-family:'JetBrains Mono', monospace;">—</b>
+              </div>
+              <div class="stack-bot" id="r-pd-desc">—</div>
+            </div>
+          </div>
+          </div>
+        </div>
+        <div class="chartBar">
+          <div class="cbRow cbRowSplit">
+            <span class="barLbl" title="变形图显示缩放倍数（仅影响显示，不影响计算）">缩放</span>
+            <input type="range" id="dScale" min="10" max="300" step="5" value="30" title="变形图显示比例（30 为默认比例，仅影响显示，不改变计算结果）">
+            <b id="v-dScale" class="barVal">30</b>
+            <span class="barLbl" title="柱脚转动约束：1=固接，0=铰接，中间=弹性">柱脚 β<sub>f</sub></span>
+            <input type="range" id="betaF_d" min="0" max="1" step="0.01" value="1" title="柱脚转动约束 1=固接，0=铰接">
+            <b id="v-betaF_d" class="barVal">1.00</b>
+            <span class="barLbl" title="跨内梁端转动约束：1=刚接，0=铰接，中间=半刚接">跨内梁端 β<sub>j</sub></span>
+            <input type="range" id="betaJ_d" min="0" max="1" step="0.01" value="1" title="梁端转动约束 1=刚接，0=铰接">
+            <b id="v-betaJ_d" class="barVal">1.00</b>
+          </div>
+        </div>
+      </div>
+    </div>
+</main>
+
+</div>
+
+<!-- ============ 使用说明模态框 ============ -->
+<div class="modal" id="modalHelp">
+  <div class="modalCard">
+        <div class="modalHead">
+          <h2>使用说明 · 假设与计算方法</h2>
+          <button class="modalClose" id="btnHelpClose" title="关闭">×</button>
+        </div>
+        <div class="modalTabs">
+          <button type="button" class="modalTabBtn on" data-htab="mh-tab1">工具与定位</button>
+          <button type="button" class="modalTabBtn" data-htab="mh-tab2">建模与假设</button>
+          <button type="button" class="modalTabBtn" data-htab="mh-tab3">求解与局限</button>
+          <button type="button" class="modalTabBtn" data-htab="mh-tab4">界面与自检</button>
+        </div>
+        <div class="modalBody">
+
+          <!-- ====== Tab 1 ====== -->
+          <div class="modalTabPane on" id="mh-tab1">
+            <!-- 反馈：极简行内提示 -->
+            <div style="margin-bottom: 28px; color: #94a3b8; font-size: 12.5px; display: flex; align-items: center; gap: 6px;">
+              <span style="font-size: 14px;">📬</span> 
+              <span>反馈与建议：欢迎发送至 <a href="mailto:zhao_struct_e@163.com" style="color: #38bdf8; text-decoration: underline; font-weight: 600;">Zhao_Struct_E@163.com</a></span>
+            </div>
+
+            <h3 style="font-size: 16px; font-weight: 700; color: #f8fafc; margin-bottom: 12px; border-bottom: 1px solid rgba(148,163,184,0.15); padding-bottom: 8px;">工具定位与学习路径</h3>
+            <p style="font-size: 13px; color: #cbd5e1; line-height: 1.7;">本工具是一个纯粹的<strong>力学概念自检工具</strong>。它不是用来替代 YJK / SAP2000 进行出图设计的。本工具跳过了繁琐的规范组合，去掉了复杂的配筋计算，旨在用最纯粹的线弹性理论，帮你快速验证对平面刚架受力性能的直觉判断。</p>
+            <p style="color: #64748b; font-size: 12px; margin-top: 4px; margin-bottom: 16px;"><em>* 注：底层求解器严格基于「矩阵位移法的平面刚架线弹性静力分析」，以确保你看到的每一次变形、每一张弯矩图都符合真实的力学规律。</em></p>
+            
+            <p style="font-weight: 600; color: #f8fafc; margin-bottom: 8px;">推荐的学习路径：</p>
+            <ul style="margin: 0 0 24px 0; padding-left: 20px; font-size: 13px; color: #cbd5e1; line-height: 1.8;">
+              <li><strong style="color: #f8fafc;">第一步：先做实验。</strong>点击「自检」中的卡片，观察右侧扫掠动画。</li>
+              <li><strong style="color: #f8fafc;">第二步：看现象。</strong>注意右侧变形图的层间位移角，看看变形是不是确实集中在软弱层。</li>
+              <li><strong style="color: #f8fafc;">第三步：看理论。</strong>打开本说明书的「建模与假设」Tab，阅读背后的力学逻辑。</li>
+              <li><strong style="color: #f8fafc;">第四步：自己动手。</strong>去「模型」和「荷载」Tab 随意修改参数，看看你的修改是否引发了符合你预期的力学变化。</li>
+            </ul>
+            
+            <!-- 关键声明：只加左边红线和淡红背景 -->
+            <div style="background: rgba(244, 63, 94, 0.05); border-left: 3px solid #f43f5e; padding: 12px 16px; border-radius: 0 6px 6px 0; margin-bottom: 28px; font-size: 13px; color: #fca5a5; line-height: 1.7;">
+              <strong style="color: #f43f5e;">⚠ 关键声明：</strong>本工具目前处于<strong>持续更新与测试阶段</strong>，算法细节与交互可能随时调整。请将其作为“力学概念自检”的辅助参考，<strong>切勿盲目相信工具的绝对数值</strong>，绝对禁止将计算结果直接用于实际工程设计、施工图审查或工程鉴定。
+            </div>
+            
+          </div>
+
+          <!-- ====== Tab 2 ====== -->
+          <div class="modalTabPane" id="mh-tab2">
+            <h3>一、基本假定与单元模型</h3>
+            <ul>
+              <li><strong>线弹性与小变形假定</strong>：本工具严格遵循线弹性理论。这意味着无论你施加多大的荷载，材料都不会屈服，杆件也不会发生大变形。工具中没有“极限承载力”的概念，所有结果都可以直接线性叠加。但这不代表可以无限制地输入大荷载，一旦超过现实中的比例极限，算出的内力就失去了工程意义。</li>
+              <li><strong>平面梁单元</strong>：每根杆件被离散为一个标准的 Euler-Bernoulli 梁单元，每个节点具有 3 个自由度（水平位移 u、竖向位移 v、转角 θ）。工具忽略剪切变形（即 Timoshenko 梁效应），因此对于跨高比极小的“深梁”，计算结果会存在一定误差。</li>
+              <li><strong>为什么手算反弯点是 0.33h，软件却是 0.30h？（重点）</strong>：在经典手算位移法中，我们常背“形常数”表，认为单层单跨框架的柱子反弯点必然在 <code>0.33h</code> 处。但这有一个严苛的前提：<strong>两端节点无相对侧移</strong>。在矩阵位移法中（特别是默认开启“考虑轴向变形”时），梁受压会产生微小的轴向缩短，导致柱顶发生极其微小的侧移。这种极微小的侧移，在超静定结构中会通过刚度矩阵迅速放大，导致柱端弯矩比例不再严格是 4:2，反弯点随之偏离 0.33h。本工具不做近似，因此算出的反弯点会随真实侧移偏离手算假定。你可以随时在【模型】Tab 切换轴向变形模式，观察 0.30h 与 0.33h 的瞬间跳跃。</li>
+            </ul>
+
+            <h3>二、半刚接节点的力学本质（核心）</h3>
+            <p>在传统的结构力学中，节点要么是刚接（β=1），要么是铰接（β=0）。但在真实的钢框架或装配式混凝土结构中，节点往往处于半刚接状态。本工具通过引入端部柔度参数 <b>α = (1-β) / (4β)</b> 来修正梁单元的刚度矩阵。它的物理意义非常直观：</p>
+            <ul>
+              <li>当 <b>β<sub>j</sub> = 1</b> 时，<b>α = 0</b>，转动弹簧完全刚性，梁端弯矩可以完全传递给柱，这是标准的刚接框架；</li>
+              <li>当 <b>β<sub>j</sub> &rarr; 0</b> 时，<b>α &rarr; &infin;</b>，梁端的抗弯刚度被完全释放，退化为两端铰接。</li>
+              <li><strong>教材级理解</strong>：你可以把 β_j 想象成一个调节旋钮。从 1 调到 0 的过程，就是梁端从“死死焊住”逐渐变成“用一根有弹性的弹簧拉住”的过程。你会发现，随着 β_j 减小，梁端负弯矩急剧下降，而跨中正弯矩剧烈上升。</li>
+              <li><strong>真实工程对应</strong>：在钢结构中外伸式端板螺栓连接、在装配式混凝土中采用灌浆套筒的节点，力学上都属于半刚接。无脑按“绝对刚接”算，会低估跨中弯矩；按“绝对铰接”算，又会导致侧移计算过大。</li>
+            </ul>
+
+            <h3>三、支撑（二力杆）的特殊处理</h3>
+            <p>支撑是框架抵抗水平力的第二道防线。在模型底层，支撑单元被赋予了特殊的标记 kind:'brace'：</p>
+            <ul>
+              <li><strong>纯轴力</strong>：局部刚度矩阵中，所有弯曲刚度项（如 12EI/L³）被强制清零，只保留轴向刚度 EA/L。</li>
+              <li><strong>两端铰接</strong>：支撑不参与 β_j 的修正，不论你把梁端刚度调到多少，支撑两端永远是理想铰接。</li>
+              <li><strong>仅受拉非线性</strong>：当开启“仅受拉”时，求解器会进入迭代。只要检测到支撑轴力出现压力（哪怕是极小的 10⁻⁴ kN），这根杆就会被直接“踢出”刚度矩阵，重新求解。这就模拟了真实工程中，长细比很大的柔性拉杆一旦受压就会屈曲失效退出工作的物理现象。</li>
+            </ul>
+            
+            <h3>四、刚性楼板与自由度缩并</h3>
+            <p>在现浇混凝土楼盖中，楼板的面内刚度极大。如果在水平力下，同一层的柱顶水平位移不一致，楼板会被撕裂。因此，本工具提供「刚性楼板」选项。在求解底层，程序采用了矩阵自由度缩并技术，强制让同层所有柱顶的水平位移相等。这就模拟了真实的刚性隔板效应，此时水平力会自动根据各柱的线刚度进行分配。</p>
+            
+            <h3>五、截面与刚度</h3>
+            <p><strong>【截面类型】</strong>支持“矩形”与“H型钢”两种。H型钢的 A、I 取自国标型钢库（GB/T 11263），计算时自动替换原有矩形公式。</p>
+            <ul>
+              <li><strong>矩形截面（默认）</strong>：
+                <ul>
+                  <li>柱截面：b<sub>c</sub> × h<sub>c</sub>（出平面 × 平面内），I<sub>c</sub> = b<sub>c</sub>·h<sub>c</sub>³/12，A<sub>c</sub> = b<sub>c</sub>·h<sub>c</sub>。</li>
+                  <li>梁截面：b<sub>b</sub> × h<sub>b</sub>（水平 × 竖向），I<sub>b</sub> = b<sub>b</sub>·h<sub>b</sub>³/12，A<sub>b</sub> = b<sub>b</sub>·h<sub>b</sub>。</li>
+                </ul>
+              </li>
+              <li><strong>H型钢柱 (HW)</strong>：可切换“强轴在平面内 (Ix)”与“弱轴在平面内 (Iy)”。在二维平面中，这是模拟工字柱不同摆放方向对抗侧刚度影响的绝佳工具。</li>
+              <li><strong>H型钢梁 (HN)</strong>：自动读取 HN 系列窄翼缘型钢的竖向惯性矩 Ix。</li>
+              <li><strong>中柱刚度比 r</strong>：中柱的 EI 与 EA 均为边柱的 r 倍。用于演示"柱刚度差异如何影响水平力分配"，界面保持简洁不展开为多组截面参数。</li>
+              <li>截面按矩形实心计算，不考虑楼板共同工作、钢筋（纵筋与箍筋）等实际构造。</li>
+            </ul>
+            <p style="margin-top:8px"><strong>【截面对刚度的"量级感"（新卡必读）】</strong></p>
+            <ul>
+              <li><b>材料 E 的比值</b>：E<sub>钢</sub>/E<sub>混凝土</sub> = 2.06×10⁸ / 3.0×10⁷ ≈ <b>6.87 倍</b>。几何完全相同时，钢结构侧移是混凝土的 1/6.87。<b>"纤细"是材料给的底气，不是截面省出来的</b>。</li>
+              <li><b>HW 强弱轴比例</b>：HW300x300 的 I<sub>y</sub>/I<sub>x</sub> ≈ 6760/20500 ≈ <b>0.33</b>。同一根工字柱摆错 90°，平面内刚度掉到 1/3。<b>施工图必须标注"强轴方向"</b>，这不是形式主义。</li>
+              <li><b>bc/bb 是线性，hc/hb 是三次方</b>：柱 I<sub>c</sub> = b<sub>c</sub>·h<sub>c</sub>³/12，梁 I<sub>b</sub> = b<sub>b</sub>·h<sub>b</sub>³/12。<b>加高比加宽划算得多</b>——这就是为什么柱、梁的截面总是"窄而高"，也是为什么"梁高不能随便砍"是铁律。</li>
+              <li><b>同高度 ≠ 同刚度</b>：HN600x200 与 250×600 矩形梁同高，但 I 相差 2~3 倍。型钢梁选型要查表，不能按"高度"估算。</li>
+            </ul>
+            
+            <h3>六、边界条件</h3>
+            <p><strong>柱脚（β<sub>f</sub>）</strong></p>
+            <ul>
+              <li>平动（水平、竖向）始终约束。</li>
+              <li>转动：β<sub>f</sub> = 1 时完全固定；β<sub>f</sub> = 0 时完全铰接；0 &lt; β<sub>f</sub> &lt; 1 时按弹性转动弹簧处理。</li>
+              <li>弹簧刚度采用启发式公式 <code>k_θ = (4EI_c/h₁)·β_f/(1−β_f)</code>，使 β<sub>f</sub> 在 0.5 附近时弹簧刚度与柱自身转动刚度同量级。<strong>它不是从节点平衡精确推导的弹簧刚度</strong>，只用于演示"从铰接到固定的连续过渡"。</li>
+              <li>绘制柱脚符号：β<sub>f</sub> ≥ 0.99 画固定支座，β<sub>f</sub> ≤ 0.01 画铰接，中间画弹簧符号。</li>
+            </ul>
+            <p style="margin-top:8px"><strong>每柱独立支座类型（固接 / 铰接 / 滚轴）</strong></p>
+            <ul>
+              <li>在「荷载」Tab 的「支座类型与强迫位移」组中，可对每根柱<b>独立</b>选择支座类型，覆盖全局 β<sub>f</sub> 判定。</li>
+              <li><b>固接</b>：约束水平、竖向、转动三个自由度；<b>铰接</b>：约束水平、竖向，转动自由；<b>滚轴</b>：<b>仅约束竖向</b>，水平可滑动、转动自由。</li>
+              <li>⚠ <b>滚轴柱不参与抗侧</b>：水平力不会分配到滚轴柱，侧移完全由固接/铰接柱承担。若整层所有柱均为滚轴，结构水平方向为机构，求解器会抛"缺少水平约束"错误。</li>
+              <li>⚠ <b>至少保留一根柱为固接或铰接</b>，否则水平方向无约束。多道防线不能靠"假设"，必须至少有一根柱真实提供水平约束。</li>
+            </ul>
+            <p style="margin-top:8px"><strong>强迫位移与支座类型（每柱独立）</strong></p>
+            <ul>
+              <li>可在「荷载」Tab 下对每根柱子独立设置 <b>固接 / 铰接 / 滚轴</b> 支座。</li>
+              <li><b>竖向位移：</b>正数表示沉降向下，负数表示基础上抬（如抗浮工况）。</li>
+              <li><b>强迫转角：</b>正数表示逆时针旋转，用于模拟基础不均匀沉降造成的柱底强迫扭转。软件支持的真实转角上限为 10 mrad（约 0.57°）。由于真实角度在图形上极其微小，为了便于视觉观察，程序在绘制简图时会将其视觉放大，但面板上显示的始终是真实的 mrad 数值及其对应的微小度数。<br>
+              <span style="color:#fbbf24; font-weight:bold;">⚠️ 注意：</span>如果您在一个非固接（如铰接或滚轴）的支座上施加了非零的强迫转角，力学计算底层会自动强制锁定该节点的转动自由度（等效于固接），以精确施加该角度。此时支座图标也会自动切换为固接符号。</li>
+            </ul>
+            <p style="margin-top:8px"><strong>梁端（β<sub>j</sub>）</strong></p>
+            <ul>
+              <li>通过修正梁单元局部刚度矩阵实现半刚接。</li>
+              <li>采用标准半刚接梁单元模型，引入端部柔度参数 <code>α = (1−β_j)/(4β_j)</code>，对以下四项进行修正：
+                <table>
+                  <tr><th>项</th><th>修正后</th></tr>
+                  <tr><td>横向刚度 k<sub>vv</sub></td><td>12EI/L<sup>3</sup> &middot; 1/(1+6α)</td></tr>
+                  <tr><td>耦合项 k<sub>vθ</sub></td><td>6EI/L<sup>2</sup> &middot; (1+2α)/(1+8α+12α<sup>2</sup>)</td></tr>
+                  <tr><td>转动自项 k<sub>θθ</sub></td><td>4EI/L &middot; (1+3α)/(1+8α+12α<sup>2</sup>)</td></tr>
+                  <tr><td>转动互项 k<sub>θθ'</sub></td><td>2EI/L &middot; 1/(1+8α+12α<sup>2</sup>)</td></tr>
+                  <tr><td>固端弯矩</td><td>wL<sup>2</sup>/12 &middot; (1+6α)/(1+8α+12α<sup>2</sup>)</td></tr>
+                </table>
+              </li>
+              <li>β<sub>j</sub> = 1（α = 0）退化为标准刚接梁单元；β<sub>j</sub> = 0（α → ∞）退化为两端铰接。</li>
+            </ul>
+            
+            <h3>七、荷载</h3>
+            <ul>
+              <li><strong>梁均布荷载</strong> q₁、q₂、q₃：作用于跨内梁。支持「统一值」和「按跨指定」两种模式。在「按跨指定」模式下，可对不同跨赋予不同荷载，可轻松实现“荷载不利布置”的对比（如仅中跨加载、隔跨加载）。</li>
+              <li><strong>梁集中荷载</strong> P₁、P₂、P₃：作用于跨内梁。默认在跨中，通过「按跨指定」可设置作用点距离左端的距离 a。求解器会在作用点处自动将梁单元拆分为两个子单元，从而在弯矩图上产生精确的“尖角”。</li>
+              <li><strong>悬挑均布荷载</strong> q<sub>c1</sub>、q<sub>c2</sub>、q<sub>c3</sub>：作用于右侧各层悬挑梁，长度 L<sub>c</sub>。悬挑梁为右柱节点伸出的标准刚接单元，<strong>不参与 β<sub>j</sub> 半刚接修正</strong>。</li>
+              <li><strong>水平力</strong> H₁、H₂、H₃（仅正向，不支持反向）：两种施加方式
+                <ul style="margin-top:3px">
+                  <li><strong>无楼板</strong>：全部施加于左柱顶节点，模拟风压从左侧来。</li>
+                  <li><strong>刚性楼板</strong>：强制同层柱顶水平位移相等，通过约束自动分配剪力，更接近真实现浇楼盖。</li>
+                </ul>
+              </li>
+              <li><strong>非荷载作用 · 温度</strong>：全结构均匀升温 ΔT 会产生轴向膨胀受阻的次内力；<strong>结构内外温差</strong>（室外温度高于室内为正）仅作用于框架最外侧的边柱和顶层边梁，使结构产生向外膨胀的弯曲次内力。内部梁柱及悬挑梁截面本身无温差，不受此项影响。支撑默认不受温度影响。</li>
+              <li>所有荷载为静力荷载，不考虑动力放大、偶然偏心、荷载组合系数。</li>
+            </ul>
+            <p style="margin-top:8px"><strong>移动荷载（单跨竖向集中力）</strong></p>
+            <ul>
+              <li>作用于指定「层 × 跨」的单个竖向集中力 P，位置由参数 t ∈ [0,1] 控制（0=左端，1=右端）。</li>
+              <li><b>启用条件：</b>P &gt; 0 即自动启用；播放按钮会在该跨内从左到右匀速循环移动，单程约 2 秒（可暂停/继续）。</li>
+              <li><b>优先级：</b>移动荷载启用时，会<b>覆盖</b>该跨的「逐跨指定」集中力（`pLoadMap`），但不影响其他跨。P=0 即关闭，退回普通集中力。</li>
+              <li><b>与扫掠互斥：</b>播放移动荷载会自动停止扫掠，反之亦然——避免两个动画同时跑导致画面卡顿。</li>
+              <li><b>概念用途：</b>配合「截面探针」可观察某截面 M 随荷载位置的变化，这就是<b>影响线</b>的本质；找到 M 的极值位置即对应活荷载的不利布置。</li>
+            </ul>
+            
+            <h3>八、支撑系统</h3>
+            <p>支撑是「框架-支撑双轨制」的第二条抗侧力路径。与梁柱不同，支撑按<strong>「层 × 跨」网格逐格布置</strong>，每格独立配置形式、材质、截面与是否仅受拉。</p>
+            <p><strong>布置形式</strong></p>
+            <ul>
+              <li>在「模型」Tab 点击画笔（<code>X</code> / <code>╱</code> / <code>╲</code> / <code>无</code>），再点击布置网格的格子即可涂抹；再次点击同一格且画笔相同则取消。</li>
+              <li><code>X</code> 撑 = 同格两条对角线（╱ + ╲）各一根斜杆；<code>╱</code> 或 <code>╲</code> = 单斜撑，只生成一根。</li>
+              <li>支撑两端节点为该格左下 / 右下 / 左上 / 右上四个框架节点，杆长按实际几何 <code>L = √(跨² + 层高²)</code> 计算，倾角自动跟随跨度与层高变化。</li>
+              <li>X 撑同格的两根斜杆<strong>共用该格的材质、A<sub>s</sub> 与「仅受拉」状态</strong>，但失效判定仍按单根各自进行。</li>
+            </ul>
+            <p><strong>材质与截面</strong></p>
+            <ul>
+              <li>支撑材质独立于梁柱：钢 Q355（E = 2.06×10⁸ kN/m²）或混凝土 C30（E = 3.0×10⁷ kN/m²）。</li>
+              <li>截面积 A<sub>s</sub> 以 mm² 输入（默认 2000 mm²），内部换算为 m² 后计算轴向刚度 EA<sub>s</sub>。</li>
+              <li>支撑只承担轴力，不区分强轴 / 弱轴。受压是否退出由「仅受拉」开关决定；另提供欧拉临界力粗估 N<sub>cr</sub> = π²EA/λ²，λ = μL/i（μ=1，两端铰接），超限仅报警，不改变内力结果。</li>
+            </ul>
+            <p><strong>单元刚度</strong></p>
+            <ul>
+              <li>支撑单元 <code>kind:'brace'</code>，局部刚度矩阵只保留轴向项 <code>EA/L</code>，所有弯曲刚度项（<code>12EI/L³</code>、<code>6EI/L²</code>、<code>4EI/L</code>、<code>2EI/L</code>）置 0。</li>
+              <li>支撑<strong>两端强制铰接</strong>，不受 β<sub>j</sub> 滑块影响；内力图与荷载简图中无论 β<sub>j</sub> 设为多少，支撑两端都绘制铰接圆圈。</li>
+              <li>支撑不参与梁端半刚接修正，也不参与柱脚 β<sub>f</sub> 弹簧。</li>
+            </ul>
+            <p><strong>仅受拉（逐格指定）</strong></p>
+            <ul>
+              <li>每格支撑右上角有 <code>T</code> 角标：点击可单独开启 / 关闭该格「仅受拉」；「模型」Tab 的「全部仅受拉 / 全部普通」按钮为批量操作。</li>
+              <li>求解器 <code>analyzeTensionOnly</code> 只对开启了「仅受拉」的支撑做失效判定：一旦检测到轴力受压（<code>N &lt; −1e−4 kN</code>），即把该杆从 K 矩阵中移除、重新求解，最多迭代 15 次，直至不再有新的支撑失效。</li>
+              <li>失效支撑的轴力按 0 输出，N 图上该杆不再显示数值；但杆件轮廓仍以灰色绘制，便于识别「曾经存在但已退出」的支撑。</li>
+              <li>若某格 X 撑两根全部失效导致矩阵奇异，程序提示「仅受拉支撑全部退出（已失效 N 根），结构可能失稳」，而不是笼统的「刚度矩阵奇异」。</li>
+              <li>普通支撑（未开启仅受拉）受压时照常工作，不受失效迭代影响。</li>
+            </ul>
+            <p><strong>绘图约定</strong></p>
+            <ul>
+              <li>支撑<strong>仅绘制 N 图内力曲线</strong>；M / V 图下支撑不显示内力（弯曲刚度为零，M、V 恒为 0），但<strong>保留青色轮廓线</strong>以示支撑存在——这与 SAP2000 / MIDAS 等工程软件的处理一致，避免用户误以为"支撑消失了"。</li>
+              <li>支撑轴力线强制使用青色 <code>#22d3ee</code> 绘制在最上层，并把显示比例强制放大 5 倍（<code>refDiv</code> 逻辑），避免被柱子的巨大轴力压得看不见。</li>
+              <li>荷载简图中自动标注斜撑实际倾角（取整，如 <code>34°</code>）；X 撑两条线中点重合，已做去重与背景底色处理，防止文字重叠。</li>
+            </ul>
+            <p><strong>已知局限</strong></p>
+            <ul>
+              <li>仅受拉采用「一次性受压失效 + 矩阵重算」的迭代法，<strong>未考虑支撑在反复荷载下的滞回性能</strong>（静力盲测够用，但不适用于动力时程或往复加载）。</li>
+              <li>屈曲校核为欧拉临界力粗估（λ = μL/i，μ 固定 1.0），未考虑初始缺陷、真实稳定曲线、节点板约束；仅作量级参考，不是稳定验算。</li>
+              <li>X 撑两根共用一个格子的 A<sub>s</sub>，不支持同一格内两根斜杆取不同截面。</li>
+              <li>支撑与框架节点按理想铰接处理，未考虑节点板、螺栓群、节点域剪切变形。</li>
+            </ul>
+
+            <h3>九、梁系移除与穿层柱</h3>
+            <p>「模型」Tab 新增了「梁系移除」网格，允许用户抽掉特定楼层的局部梁，用于模拟大堂、挑空区等造成的<strong>穿层柱</strong>工况。</p>
+            <ul>
+              <li><strong>物理本质</strong>：点击网格上的梁将其移除后，该跨梁的单元将<strong>彻底从刚度矩阵中剔除</strong>，连带其自重和传递水平/竖向荷载的能力一并消失。</li>
+              <li><strong>交互联动</strong>：如果某一层的梁被全部移除，程序会自动禁用该层的水平力与竖向荷载输入滑块，防止将荷载施加在“真空”上。</li>
+              <li><strong>刚性楼板的陷阱</strong>：如果在移除梁的同时开启了「刚性楼板」，程序底层的自由度缩并依然会强制同层柱顶水平位移一致。这意味着未断开的楼板会起到"隔空传力"的作用，掩盖穿层柱真实的软弱性。若想观察纯框架的穿层效应，请务必切换到<strong>无楼板</strong>模式。</li>
+              <li><strong>抽梁位置的差异（重要）</strong>：
+                <ul style="margin-top:3px">
+                  <li><b>底层抽梁</b>：整体侧移刚度骤降，整楼像"踩高跷"——底部软弱是<b>整体性</b>问题；</li>
+                  <li><b>顶层抽梁</b>：只有顶层局部侧移，下部楼层被下部结构约束——顶部软弱是<b>局部性</b>问题；</li>
+                  <li><b>连续抽梁</b>（如两跨都抽）：中间柱顶部两侧同时失去约束，计算长度翻倍，侧移剧增——"连续削弱"比"分散削弱"更危险。</li>
+                </ul>
+              </li>
+              <li><strong>与规范的关系</strong>：抗震规范严控竖向刚度突变，正是因为底层抽梁、连续抽梁会形成"软弱层"，变形集中在该层，地震下极易形成楼层机制（整层柱端塑性铰→整体倒塌）。</li>
+            </ul>
+          </div>
+         
+          <!-- ====== Tab 3 ====== -->
+          <div class="modalTabPane" id="mh-tab3">
+            <h3>一、林同炎的线刚度比 ρ</h3>
+            <p>在右侧实时读数面板中，我们提供了 <b>ρ = (EI<sub>b</sub> / L) / (EI<sub>c</sub> / h)</b>，即梁线刚度与柱线刚度的比值。这是判断框架受力特性的核心指标：</p>
+            <ul>
+              <li><strong>强柱弱梁（ρ &lt; 0.5）</strong>：柱的刚度远大于梁。此时框架的侧移主要是由柱的弯曲变形主导的，称为“弯曲型”。在地震下，塑性铰会优先生于梁端形成，形成良好的耗能机制。</li>
+              <li><strong>强梁弱柱（ρ &gt; 2.0）</strong>：梁的刚度远大于柱。框架侧移呈现明显的“剪切型”（越往下层间位移越大）。这种体系非常危险，地震时柱端会先出现塑性铰，容易导致整体楼层垮塌。</li>
+              <li><strong>反弯点联动</strong>：打开反弯点小图，你会看到一个极其规整的力学现象：随着 ρ 的增大（梁越来越刚），柱子的反弯点会越来越接近跨中（即 x/h 趋向于 0.5）。因为超强的梁死死限制了柱子的转动，柱子的变形模式越来越接近“两端固接”的杆件。</li>
+            </ul>
+
+            <h3>二、P-Δ 二阶效应与失稳</h3>
+            <p>传统一阶分析不考虑变形对内力产生的附加影响。但在高层或柔性框架中，竖向荷载 N 在发生侧移 Δ 后，会产生附加倾覆力矩 N·Δ。</p>
+            <ul>
+              <li>本工具没有采用复杂的几何非线性矩阵迭代，而是采用了一种工程上更直观的<strong>放大系数法</strong>：<b>B = 1 / (1 - ΣN / ΣN<sub>cr</sub>)</b>。</li>
+              <li><b>ΣN</b> 是当前总竖向力，<b>ΣN<sub>cr</sub></b> 是结构的弹性临界屈曲荷载。系统会自动剥离所有竖向荷载，单独施加一个纯水平力，反推出结构的真实侧向刚度，从而精准计算出 <b>N<sub>cr</sub></b>。</li>
+              <li><strong>教材级预警</strong>：面板右侧会直接用大白话提示（例如：<i>侧移及弯矩放大 2.8 倍</i>）。当 <b>ΣN / ΣN<sub>cr</sub></b> 接近 1 时，B 值会急剧飙升甚至变负数，意味着结构已经无限接近失稳（侧移突变）。此时现实中的结构早已发生大变形破坏，线弹性假定彻底失效。</li>
+            </ul>
+
+            <h3>三、为什么支座沉降会产生内力？</h3>
+            <p>静定结构（如简支梁）的支座沉降不会产生任何内力，因为结构能自由变形。但本工具分析的是超静定刚架。当你拖动某根柱发生沉降时，由于多余的约束限制，结构无法自由变形，从而产生极大的附加内力。</p>
+            <ul>
+              <li><strong>公式本质</strong>：K·ΔU = F_等效。沉降相当于在支座处强行塞入了一个强迫位移，这个位移通过刚度矩阵 K 耦合到了其他自由节点上，相当于施加了巨大的等效外力。</li>
+              <li><strong>经验法则</strong>：沉降产生的次内力大小，与支座的转动刚度（固接 vs 铰接）强相关。如果你把沉降柱脚设为“铰接”（β_f=0），你会发现沉降产生次内力会大幅减少。</li>
+            </ul>
+            
+            <h3>四、求解方法（矩阵位移法）</h3>
+            <ul>
+              <li>采用矩阵位移法（直接刚度法）：组装整体刚度矩阵 K，组装等效节点荷载向量 F，施加边界条件后高斯消元求解 K·U = F。</li>
+              <li>高斯消元使用部分主元法；对角元 &lt; 1e-14 时判定为奇异并提示。</li>
+              <li>反力由 <code>R = K_struct·U − F</code> 计算（K_struct 不含弹簧贡献）。对于弹性柱脚，代码里从 K·U 中扣除弹簧力 k<sub>θ</sub>·θ 后得到弹簧反力矩。</li>
+            </ul>
+            
+            <h3>五、内力符号约定</h3>
+            <ul>
+              <li><strong>轴力 N</strong>：拉为正，压为负。</li>
+              <li><strong>剪力 V</strong>：与单元局部坐标一致，V(x) = dM/dx = f₁ + w·x。</li>
+              <li><strong>弯矩 M</strong>：M(x) = −f₂ + f₁·x + w·x²/2。弯矩图绘于受拉侧。</li>
+              <li>内力图正方向与单元局部坐标的 y 轴一致（柱竖向、梁横向）。</li>
+            </ul>
+            
+            <h3>六、已知近似与局限</h3>
+            <div class="note">
+              以下几点是模型的简化，使用时需注意。用于教学演示足够，但<strong>不能作为设计依据</strong>。
+            </div>
+            <ol style="margin-left:22px">
+              <li style="margin-bottom:5px"><strong>β<sub>f</sub> 弹簧刚度</strong>为启发式，不是严格推导的弹簧刚度。主要用于演示从铰接到固定的趋势，不能与真实转动弹簧刚度值对应。</li>
+              <li style="margin-bottom:5px"><strong>β<sub>j</sub> 修正的梁单元</strong>是标准半刚接模型，但对多层多跨刚架，节点处柱的转动约束没有单独建模（即梁端的半刚接在节点处自动与柱刚接），这会影响含半刚接节点刚架的整体刚度。</li>
+              <li style="margin-bottom:5px"><strong>水平力施加方式与楼板假设</strong>：
+                <ul style="margin-top:3px">
+                  <li><strong>无楼板（Hmode = 'none'）</strong>：同层各柱顶水平位移相互独立，水平力直接作用于左柱顶，依靠梁自身的轴向和弯曲刚度耦合传递。</li>
+                  <li><strong>刚性楼板（Hmode = 'rigid'）</strong>：采用自由度缩并技术，强制同层各节点水平位移相等。水平力同样作用于左柱顶，由刚性约束自动按各柱侧移刚度分配。适用于现浇混凝土楼盖。</li>
+                </ul>
+              </li>
+              <li style="margin-bottom:5px"><strong>二阶效应为粗估</strong>：不做真正的 P-Δ 迭代（不组装几何刚度矩阵 K<sub>g</sub>），仅用等效单自由度反推 <code>B = 1/(1−ΣN/ΣN<sub>cr</sub>)</code>，详见本节「九、P-Δ 放大系数与侧移刚度的说明」。</li>
+              <li style="margin-bottom:5px"><strong>多跨对称结构的浮点虚假侧移</strong>：单跨无悬挑纯竖向荷载已在求解前用约束消除奇异；多跨对称结构（等跨、等层高、r=1、荷载对称）理论上水平位移为零，但代码未做此约束，浮点噪声可能产生极小侧移。对侧移刚度大的结构影响可忽略；对全铰接或半刚接的柔性框架，可能出现可见的虚假侧移。</li>
+              <li style="margin-bottom:5px"><strong>无节点域</strong>：节点处按纯刚接或纯铰接处理，未考虑节点域剪切变形。</li>
+              <li style="margin-bottom:5px"><strong>悬挑梁简化</strong>：悬挑梁按标准刚接单元处理，不参与 β<sub>j</sub> 半刚接修正；悬挑端为自由端，未建模实际边梁的弹性约束。</li>
+              <li style="margin-bottom:5px"><strong>两端完全铰接的梁</strong>：当 β<sub>j</sub> 降至 0 时，梁单元弯曲刚度归零，仅保留轴向刚度（类似链杆）。因此多跨连续梁若中间跨两端完全铰接，无法传递剪力，结构侧向柔度会显著增大。这是标准有限元处理方式，并非程序错误。</li>
+              <li style="margin-bottom:5px"><strong>刚性楼板与梁系解耦</strong>：在刚性楼板假设下，只要楼板存在，即使梁被抽空，水平力依然能通过虚拟的刚性隔板在柱间传递。这是为了模拟无梁楼盖或局部抽梁但现浇板完好的真实受力状态，并非计算错误。</li>
+              <li style="margin-bottom:5px"><strong>支撑仅受拉的非线性</strong>：采用「一次性受压失效 + 矩阵重算」的迭代法（最多 15 次）。一旦检测到某根仅受拉支撑轴力受压（&lt; −1e−4 kN），即将其标记为失效、从 K 矩阵中移除并重新求解，直至不再有新的支撑失效。若某格 X 撑两根全部失效导致矩阵奇异，程序会提示「仅受拉支撑全部退出，结构可能失稳」。该法<strong>未考虑支撑在反复荷载下的滞回性能</strong>，仅适用于静力单向加载的概念演示，不适用于动力时程或往复荷载分析。逐格指定「仅受拉」仅影响该格支撑，普通支撑受压时仍正常工作。</li>
+              <li style="margin-bottom:5px"><strong>每根杆件一个单元</strong>：对于只有均布荷载的情况已足够精确，但对有多个集中力或复杂荷载的杆件精度有限。</li>
+              <li style="margin-bottom:5px"><strong>无剪切变形</strong>：按 Euler-Bernoulli 梁理论，忽略 Timoshenko 梁的剪切效应。</li>
+              <li style="margin-bottom:5px"><strong>无材料非线性</strong>：不考虑混凝土开裂、钢筋屈服等实际非线性效应。</li>
+              <li style="margin-bottom:5px"><strong>线弹性范围</strong>：计算结果可用于叠加，但不适用于承载能力极限状态验算。</li>
+              <li><strong>规范背景</strong>：默认采用中国现行规范体系（GB 50010、GB 50011 等），但<strong>不做规范校核</strong>，仅作为量级参考。</li>
+            </ol>
+            
+            <h3>七、反直觉陷阱：工程中容易踩的坑</h3>
+            <p>本工具最大的价值，是把平时在规范条文和教科书里看不见的“联动效应”放大给你看。请特别注意以下几个反直觉现象：</p>
+            <ul>
+              <li><strong>陷阱 1：柱脚越“刚”，侧移反而可能更大？</strong><br>
+              很多新手认为柱脚固接肯定比铰接“结实”。但在某些高宽比极大的细长结构中，如果因为超静定导致巨大的温度应力或沉降次应力，反而会提早屈服。<b>刚接提供的是“抗弯能力”，而不是“抗侧刚度”</b>，用错地方会适得其反。</li>
+              <li><strong>陷阱 2：抽掉梁，不一定会塌。</strong><br>
+              在「刚性楼板」假定下，抽掉某层的某跨梁，该层的侧移并不会像想象中那样“一泻千里”。因为楼板像个大铁板，依然能把水平力硬生生传给其他柱。但这是一种<b>数字幻觉</b>——真实工程中，板的开裂、失稳和穿层柱的计算长度暴增，会引发脆性破坏。工具这里只是在模拟“板没坏”的理想状态。</li>
+              <li><strong>陷阱 3：沉降产生的内力，比直接加载还大。</strong><br>
+              对于超静定刚架，强行拖拽一个支座下落 10mm，产生的梁端弯矩可能相当于直接在上面施加几十吨的重物。这就是为什么地质勘察不准时，结构的“附加内力”会直接压垮构件。</li>
+            </ul>
+
+            <h3>八、支座沉降与强迫位移</h3>
+            <p>在「荷载」Tab 的「支座类型与强迫位移」组中，可对每根柱独立指定竖向位移或强迫转角。</p>
+            <ul>
+              <li><strong>竖向沉降/上抬</strong>：沉降会引起超静定结构内部产生附加内力（类似于拉压杆效应）。输入负值（如 -50mm）可模拟抗浮工况下基础上抬。</li>
+              <li><strong>强迫转角（局部不均匀沉降）</strong>：模拟基础转动造成的柱底强迫转角。这会在柱底产生极大的约束弯矩，并带动上部框架发生侧移和内力重分布。<strong>注意：</strong>本工具基于一阶线弹性小变形假定，真实转角上限严格限制在 10 mrad（约 0.57°），切勿将其用于分析超过 20 mrad (约1.14°) 的大转角工况，否则几何非线性将导致结果失效。<br><span style="color:#fbbf24;">⚠️ 若对铰接/滚轴支座施加强迫转角，程序会自动将其强制视为固接支座进行求解（图标同步切换）。</span></li>
+              <li><strong>与冻结对比</strong>：先关闭强迫位移、点击「冻结」保存基线，再拖动强迫位移滑块，变形图与内力图会以浅灰虚线（基线）与实线（当前）对比，前后差异一目了然。</li>
+              <li><strong>局限</strong>：不支持多柱之间的沉降差相互作用（分别单独输入），未考虑土体固结时间效应。</li>
+            </ul>
+            
+            <h3>九、P-Δ 放大系数与侧移刚度的说明</h3>
+            <p><strong>P-Δ 放大系数 B</strong>（仅在「荷载」Tab 开启 P-Δ 开关后显示）：</p>
+            <ul>
+              <li>物理含义：<strong>B 值代表真实的二阶效应量级</strong>（B = 1 表示无二阶效应；B = 2 表示现实中侧移和弯矩会放大 1 倍）。<strong>注意：本工具仅用文字在面板上显示放大倍数，不会把它乘回内力图和变形图中</strong>，图中的结果依然是线弹性一阶结果，以确保计算逻辑的纯粹性。</li>
+              <li>计算式：<code>B = 1 / (1 − ΣN / ΣN_cr)</code>，其中 ΣN 是当前工况下的柱脚竖向反力之和。</li>
+              <li><strong>精准的 N_cr 推导</strong>：为避免悬挑或不对称竖向荷载产生的“假侧移”污染刚度，程序在后台会自动构建一个“纯水平力工况”，单独求得真实的纯侧向刚度，进而反推出准确的等效弹性临界荷载 <code>ΣN_cr</code>。</li>
+              <li><code>ΣN / ΣN_cr</code> 是稳定系数，必须 &lt; 1；越接近 1，B 越大，越接近失稳。</li>
+              <li>⚠ <strong>局限</strong>：虽然 N_cr 已剥离了竖向荷载干扰，但本工具依然采用等效单自由度公式反推（<code>N_cr ≈ ΣH·h/|u<sub>顶,max</sub>|</code>），且为一次性线弹性求解，未做真正的几何非线性矩阵迭代。对刚度沿高度极不均匀的结构，B 值误差可能超过 20%；接近失稳（ΣN/ΣN_cr 接近 1）时误差更大。面板显示仅作量级参考，不能用于实际工程的稳定验算。</li>
+            </ul>
+            <p style="margin-top:8px"><strong>侧移刚度 K</strong>：</p>
+            <ul>
+              <li>定义：<code>K = ΣH / |u_顶平均|</code>，即总水平力除以顶层柱顶的平均水平位移。</li>
+              <li>⚠ 当竖向荷载<strong>不对称</strong>时（例如有悬挑均布 q<sub>c</sub>，或左右跨荷载不等），柱顶位移里会混入竖向荷载引起的侧移分量，此时面板上显示的 K 是一个<strong>表观值</strong>，会比纯侧移刚度偏小。</li>
+              <li>如果想要严格的侧移刚度：把悬挑荷载和跨内荷载全部调 0，只保留水平力。</li>
+              <li>自检场景下，K 的<strong>变化趋势</strong>（拖动 β<sub>f</sub>、r 时 K 怎么变）比绝对值更有意义。</li>
+            </ul>
+
+            <h3>十、三个常见概念陷阱</h3>
+            <p><strong>陷阱 1：刚性楼板"掩盖"支撑轴力</strong><br>
+            刚性楼板强制同层柱顶水平位移相等，使各柱侧移看起来"平均"。但<b>支撑的轴力不会因此变小</b>——支撑轴力由杆件自身的轴向变形决定，与柱顶位移无关。所以："侧移小了"≠"支撑受力小了"。验算支撑时必须用真实支撑轴力，不能因为侧移小就放松。</p>
+
+            <p><strong>陷阱 2：刚性楼板"低估"P-Δ 放大系数 B</strong><br>
+            B 的计算依赖 <code>N_cr ≈ ΣH·h / |u_top,max|</code> 反推，其中 <code>u_top,max</code> 是顶层最大水平位移。刚性楼板强制同层位移平均后，<code>u_top,max</code> 被压小 → N_cr 反推偏大 → 稳定系数 ΣN/N_cr 偏小 → <b>B 值被低估</b>。所以：<b>柔性楼盖的高层比刚性楼盖更危险</b>，实际工程中柔性楼盖（如木结构、预制装配）的 P-Δ 风险要格外关注。</p>
+
+            <p><strong>陷阱 3：机构不是"计算失败"</strong><br>
+            全铰接 + 无支撑 + 水平力 → 刚度矩阵奇异 → 求解器抛错。这不是 bug，是<b>几何可变体系</b>的数学表现。软件能识别"奇异"，但"为什么奇异、哪个方向缺约束"属于人的判断。真正的概念设计，要在建模之前就排除机构：至少一根柱固接/铰接、至少一道支撑、至少一个节点有转动约束。</p>
+
+            <h3>十一、工具的能力边界（明确清单）</h3>
+            <table>
+              <tr><th>能力</th><th>状态</th><th>说明</th></tr>
+              <tr><td>线弹性静力分析</td><td>✅ 精确</td><td>矩阵位移法，逐杆单元，高斯消元</td></tr>
+              <tr><td>二阶效应（P-Δ）</td><td>⚠ 粗估</td><td>B = 1/(1−ΣN/ΣN_cr)，非几何非线性迭代</td></tr>
+              <tr><td>仅受拉支撑</td><td>✅ 非线性</td><td>一次性失效 + 矩阵重算，最多 15 次迭代</td></tr>
+              <tr><td>强迫位移 / 支座沉降</td><td>✅ 精确</td><td>直接在 K·U = F 里施加</td></tr>
+              <tr><td>温度效应（均匀 + 梯度）</td><td>✅ 精确</td><td>线膨胀 + 固端力，含半刚接修正</td></tr>
+              <tr><td>半刚接节点（βj）</td><td>✅ 精确</td><td>Monforton-Wu 两端半刚接刚度矩阵</td></tr>
+              <tr><td>刚性楼板</td><td>✅ 精确</td><td>自由度缩并，强制同层 ux 相等</td></tr>
+              <tr><td>P-δ（构件自身屈曲）</td><td>❌ 不算</td><td>无几何刚度矩阵，无特征值屈曲</td></tr>
+              <tr><td>动力反应谱 / 时程</td><td>❌ 不算</td><td>只有静力，无质量矩阵、无阻尼</td></tr>
+              <tr><td>扭转</td><td>❌ 不算</td><td>平面刚架，无平面外自由度、无楼板扭转</td></tr>
+              <tr><td>节点域剪切变形</td><td>❌ 不算</td><td>节点按纯刚接或纯铰接处理</td></tr>
+              <tr><td>材料非线性（混凝土开裂等）</td><td>❌ 不算</td><td>严格线弹性，应力可无限叠加</td></tr>
+              <tr><td>剪切变形（Timoshenko 梁）</td><td>❌ 不算</td><td>Euler-Bernoulli 梁，深梁结果有误差</td></tr>
+              <tr><td>屈曲后承载力</td><td>❌ 不算</td><td>仅报警（N &gt; N<sub>cr</sub> 标红），不改变内力</td></tr>
+              <tr><td>拱效应 / 悬索</td><td>❌ 不算</td><td>只有梁单元，无轴力主导的拱形结构</td></tr>
+              <tr><td>变截面 / 加腋</td><td>❌ 不算</td><td>每根杆件一个等截面单元</td></tr>
+            </table>
+            <div class="note" style="margin-top:10px">
+              <strong>⚠ 记住：</strong>软件可以算得很快，但"什么是它能算的、什么是它算不准的"，判断永远属于人。
+            </div>
+          </div>
+
+          <!-- ====== Tab 4 ====== -->
+          <div class="modalTabPane" id="mh-tab4">
+            <h3>一、后处理面板的高阶解读</h3>
+            
+            <p><strong>1. 截面探针（应力分析）</strong><br>
+            在内力图上点击任意杆件，右侧会弹出截面应力图。这是基于经典的<strong>平截面假定</strong>，利用轴力 N 和弯矩 M 计算得出的：σ = N/A ± M/W。<br>
+            当你看到红色的部分（受压）和蓝色的部分（受拉）是不对称的，说明该截面处于<strong>大偏心受力</strong>状态（弯矩主导）；如果两边颜色对称但只有一种颜色（全红或全蓝），说明处于<strong>小偏心受力</strong>状态（轴力主导）。利用这个探针，你可以直观地看到“框架作用”是如何在中柱中产生巨大轴力的。</p>
+
+            <p><strong>2. 刚度贡献分解（K值对比）</strong><br>
+            这个面板用于回答“到底是什么在抵抗水平力？”。程序会在后台进行一次“剥离计算”：比如求 `去支撑后 K` 时，程序会在内存中暂时删掉所有支撑，重新计算一次顶层位移，从而得到去支撑后的刚度。<br>
+            <strong>易错点：</strong>下降百分比并不能线性相加。比如去掉支撑刚度下降 50%，去掉梁约束刚度下降 40%，你绝对不能得出结论“支撑占 50%，梁占 40%”。它们互相之间是高度耦合的。你需要关注的是哪一项剥离后，结构的侧移发生了<strong>急剧的失稳性增加</strong>。</p>
+
+            <p><strong>3. 受压支撑校核</strong><br>
+            欧拉临界力 <b>N<sub>cr</sub> = π<sup>2</sup>EA / λ<sup>2</sup></b>（其中 <b>λ = μL / i</b>）。在真实的工程中，如果一根支撑的长细比 λ 过大，它在远没达到屈服强度前，就会发生横向屈曲（受压失稳）。当你在扫掠工况中使得某根支撑内力超过 <b>N<sub>cr</sub></b> 时，面板会亮起红灯并报警。虽然工具为了保持线弹性假定不会让这根杆直接断裂，但这提示你：<strong>如果你真的开启“仅受拉”开关，这根杆早就退出了。</strong></p>
+
+            <h3>二、关于界面与操作的说明</h3>
+            <ul>
+              <li><strong>左侧控制栏</strong>：包含「自检」/「模型」/「荷载」三个 Tab。其中「自检」内置了 50+ 个预设工况（按 5 大主题分类 + Tag 筛选 + 关键词搜索）。「模型」用于配置几何与截面，「荷载」用于配置受力条件。支持快捷键 <code>1</code> / <code>2</code> / <code>3</code> 快速切换。</li>
+              <li><strong>右侧读数面板</strong>：实时显示截面参数、刚度比、逐层逐跨 ρ 等。其中「体系判定」模块会根据当前的梁柱线刚度比 ρ 与梁端刚度 β_j，自动判定当前的结构体系（如：强柱弱梁、典型刚接框架、铰接排架等）。</li>
+              <li><strong>内力图工具条</strong>：<code>M</code> / <code>N</code> / <code>V</code> / <code>R</code> 切换内力类型；<code>冻结</code> 把当前结果存为浅灰虚线基准；<code>📷</code> 导出当前内力图为 PNG。底栏「缩放」滑块只影响显示比例，不改变计算结果。</li>
+              <li><strong>参数扫掠</strong>（底栏「▶ 扫掠」）：单参数默认 3s 循环播放（自检卡片为 12s 慢速播放）。录制功能可录制为视频（自动选 mp4 / webm）。</li>
+              <li><strong>底部状态栏</strong>：<code>RESIDUAL</code> 显示<strong>相对</strong>平衡残差（越小越准）。<code>STATUS</code> 相对残差 &lt; 1e-8 显示绿色 OK；仅受拉迭代 15 次未收敛时显示 NC·未收敛。</li>
+            </ul>
+
+            <h3>三、力学概念自检建议</h3>
+            <div class="note" style="margin-bottom:12px">
+              左侧栏「自检」Tab 内置了 <b>50+ 个</b>一键播放的力学场景。场景按【主题】重新分类（📐杆件与截面、🏢整体受力与变形、🌪️抗侧力与二阶、🧱特殊构件与边界、🔥综合演练与概念），并标记了 <b style="color:#38bdf8">L1基础</b> / <b style="color:#fbbf24">L2进阶</b> / <b style="color:#f87171">L3高阶</b> 的难度级别，<b>每个分类内部的卡片均会严格按照 L1 → L2 → L3 自动排序</b>。卡片支持<b>标签筛选</b>与<b>关键词搜索</b>，点击即可自动加载工况、开启扫掠并慢速播放；部分概念类卡片为静态提示。
+            </div>
+              <div style="margin-left:18px; margin-bottom:12px;">
+                <p style="color:#38bdf8; font-weight:600; margin-bottom:4px;">💡 建议按 L1 → L2 → L3 顺序食用：</p>
+                <p><strong>📐 杆件与截面行为 (L1~L2)</strong></p>
+                <ul style="margin-top:2px; margin-bottom:12px; color:#cbd5e1;">
+                  <li>观察单一构件的内力响应。如扫掠梁端/柱脚刚度（β），理解“弯矩重分配”的本质。</li>
+                  <li>搞懂“三次方效应”：柱高/梁高增加一点点，刚度为何飙升（I ∝ h³）。</li>
+                  <li>破除应试迷信：为什么软件算出的反弯点永远不是教科书上的 0.33h？（因为真实结构存在微小的轴向变形和侧移）。</li>
+                </ul>
+                
+                <p><strong>🏢 整体受力与变形 (L1~L3)</strong></p>
+                <ul style="margin-top:2px; margin-bottom:12px; color:#cbd5e1;">
+                  <li>从单根杆件上升到整栋楼。观察竖向荷载如何“向下传递并衰减”（分层法的物理真相）。</li>
+                  <li>寻找薄弱层：在不对称侧移、悬挑重力侧移中，体会“刚度偏心”引发的扭转与附加侧移。</li>
+                  <li>高阶探索：利用抽梁网格，观察“竖向刚度突变”如何导致变形向某一层集中。</li>
+                </ul>
+
+                <p><strong>🌪️ 抗侧力与二阶效应 (L2~L3)</strong></p>
+                <ul style="margin-top:2px; margin-bottom:12px; color:#cbd5e1;">
+                  <li>理解水平力的传递路径：刚性楼板如何像“隔板”一样按刚度自动分配剪力。</li>
+                  <li>高阶探索：在极高轴压比和柔性框架下，观察 P-Δ 效应（重力引起的附加弯矩）如何把结构推向失稳边缘。</li>
+                  <li>概念澄清：本工具只算 P-Δ（楼层整体侧移），不算 P-δ（单根构件自身挠曲）。</li>
+                </ul>
+
+                <p><strong>🧱 特殊构件与边界 (L2~L3)</strong></p>
+                <ul style="margin-top:2px; margin-bottom:12px; color:#cbd5e1;">
+                  <li>支撑系统：理解“仅受拉”支撑在反向推覆下的失效退出，以及最优支撑倾角为何是 35.3°。</li>
+                  <li>非荷载作用：体验沉降、强迫转角、整体升温带来的恐怖次内力（位移法/力法核心考察点）。</li>
+                </ul>
+
+                <p><strong>🔥 综合演练与概念 (L1~L2)</strong></p>
+                <ul style="margin-top:2px; margin-bottom:8px; color:#cbd5e1;">
+                  <li>将上述知识点融合：通过“影响线（移动荷载）”、“不利布置对比”体会规范中组合系数的来历。</li>
+                  <li>体系演化与理念：从“强梁弱柱”到“强柱弱梁”，理解抗震设计的终极底线。</li>
+                </ul>
+              </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+
+<!-- ============ 分享弹窗 ============ -->
+<div class="modal" id="modalShare">
+  <div class="modalCard modalCardShare">
+    <div class="modalHead">
+      <h2><span class="shareTitleMark">◆</span> 分享当前工况</h2>
+      <button class="modalClose" id="btnShareClose" title="关闭">×</button>
+    </div>
+    <div class="modalBody modalBodyShare">
+
+      <!-- file:// 或 localhost 打开时的提示条（默认隐藏） -->
+      <div class="shareLocalWarn" id="shareLocalWarn" hidden>
+        <span class="shareLocalWarnIcon">⚠</span>
+        <span>当前是本地打开。二维码已指向线上地址，手机可直接扫码。</span>
+      </div>
+
+      <!-- QR 展示区：光晕 + 白底 + 四角 HUD 刻线 -->
+      <div class="shareQRFrame">
+        <div class="shareQRBox" id="shareQRBox">
+          <span class="qrCorner tl"></span>
+          <span class="qrCorner tr"></span>
+          <span class="qrCorner bl"></span>
+          <span class="qrCorner br"></span>
+          <div class="shareQRLoading">二维码生成中…</div>
+        </div>
+      </div>
+
+      <!-- 装饰 meta 行：品牌署名，弱化为背景纹样 -->
+      <div class="shareMeta">
+        <span class="shareMetaDot"></span>
+        <span>ZHAO STRUCTURAL LAB · 2026</span>
+        <span class="shareMetaDot"></span>
+      </div>
+
+      <p class="shareHint">扫码在手机上打开当前工况</p>
+
+      <!-- URL 字段 + 复制 -->
+      <div class="shareURLRow">
+        <input type="text" id="shareURLField" class="shareURLField" readonly>
+        <button type="button" id="btnShareCopy" class="btnShareCopy" title="复制链接">
+          <span class="btnShareCopyIcon">📋</span>
+          <span class="btnShareCopyTxt">复制</span>
+        </button>
+      </div>
+
+      <!-- 次要操作：下载二维码 -->
+      <button type="button" id="btnShareDownload" class="btnShareDownload">
+        ⬇ 下载二维码（高分辨率 PNG）
+      </button>
+
+    </div>
+  </div>
+</div>
+
+<!-- 悬浮反弯点小图 -->
+<div id="floatAntiRhoWrap" hidden style="position:fixed; top:120px; right:40px; width:280px; background:#1e293b; border:1px solid #334155; border-radius:10px; z-index:1000; box-shadow:0 10px 30px rgba(0,0,0,.6); display:flex; flex-direction:column; user-select:none;">
+  <div id="floatAntiRhoHeader" style="padding:8px 12px; cursor:move; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #334155; font-size:11px; color:#cbd5e1; font-weight:600;">
+    <span>反弯点 x/h vs ρ</span>
+    <button id="btnFloatAntiRhoClose" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:16px;line-height:1;padding:0;" title="关闭">×</button>
+  </div>
+  <div style="padding:8px 10px;">
+    <canvas id="cvAntiRhoFloat" style="width:100%;height:160px;display:block;border-radius:6px;background:transparent;border:1px dashed #334155;"></canvas>
+    <div class="hint" style="margin-top:6px;font-size:10px;text-align:center;">可拖拽标题栏移动位置</div>
+  </div>
+</div>
+
+<script>
+  // =========================================================
+  // 自动挂载所有依赖脚本（按顺序同步执行，保持原有依赖关系）
+  // 它们会自动读取上面 <head> 中定义的 window.APP_VERSION
+  // 注意：01-state.js 已经在 <head> 中加载过了，这里不再重复加载
+  // =========================================================
+  const scriptFiles = [
+    'js/02-model.js',
+    'js/02-generator.js',
+    'js/02-solver.js',
+    'js/03-internal.js',
+    'js/04-canvas.js',
+    'js/05-force.js',
+    'js/06-deform.js',
+    'js/07-run.js',
+    'js/07b-ui-builder.js',
+    'js/08-sweep-record.js',
+    'js/09-ui-share.js',
+    'js/11-construct.js',
+    'js/10-boot.js'
+  ];
+  
+  scriptFiles.forEach(src => {
+    document.write(`<script src="${src}?${window.APP_VERSION}"><\/script>`);
+  });
+</script>
+
+<!-- 变形图浮层折叠逻辑 -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  var box = document.getElementById('deformOverlayBox');
+  var title = document.getElementById('deformOverlayTitle');
+  var content = document.getElementById('deformOverlayContent');
+  var icon = document.getElementById('deformToggleIcon');
+  
+  if (box && title && content) {
+    title.addEventListener('click', function() {
+      var isCollapsed = box.classList.contains('collapsed');
+      if (isCollapsed) {
+        box.classList.remove('collapsed');
+        content.style.display = 'block';
+        icon.textContent = '收起 ▴';
+      } else {
+        box.classList.add('collapsed');
+        content.style.display = 'none';
+        icon.textContent = '展开 ▾';
+      }
+    });
+  }
+});
+</script>
+
+<!-- 使用说明 Tab 切换逻辑 -->
+<script>
+(function(){
+  document.addEventListener('DOMContentLoaded', function() {
+    var tabsWrap = document.querySelector('#modalHelp .modalTabs');
+    if(!tabsWrap) return;
+    tabsWrap.addEventListener('click', function(e) {
+      var btn = e.target.closest('.modalTabBtn');
+      if(!btn) return;
+      var targetId = btn.getAttribute('data-htab');
+      
+      // 切换按钮 active 状态
+      var allBtns = tabsWrap.querySelectorAll('.modalTabBtn');
+      for(var i=0; i<allBtns.length; i++) allBtns[i].classList.remove('on');
+      btn.classList.add('on');
+      
+      // 切换面板可见性
+      var panes = document.querySelectorAll('#modalHelp .modalTabPane');
+      for(var j=0; j<panes.length; j++) panes[j].classList.remove('on');
+      var targetPane = document.getElementById(targetId);
+      if(targetPane) targetPane.classList.add('on');
+    });
+  });
+})();
+</script>
+</body>
+</html>
